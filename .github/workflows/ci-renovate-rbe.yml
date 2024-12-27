@@ -59,3 +59,8 @@ jobs:
       caching: false
       ruby-version: jruby-9.4.8.0
       run: ./scripts/github-actions/ci-build.sh
+
+  ci-gh:
+    name: CI - GitHub
+    if: github.repository_owner == 'seleniumhq'
+    uses: ./.github/workflows/ci.yml
