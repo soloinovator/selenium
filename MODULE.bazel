@@ -169,7 +169,7 @@ maven.install(
     name = "maven",
     artifacts = [
         "com.beust:jcommander:1.82",
-        "com.github.javaparser:javaparser-core:3.26.2",
+        "com.github.javaparser:javaparser-core:3.26.3",
         "com.github.spotbugs:spotbugs:4.8.6",
         "com.github.stephenc.jcip:jcip-annotations:1.0-1",
         "com.google.code.gson:gson:2.11.0",
