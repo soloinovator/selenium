@@ -82,10 +82,6 @@ jobs:
     steps:
       - name: Checkout source tree
         uses: actions/checkout@v4
-      - name: Show current branch
-        run: |
-          echo "head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
-        shell: bash
       - name: Pull latest changes from head ref for PRs
         if: contains(github.head_ref, 'renovate/')
         run: git pull origin ${{ github.head_ref }}
