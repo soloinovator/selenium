@@ -8,10 +8,16 @@ on:
   schedule:
     - cron: "0 */12 * * *"
   workflow_dispatch:
+  workflow_run:
+    workflows: [ CI - Renovate - RBE ]
+    types: [ completed ]
 
 jobs:
   check:
     name: Check
+    if: >
+      github.repository_owner == 'seleniumhq' && 
+        (startsWith(github.head_ref, 'renovate/') != true || github.event_name == 'workflow_run')
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.check-targets.outputs.bazel-targets }}
