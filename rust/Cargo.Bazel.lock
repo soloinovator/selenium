@@ -1,5 +1,5 @@
 {
-  "checksum": "1a54ef49a0581f9fb6b2d7a75f35764d878fa58986eb7f024276df0762c7d97a",
+  "checksum": "3328fe033a9f6015df3efa4b392425cd1b81489e378accc193a1b8f79f41e72f",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -4034,14 +4034,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "env_logger 0.11.5": {
+    "env_logger 0.11.6": {
       "name": "env_logger",
-      "version": "0.11.5",
+      "version": "0.11.6",
       "package_url": "https://github.com/rust-cli/env_logger",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/env_logger/0.11.5/download",
-          "sha256": "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
+          "url": "https://static.crates.io/crates/env_logger/0.11.6/download",
+          "sha256": "dcaee3d8e3cfc3fd92428d477bc97fc29ec8716d180c0d74c643bb26166660e0"
         }
       },
       "targets": [
@@ -4099,7 +4099,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.11.5"
+        "version": "0.11.6"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -13266,7 +13266,7 @@
               "target": "directories"
             },
             {
-              "id": "env_logger 0.11.5",
+              "id": "env_logger 0.11.6",
               "target": "env_logger"
             },
             {
@@ -22015,7 +22015,7 @@
     "clap 4.5.23",
     "debpkg 0.6.0",
     "directories 5.0.1",
-    "env_logger 0.11.5",
+    "env_logger 0.11.6",
     "exitcode 1.1.2",
     "flate2 1.0.35",
     "fs2 0.4.3",
