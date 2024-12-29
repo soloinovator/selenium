@@ -1,5 +1,5 @@
 {
-  "checksum": "873866733c14692dfdb6fa0c8c2a45f6c617b43faf48c6c938b1e5bb4f411afb",
+  "checksum": "2c51ebf8e3823f760e8ccb1f9f6ebdf29a79134de1361c9b381423fbc4692401",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -11560,7 +11560,7 @@
                 "target": "js_sys"
               },
               {
-                "id": "serde_json 1.0.133",
+                "id": "serde_json 1.0.134",
                 "target": "serde_json"
               },
               {
@@ -13506,7 +13506,7 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.133",
+              "id": "serde_json 1.0.134",
               "target": "serde_json"
             },
             {
@@ -13856,14 +13856,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "serde_json 1.0.133": {
+    "serde_json 1.0.134": {
       "name": "serde_json",
-      "version": "1.0.133",
+      "version": "1.0.134",
       "package_url": "https://github.com/serde-rs/json",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/serde_json/1.0.133/download",
-          "sha256": "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
+          "url": "https://static.crates.io/crates/serde_json/1.0.134/download",
+          "sha256": "d00f4175c42ee48b15416f6193a959ba3a0d67fc699a0db9ad12df9f83991c7d"
         }
       },
       "targets": [
@@ -13923,14 +13923,14 @@
               "target": "serde"
             },
             {
-              "id": "serde_json 1.0.133",
+              "id": "serde_json 1.0.134",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.133"
+        "version": "1.0.134"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -22362,7 +22362,7 @@
     "regex 1.11.1",
     "reqwest 0.12.9",
     "serde 1.0.216",
-    "serde_json 1.0.133",
+    "serde_json 1.0.134",
     "sevenz-rust 0.6.1",
     "tar 0.4.43",
     "tempfile 3.14.0",
