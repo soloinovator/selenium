@@ -1,5 +1,5 @@
 {
-  "checksum": "c73a8dbb6811a65963ab4a64412c6d2d24e76c217e92ab3ec1446869edc993cc",
+  "checksum": "d9285b63a8ce42183b3092dd0140c47d4711a9fa8b5016eaeaa0be37ec80b44b",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -699,7 +699,7 @@
               "target": "scroll"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -809,7 +809,7 @@
               "target": "scroll"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -2209,7 +2209,7 @@
               "target": "num_traits"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             }
           ],
@@ -3962,6 +3962,45 @@
           "selects": {}
         },
         "edition": "2021",
+        "version": "0.1.0"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "env_home 0.1.0": {
+      "name": "env_home",
+      "version": "0.1.0",
+      "package_url": "https://github.com/notpeter/env-home",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/env_home/0.1.0/download",
+          "sha256": "c7f84e12ccf0a7ddc17a6c41c93326024c42920d7ee630d04950e6926645c0fe"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "env_home",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "env_home",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
         "version": "0.1.0"
       },
       "license": "MIT OR Apache-2.0",
@@ -5767,56 +5806,6 @@
         },
         "edition": "2018",
         "version": "0.4.3"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "home 0.5.9": {
-      "name": "home",
-      "version": "0.5.9",
-      "package_url": "https://github.com/rust-lang/cargo",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/home/0.5.9/download",
-          "sha256": "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "home",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "home",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [],
-          "selects": {
-            "cfg(windows)": [
-              {
-                "id": "windows-sys 0.52.0",
-                "target": "windows_sys"
-              }
-            ]
-          }
-        },
-        "edition": "2021",
-        "version": "0.5.9"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -10860,7 +10849,7 @@
               "target": "http"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -13239,7 +13228,7 @@
               "target": "reqwest"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -13271,7 +13260,7 @@
               "target": "walkdir"
             },
             {
-              "id": "which 7.0.0",
+              "id": "which 7.0.1",
               "target": "which"
             },
             {
@@ -13279,7 +13268,7 @@
               "target": "xz2"
             },
             {
-              "id": "zip 2.2.1",
+              "id": "zip 2.2.2",
               "target": "zip"
             }
           ],
@@ -13386,14 +13375,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "serde 1.0.216": {
+    "serde 1.0.217": {
       "name": "serde",
-      "version": "1.0.216",
+      "version": "1.0.217",
       "package_url": "https://github.com/serde-rs/serde",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/serde/1.0.216/download",
-          "sha256": "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+          "url": "https://static.crates.io/crates/serde/1.0.217/download",
+          "sha256": "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
         }
       },
       "targets": [
@@ -13439,7 +13428,7 @@
         "deps": {
           "common": [
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "build_script_build"
             }
           ],
@@ -13449,13 +13438,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "serde_derive 1.0.216",
+              "id": "serde_derive 1.0.217",
               "target": "serde_derive"
             }
           ],
           "selects": {}
         },
-        "version": "1.0.216"
+        "version": "1.0.217"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -13508,7 +13497,7 @@
               "target": "log"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -13531,14 +13520,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "serde_derive 1.0.216": {
+    "serde_derive 1.0.217": {
       "name": "serde_derive",
-      "version": "1.0.216",
+      "version": "1.0.217",
       "package_url": "https://github.com/serde-rs/serde",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/serde_derive/1.0.216/download",
-          "sha256": "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+          "url": "https://static.crates.io/crates/serde_derive/1.0.217/download",
+          "sha256": "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
         }
       },
       "targets": [
@@ -13584,7 +13573,7 @@
           "selects": {}
         },
         "edition": "2015",
-        "version": "1.0.216"
+        "version": "1.0.217"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -13656,7 +13645,7 @@
               "target": "ryu"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -13722,7 +13711,7 @@
         "deps": {
           "common": [
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             }
           ],
@@ -13782,7 +13771,7 @@
               "target": "ryu"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             }
           ],
@@ -16543,7 +16532,7 @@
         "deps": {
           "common": [
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -16609,7 +16598,7 @@
         "deps": {
           "common": [
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             }
           ],
@@ -16669,7 +16658,7 @@
               "target": "indexmap"
             },
             {
-              "id": "serde 1.0.216",
+              "id": "serde 1.0.217",
               "target": "serde"
             },
             {
@@ -18209,14 +18198,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "which 7.0.0": {
+    "which 7.0.1": {
       "name": "which",
-      "version": "7.0.0",
+      "version": "7.0.1",
       "package_url": "https://github.com/harryfei/which-rs.git",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/which/7.0.0/download",
-          "sha256": "c9cad3279ade7346b96e38731a641d7343dd6a53d55083dd54eadfa5a1b38c6b"
+          "url": "https://static.crates.io/crates/which/7.0.1/download",
+          "sha256": "fb4a9e33648339dc1642b0e36e21b3385e6148e289226f657c809dee59df5028"
         }
       },
       "targets": [
@@ -18254,8 +18243,8 @@
             ],
             "cfg(any(windows, unix, target_os = \"redox\"))": [
               {
-                "id": "home 0.5.9",
-                "target": "home"
+                "id": "env_home 0.1.0",
+                "target": "env_home"
               }
             ],
             "cfg(windows)": [
@@ -18267,7 +18256,7 @@
           }
         },
         "edition": "2021",
-        "version": "7.0.0"
+        "version": "7.0.1"
       },
       "license": "MIT",
       "license_ids": [
@@ -18877,7 +18866,6 @@
             "Win32_Storage",
             "Win32_Storage_FileSystem",
             "Win32_System",
-            "Win32_System_Com",
             "Win32_System_Console",
             "Win32_System_IO",
             "Win32_System_Pipes",
@@ -18885,8 +18873,6 @@
             "Win32_System_SystemServices",
             "Win32_System_Threading",
             "Win32_System_WindowsProgramming",
-            "Win32_UI",
-            "Win32_UI_Shell",
             "default"
           ],
           "selects": {}
@@ -21068,14 +21054,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "zip 2.2.1": {
+    "zip 2.2.2": {
       "name": "zip",
-      "version": "2.2.1",
+      "version": "2.2.2",
       "package_url": "https://github.com/zip-rs/zip2.git",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zip/2.2.1/download",
-          "sha256": "99d52293fc86ea7cf13971b3bb81eb21683636e7ae24c729cdaf1b7c4157a352"
+          "url": "https://static.crates.io/crates/zip/2.2.2/download",
+          "sha256": "ae9c1ea7b3a5e1f4b922ff856a129881167511563dc219869afe3787fc0c1a45"
         }
       },
       "targets": [
@@ -21141,7 +21127,7 @@
               "target": "thiserror"
             },
             {
-              "id": "zip 2.2.1",
+              "id": "zip 2.2.2",
               "target": "build_script_build"
             }
           ],
@@ -21170,7 +21156,7 @@
           ],
           "selects": {}
         },
-        "version": "2.2.1"
+        "version": "2.2.2"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -21961,7 +21947,7 @@
     "log 0.4.22",
     "regex 1.11.1",
     "reqwest 0.12.11",
-    "serde 1.0.216",
+    "serde 1.0.217",
     "serde_json 1.0.134",
     "sevenz-rust 0.6.1",
     "tar 0.4.43",
@@ -21969,9 +21955,9 @@
     "tokio 1.42.0",
     "toml 0.8.19",
     "walkdir 2.5.0",
-    "which 7.0.0",
+    "which 7.0.1",
     "xz2 0.1.7",
-    "zip 2.2.1"
+    "zip 2.2.2"
   ],
   "direct_dev_deps": [
     "assert_cmd 2.0.16",
