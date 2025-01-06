@@ -201,7 +201,7 @@ maven.install(
         "io.opentelemetry.semconv:opentelemetry-semconv:1.28.0-alpha",
         "it.ozimov:embedded-redis:0.7.3",
         "net.bytebuddy:byte-buddy:1.15.11",
-        "org.htmlunit:htmlunit-core-js:4.6.0",
+        "org.htmlunit:htmlunit-core-js:4.7.0",
         "org.apache.commons:commons-exec:1.4.0",
         "org.apache.logging.log4j:log4j-core:2.24.3",
         "org.assertj:assertj-core:3.27.1",
