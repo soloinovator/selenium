@@ -1937,6 +1937,11 @@ class Options {
    *     when the cookie has been deleted.
    */
   deleteCookie(name) {
+    // Validate the cookie name is non-empty and properly trimmed.
+    if (!name?.trim()) {
+      throw new error.InvalidArgumentError('Cookie name cannot be empty')
+    }
+
     return this.driver_.execute(new command.Command(command.Name.DELETE_COOKIE).setParameter('name', name))
   }
 
