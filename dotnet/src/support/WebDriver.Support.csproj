@@ -6,7 +6,7 @@
     <RootNamespace>OpenQA.Selenium.Support</RootNamespace>
     <BuildSystem>visual-studio</BuildSystem>
     <LangVersion>12.0</LangVersion>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>

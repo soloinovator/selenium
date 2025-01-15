@@ -19,6 +19,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 
@@ -29,8 +30,6 @@ namespace OpenQA.Selenium.Support.UI
     /// </summary>
     public class SelectElement : IWrapsElement
     {
-        private readonly IWebElement element;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="SelectElement"/> class.
         /// </summary>
@@ -51,7 +50,7 @@ namespace OpenQA.Selenium.Support.UI
                 throw new UnexpectedTagNameException("select", tagName);
             }
 
-            this.element = element;
+            this.WrappedElement = element;
 
             // let check if it's a multiple
             string attribute = element.GetAttribute("multiple");
@@ -61,10 +60,7 @@ namespace OpenQA.Selenium.Support.UI
         /// <summary>
         /// Gets the <see cref="IWebElement"/> wrapped by this object.
         /// </summary>
-        public IWebElement WrappedElement
-        {
-            get { return this.element; }
-        }
+        public IWebElement WrappedElement { get; }
 
         /// <summary>
         /// Gets a value indicating whether the parent element supports multiple selections.
@@ -74,7 +70,7 @@ namespace OpenQA.Selenium.Support.UI
         /// <summary>
         /// Gets the list of options for the select element.
         /// </summary>
-        public IList<IWebElement> Options => this.element.FindElements(By.TagName("option"));
+        public IList<IWebElement> Options => this.WrappedElement.FindElements(By.TagName("option"));
 
         /// <summary>
         /// Gets the selected item within the select element.
@@ -137,16 +133,16 @@ namespace OpenQA.Selenium.Support.UI
             }
 
             bool matched = false;
-            IList<IWebElement> options;
+            ReadOnlyCollection<IWebElement> options;
 
             if (!partialMatch)
             {
                 // try to find the option via XPATH ...
-                options = this.element.FindElements(By.XPath(".//option[normalize-space(.) = " + EscapeQuotes(text) + "]"));
+                options = this.WrappedElement.FindElements(By.XPath(".//option[normalize-space(.) = " + EscapeQuotes(text) + "]"));
             }
             else
             {
-                options = this.element.FindElements(By.XPath(".//option[contains(normalize-space(.),  " + EscapeQuotes(text) + ")]"));
+                options = this.WrappedElement.FindElements(By.XPath(".//option[contains(normalize-space(.),  " + EscapeQuotes(text) + ")]"));
             }
 
             foreach (IWebElement option in options)
@@ -167,12 +163,12 @@ namespace OpenQA.Selenium.Support.UI
                 if (string.IsNullOrEmpty(substringWithoutSpace))
                 {
                     // hmm, text is either empty or contains only spaces - get all options ...
-                    candidates = this.element.FindElements(By.TagName("option"));
+                    candidates = this.WrappedElement.FindElements(By.TagName("option"));
                 }
                 else
                 {
                     // get candidates via XPATH ...
-                    candidates = this.element.FindElements(By.XPath(".//option[contains(., " + EscapeQuotes(substringWithoutSpace) + ")]"));
+                    candidates = this.WrappedElement.FindElements(By.XPath(".//option[contains(., " + EscapeQuotes(substringWithoutSpace) + ")]"));
                 }
 
                 foreach (IWebElement option in candidates)
@@ -211,7 +207,7 @@ namespace OpenQA.Selenium.Support.UI
             StringBuilder builder = new StringBuilder(".//option[@value = ");
             builder.Append(EscapeQuotes(value));
             builder.Append("]");
-            IList<IWebElement> options = this.element.FindElements(By.XPath(builder.ToString()));
+            IList<IWebElement> options = this.WrappedElement.FindElements(By.XPath(builder.ToString()));
 
             bool matched = false;
             foreach (IWebElement option in options)
@@ -293,7 +289,7 @@ namespace OpenQA.Selenium.Support.UI
             StringBuilder builder = new StringBuilder(".//option[normalize-space(.) = ");
             builder.Append(EscapeQuotes(text));
             builder.Append("]");
-            IList<IWebElement> options = this.element.FindElements(By.XPath(builder.ToString()));
+            IList<IWebElement> options = this.WrappedElement.FindElements(By.XPath(builder.ToString()));
             foreach (IWebElement option in options)
             {
                 SetSelected(option, false);
@@ -329,7 +325,7 @@ namespace OpenQA.Selenium.Support.UI
             StringBuilder builder = new StringBuilder(".//option[@value = ");
             builder.Append(EscapeQuotes(value));
             builder.Append("]");
-            IList<IWebElement> options = this.element.FindElements(By.XPath(builder.ToString()));
+            IList<IWebElement> options = this.WrappedElement.FindElements(By.XPath(builder.ToString()));
             foreach (IWebElement option in options)
             {
                 SetSelected(option, false);

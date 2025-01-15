@@ -50,13 +50,13 @@ namespace OpenQA.Selenium.Support.Extensions
 
                 MethodInfo executeMethod = driver.GetType().GetMethod("Execute", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
-                object? responseObject = executeMethod.Invoke(driver, new object[] { DriverCommand.Screenshot, null });
+                object? responseObject = executeMethod.Invoke(driver, new object?[] { DriverCommand.Screenshot, null });
                 if (responseObject is not Response screenshotResponse)
                 {
                     throw new WebDriverException($"Unexpected failure getting screenshot; response was not in the proper format: {responseObject}");
                 }
 
-                string screenshotResult = screenshotResponse.Value.ToString();
+                string screenshotResult = screenshotResponse.Value!.ToString();
                 return new Screenshot(screenshotResult);
             }
 
