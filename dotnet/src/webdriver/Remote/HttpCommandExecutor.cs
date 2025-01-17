@@ -325,7 +325,8 @@ namespace OpenQA.Selenium.Remote
 
             if (response.Value is string valueString)
             {
-                response.Value = valueString.Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
+                valueString = valueString.Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
+                response = new Response(response.SessionId, valueString, response.Status);
             }
 
             return response;
