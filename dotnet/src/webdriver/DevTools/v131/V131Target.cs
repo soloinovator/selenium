@@ -119,15 +119,12 @@ namespace OpenQA.Selenium.DevTools.V131
 
         private void OnDetachedFromTarget(object sender, DetachedFromTargetEventArgs e)
         {
-            this.OnTargetDetached(new TargetDetachedEventArgs() { SessionId = e.SessionId, TargetId = e.TargetId });
+            this.OnTargetDetached(new TargetDetachedEventArgs(e.SessionId, e.TargetId));
         }
 
         private void OnAttachedToTarget(object sender, AttachedToTargetEventArgs e)
         {
-            this.OnTargetAttached(new TargetAttachedEventArgs()
-            {
-                SessionId = e.SessionId,
-                TargetInfo = e.TargetInfo == null ? null : new TargetInfo
+            var targetInfo = e.TargetInfo == null ? null : new TargetInfo
                 {
                     BrowserContextId = e.TargetInfo.BrowserContextId,
                     IsAttached = e.TargetInfo.Attached,
@@ -136,9 +133,14 @@ namespace OpenQA.Selenium.DevTools.V131
                     Title = e.TargetInfo.Title,
                     Type = e.TargetInfo.Type,
                     Url = e.TargetInfo.Url
-                },
-                WaitingForDebugger = e.WaitingForDebugger
-            });
+            };
+
+            this.OnTargetAttached(new TargetAttachedEventArgs
+            (
+                sessionId: e.SessionId,
+                targetInfo: targetInfo,
+                waitingForDebugger: e.WaitingForDebugger
+            ));
         }
 
         internal override ICommand CreateSetAutoAttachCommand(bool waitForDebuggerOnStart)
