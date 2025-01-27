@@ -15,7 +15,8 @@
   <a href="#developing">Developing</a> •
   <a href="#testing">Testing</a> •
   <a href="#documenting">Documenting</a> •
-    <a href="#releasing">Releasing</a>
+  <a href="#releasing">Releasing</a> •
+  <a href="#license">License</a>
 </p>
 
 <br>
@@ -28,8 +29,6 @@ major web browsers.
 
 The project is made possible by volunteer contributors who've
 generously donated thousands of hours in code development and upkeep.
-
-Selenium's source code is made available under the [Apache 2.0 license](https://github.com/SeleniumHQ/selenium/blob/trunk/LICENSE).
 
 This README is for developers interested in contributing to the project.
 For people looking to get started using Selenium, please check out
@@ -525,3 +524,7 @@ If you have access to the Selenium EngFlow repository, you can have the assets b
 ```shell
 ./go all:release['--config', 'release']
 ```
+
+## License
+
+Selenium's source code is made available under the [Apache 2.0 license](https://github.com/SeleniumHQ/selenium/blob/trunk/LICENSE).
