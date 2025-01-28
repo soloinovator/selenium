@@ -17,8 +17,24 @@
 
 package org.openqa.selenium.grid.distributor;
 
-import com.google.common.collect.ImmutableSet;
+import static org.openqa.selenium.grid.data.Availability.DOWN;
+import static org.openqa.selenium.grid.data.Availability.DRAINING;
+import static org.openqa.selenium.grid.data.Availability.UP;
 
+import com.google.common.collect.ImmutableSet;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Logger;
 import org.openqa.selenium.events.EventBus;
 import org.openqa.selenium.grid.config.Config;
 import org.openqa.selenium.grid.data.Availability;
@@ -36,29 +52,12 @@ import org.openqa.selenium.internal.Debug;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.remote.SessionId;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Logger;
-
-import static org.openqa.selenium.grid.data.Availability.DOWN;
-import static org.openqa.selenium.grid.data.Availability.DRAINING;
-import static org.openqa.selenium.grid.data.Availability.UP;
-
 public class GridModel {
 
   private static final SessionId RESERVED = new SessionId("reserved");
   private static final Logger LOG = Logger.getLogger(GridModel.class.getName());
-  // How many times a node's heartbeat duration needs to be exceeded before the node is considered purgeable.
+  // How many times a node's heartbeat duration needs to be exceeded before the node is considered
+  // purgeable.
   private static final int PURGE_TIMEOUT_MULTIPLIER = 4;
   private static final int UNHEALTHY_THRESHOLD = 4;
   private final ReadWriteLock lock = new ReentrantReadWriteLock(/* fair */ true);
@@ -94,10 +93,11 @@ public class GridModel {
         // If the ID and the URI are the same, use the same
         // availability as the version we have now: we're just refreshing
         // an existing node.
-        if (next.getNodeId().equals(node.getNodeId()) && next.getExternalUri().equals(node.getExternalUri())) {
+        if (next.getNodeId().equals(node.getNodeId())
+            && next.getExternalUri().equals(node.getExternalUri())) {
           iterator.remove();
 
-          LOG.log(Debug.getDebugLogLevel(), "Refreshing node with id %s", node.getNodeId());
+          LOG.log(Debug.getDebugLogLevel(), "Refreshing node with id {0}", node.getNodeId());
           NodeStatus refreshed = rewrite(node, next.getAvailability());
           nodes.add(refreshed);
           nodePurgeTimes.put(refreshed.getNodeId(), Instant.now());
@@ -107,11 +107,16 @@ public class GridModel {
         }
 
         // If the URI is the same but NodeId is different, then the Node has restarted
-        if(!next.getNodeId().equals(node.getNodeId()) &&
-           next.getExternalUri().equals(node.getExternalUri())) {
-          LOG.info(String.format("Re-adding node with id %s and URI %s.", node.getNodeId(), node.getExternalUri()));
+        if (!next.getNodeId().equals(node.getNodeId())
+            && next.getExternalUri().equals(node.getExternalUri())) {
+          LOG.info(
+              String.format(
+                  "Re-adding node with id %s and URI %s.",
+                  node.getNodeId(), node.getExternalUri()));
 
-          events.fire(new NodeRestartedEvent(node));
+          // Send the previous state to allow cleaning up the old node related resources.
+          // Nodes are initially added in the "down" state, so the new state must be ignored.
+          events.fire(new NodeRestartedEvent(next));
           iterator.remove();
           break;
         }
@@ -120,7 +125,10 @@ public class GridModel {
         // out of the loop: we want to add it as `DOWN` until something
         // changes our mind.
         if (next.getNodeId().equals(node.getNodeId())) {
-          LOG.info(String.format("Re-adding node with id %s and URI %s.", node.getNodeId(), node.getExternalUri()));
+          LOG.info(
+              String.format(
+                  "Re-adding node with id %s and URI %s.",
+                  node.getNodeId(), node.getExternalUri()));
           iterator.remove();
           break;
         }
@@ -128,8 +136,9 @@ public class GridModel {
 
       // Nodes are initially added in the "down" state until something changes their availability
       LOG.log(
-        Debug.getDebugLogLevel(),
-        String.format("Adding node with id %s and URI %s", node.getNodeId(), node.getExternalUri()));
+          Debug.getDebugLogLevel(),
+          "Adding node with id {0} and URI {1}",
+          new Object[] {node.getNodeId(), node.getExternalUri()});
       NodeStatus refreshed = rewrite(node, DOWN);
       nodes.add(refreshed);
       nodePurgeTimes.put(refreshed.getNodeId(), Instant.now());
@@ -171,15 +180,22 @@ public class GridModel {
     }
   }
 
-  public void touch(NodeId id) {
-    Require.nonNull("Node ID", id);
+  public void touch(NodeStatus nodeStatus) {
+    Require.nonNull("Node ID", nodeStatus);
 
     Lock writeLock = lock.writeLock();
     writeLock.lock();
     try {
-      NodeStatus node = getNode(id);
+      NodeStatus node = getNode(nodeStatus.getNodeId());
       if (node != null) {
         nodePurgeTimes.put(node.getNodeId(), Instant.now());
+        // Covers the case where the Node might be DOWN in the Grid model (e.g. Node lost
+        // connectivity for a while). The Node reports itself back as UP.
+        if (node.getAvailability() != nodeStatus.getAvailability()
+            && nodeStatus.getAvailability() == UP) {
+          nodes.remove(node);
+          nodes.add(nodeStatus);
+        }
       }
     } finally {
       writeLock.unlock();
@@ -210,37 +226,49 @@ public class GridModel {
       for (NodeStatus node : nodes) {
         NodeId id = node.getNodeId();
         if (nodeHealthCount.getOrDefault(id, 0) > UNHEALTHY_THRESHOLD) {
-          LOG.info(String.format("Removing Node %s, unhealthy threshold has been reached",
-                                 node.getExternalUri()));
+          LOG.info(
+              String.format(
+                  "Removing Node %s (uri: %s), unhealthy threshold has been reached",
+                  node.getNodeId(), node.getExternalUri()));
           toRemove.add(node);
           break;
         }
 
         Instant now = Instant.now();
         Instant lastTouched = nodePurgeTimes.getOrDefault(id, Instant.now());
-        Instant lostTime = lastTouched.plus(node.getHeartbeatPeriod().multipliedBy(PURGE_TIMEOUT_MULTIPLIER / 2));
-        Instant deadTime = lastTouched.plus(node.getHeartbeatPeriod().multipliedBy(PURGE_TIMEOUT_MULTIPLIER));
+        Instant lostTime =
+            lastTouched.plus(node.getHeartbeatPeriod().multipliedBy(PURGE_TIMEOUT_MULTIPLIER / 2));
+        Instant deadTime =
+            lastTouched.plus(node.getHeartbeatPeriod().multipliedBy(PURGE_TIMEOUT_MULTIPLIER));
 
         if (node.getAvailability() == UP && lostTime.isBefore(now)) {
-          LOG.info(String.format("Switching Node %s from UP to DOWN", node.getExternalUri()));
+          LOG.info(
+              String.format(
+                  "Switching Node %s (uri: %s) from UP to DOWN",
+                  node.getNodeId(), node.getExternalUri()));
           replacements.put(node, rewrite(node, DOWN));
-        }
-        if (node.getAvailability() == DOWN && deadTime.isBefore(now)) {
-          LOG.info(String.format("Removing Node %s, DOWN for too long", node.getExternalUri()));
+          nodePurgeTimes.put(id, Instant.now());
+        } else if (node.getAvailability() == DOWN && deadTime.isBefore(now)) {
+          LOG.info(
+              String.format(
+                  "Removing Node %s (uri: %s), DOWN for too long",
+                  node.getNodeId(), node.getExternalUri()));
           toRemove.add(node);
         }
       }
 
-      replacements.forEach((before, after) -> {
-        nodes.remove(before);
-        nodes.add(after);
-      });
-      toRemove.forEach(node -> {
-        nodes.remove(node);
-        nodePurgeTimes.remove(node.getNodeId());
-        nodeHealthCount.remove(node.getNodeId());
-        events.fire(new NodeRemovedEvent(node));
-      });
+      replacements.forEach(
+          (before, after) -> {
+            nodes.remove(before);
+            nodes.add(after);
+          });
+      toRemove.forEach(
+          node -> {
+            nodes.remove(node);
+            nodePurgeTimes.remove(node.getNodeId());
+            nodeHealthCount.remove(node.getNodeId());
+            events.fire(new NodeRemovedEvent(node));
+          });
     } finally {
       writeLock.unlock();
     }
@@ -264,12 +292,10 @@ public class GridModel {
           nodePurgeTimes.put(node.getNodeId(), Instant.now());
         }
       } else {
-        LOG.info(String.format(
-          "Switching Node %s (uri: %s) from %s to %s",
-          id,
-          node.getExternalUri(),
-          node.getAvailability(),
-          availability));
+        LOG.info(
+            String.format(
+                "Switching Node %s (uri: %s) from %s to %s",
+                id, node.getExternalUri(), node.getAvailability(), availability));
 
         NodeStatus refreshed = rewrite(node, availability);
         nodes.remove(node);
@@ -287,27 +313,29 @@ public class GridModel {
     try {
       NodeStatus node = getNode(slotId.getOwningNodeId());
       if (node == null) {
-        LOG.warning(String.format("Asked to reserve slot on node %s, but unable to find node", slotId.getOwningNodeId()));
+        LOG.warning(
+            String.format(
+                "Asked to reserve slot on node %s, but unable to find node",
+                slotId.getOwningNodeId()));
         return false;
       }
 
       if (!UP.equals(node.getAvailability())) {
-        LOG.warning(String.format(
-          "Asked to reserve a slot on node %s, but node is %s",
-          slotId.getOwningNodeId(),
-          node.getAvailability()));
+        LOG.warning(
+            String.format(
+                "Asked to reserve a slot on node %s, but node is %s",
+                slotId.getOwningNodeId(), node.getAvailability()));
         return false;
       }
 
-      Optional<Slot> maybeSlot = node.getSlots().stream()
-        .filter(slot -> slotId.equals(slot.getId()))
-        .findFirst();
+      Optional<Slot> maybeSlot =
+          node.getSlots().stream().filter(slot -> slotId.equals(slot.getId())).findFirst();
 
       if (!maybeSlot.isPresent()) {
-        LOG.warning(String.format(
-          "Asked to reserve slot on node %s, but no slot with id %s found",
-          node.getNodeId(),
-          slotId));
+        LOG.warning(
+            String.format(
+                "Asked to reserve slot on node %s, but no slot with id %s found",
+                node.getNodeId(), slotId));
         return false;
       }
 
@@ -334,10 +362,7 @@ public class GridModel {
     Lock readLock = lock.readLock();
     readLock.lock();
     try {
-      return nodes.stream()
-        .filter(n -> n.getNodeId().equals(id))
-        .findFirst()
-        .orElse(null);
+      return nodes.stream().filter(n -> n.getNodeId().equals(id)).findFirst().orElse(null);
     } finally {
       readLock.unlock();
     }
@@ -345,14 +370,15 @@ public class GridModel {
 
   private NodeStatus rewrite(NodeStatus status, Availability availability) {
     return new NodeStatus(
-      status.getNodeId(),
-      status.getExternalUri(),
-      status.getMaxSessionCount(),
-      status.getSlots(),
-      availability,
-      status.getHeartbeatPeriod(),
-      status.getVersion(),
-      status.getOsInfo());
+        status.getNodeId(),
+        status.getExternalUri(),
+        status.getMaxSessionCount(),
+        status.getSlots(),
+        availability,
+        status.getHeartbeatPeriod(),
+        status.getSessionTimeout(),
+        status.getVersion(),
+        status.getOsInfo());
   }
 
   public void release(SessionId id) {
@@ -371,11 +397,8 @@ public class GridModel {
           }
 
           if (id.equals(slot.getSession().getId())) {
-            Slot released = new Slot(
-              slot.getId(),
-              slot.getStereotype(),
-              slot.getLastStarted(),
-              null);
+            Slot released =
+                new Slot(slot.getId(), slot.getStereotype(), slot.getLastStarted(), null);
             amend(node.getAvailability(), node, released);
             return;
           }
@@ -386,19 +409,25 @@ public class GridModel {
     }
   }
 
-  public void reserve(NodeStatus status, Slot slot) {
+  /**
+   * A helper to reserve a slot of a node. The writeLock must be acquired outside to ensure the view
+   * of the NodeStatus is the current state, otherwise concurrent calls to amend will work with an
+   * outdated view of slots.
+   */
+  private void reserve(NodeStatus status, Slot slot) {
     Instant now = Instant.now();
 
-    Slot reserved = new Slot(
-      slot.getId(),
-      slot.getStereotype(),
-      now,
-      new Session(
-        RESERVED,
-        status.getExternalUri(),
-        slot.getStereotype(),
-        slot.getStereotype(),
-        now));
+    Slot reserved =
+        new Slot(
+            slot.getId(),
+            slot.getStereotype(),
+            now,
+            new Session(
+                RESERVED,
+                status.getExternalUri(),
+                slot.getStereotype(),
+                slot.getStereotype(),
+                now));
 
     amend(UP, status, reserved);
   }
@@ -411,13 +440,14 @@ public class GridModel {
     try {
       NodeStatus node = getNode(slotId.getOwningNodeId());
       if (node == null) {
-        LOG.warning("Grid model and reality have diverged. Unable to find node " + slotId.getOwningNodeId());
+        LOG.warning(
+            "Grid model and reality have diverged. Unable to find node "
+                + slotId.getOwningNodeId());
         return;
       }
 
-      Optional<Slot> maybeSlot = node.getSlots().stream()
-        .filter(slot -> slotId.equals(slot.getId()))
-        .findFirst();
+      Optional<Slot> maybeSlot =
+          node.getSlots().stream().filter(slot -> slotId.equals(slot.getId())).findFirst();
 
       if (!maybeSlot.isPresent()) {
         LOG.warning("Grid model and reality have diverged. Unable to find slot " + slotId);
@@ -433,15 +463,17 @@ public class GridModel {
 
       if (!RESERVED.equals(maybeSession.getId())) {
         LOG.warning(
-          "Grid model and reality have diverged. Slot has session and is not reserved. " + slotId);
+            "Grid model and reality have diverged. Slot has session and is not reserved. "
+                + slotId);
         return;
       }
 
-      Slot updated = new Slot(
-        slot.getId(),
-        slot.getStereotype(),
-        session == null ? slot.getLastStarted() : session.getStartTime(),
-        session);
+      Slot updated =
+          new Slot(
+              slot.getId(),
+              slot.getStereotype(),
+              session == null ? slot.getLastStarted() : session.getStartTime(),
+              session);
 
       amend(node.getAvailability(), node, updated);
     } finally {
@@ -472,6 +504,11 @@ public class GridModel {
     }
   }
 
+  /**
+   * A helper to replace the availability and a slot of a node. The writeLock must be acquired
+   * outside to ensure the view of the NodeStatus is the current state, otherwise concurrent calls
+   * to amend will work with an outdated view of slots.
+   */
   private void amend(Availability availability, NodeStatus status, Slot slot) {
     Set<Slot> newSlots = new HashSet<>(status.getSlots());
     newSlots.removeIf(s -> s.getId().equals(slot.getId()));
@@ -479,21 +516,17 @@ public class GridModel {
 
     NodeStatus node = getNode(status.getNodeId());
 
-    Lock writeLock = lock.writeLock();
-    writeLock.lock();
-    try {
-      nodes.remove(node);
-      nodes.add(new NodeStatus(
-        status.getNodeId(),
-        status.getExternalUri(),
-        status.getMaxSessionCount(),
-        newSlots,
-        availability,
-        status.getHeartbeatPeriod(),
-        status.getVersion(),
-        status.getOsInfo()));
-    } finally {
-      writeLock.unlock();
-    }
+    nodes.remove(node);
+    nodes.add(
+        new NodeStatus(
+            status.getNodeId(),
+            status.getExternalUri(),
+            status.getMaxSessionCount(),
+            newSlots,
+            availability,
+            status.getHeartbeatPeriod(),
+            status.getSessionTimeout(),
+            status.getVersion(),
+            status.getOsInfo()));
   }
 }

@@ -17,6 +17,13 @@
 
 package org.openqa.selenium.grid.node.relay;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import java.io.StringReader;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.grid.config.Config;
@@ -28,106 +35,146 @@ import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.tracing.DefaultTestTracer;
 import org.openqa.selenium.remote.tracing.Tracer;
 
-import java.io.StringReader;
-import java.time.Duration;
-import java.util.Collection;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-
 @SuppressWarnings("DuplicatedCode")
-public class RelayOptionsTest {
+class RelayOptionsTest {
 
   @Test
-  public void basicConfigurationIsParsedSuccessfully() {
-    String[] rawConfig = new String[]{
-      "[relay]",
-      "url = 'http://localhost:9999'",
-      "configs = [\"2\", '{\"browserName\": \"chrome\"}']",
-      };
+  void basicConfigurationIsParsedSuccessfully() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "url = 'http://localhost:9999'",
+          "configs = [\"2\", '{\"browserName\": \"chrome\"}']",
+        };
     Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
     NetworkOptions networkOptions = new NetworkOptions(config);
     Tracer tracer = DefaultTestTracer.createTracer();
     HttpClient.Factory httpClientFactory = networkOptions.getHttpClientFactory(tracer);
     RelayOptions relayOptions = new RelayOptions(config);
-    Map<Capabilities, Collection<SessionFactory>>
-      sessionFactories = relayOptions.getSessionFactories(
-      tracer,
-      httpClientFactory,
-      Duration.ofSeconds(300));
+    Map<Capabilities, Collection<SessionFactory>> sessionFactories =
+        relayOptions.getSessionFactories(tracer, httpClientFactory, Duration.ofSeconds(300));
 
-    Capabilities chrome = sessionFactories
-      .keySet()
-      .stream()
-      .filter(capabilities -> "chrome".equals(capabilities.getBrowserName()))
-      .findFirst()
-      .orElseThrow(() -> new AssertionError("No value returned"));
+    Capabilities chrome =
+        sessionFactories.keySet().stream()
+            .filter(capabilities -> "chrome".equals(capabilities.getBrowserName()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("No value returned"));
 
     assertThat(sessionFactories.get(chrome).size()).isEqualTo(2);
     assertThat(relayOptions.getServiceUri().toString()).isEqualTo("http://localhost:9999");
   }
 
   @Test
-  public void hostAndPortAreParsedSuccessfully() {
-    String[] rawConfig = new String[]{
-      "[relay]",
-      "host = '127.0.0.1'",
-      "port = '9999'",
-      "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
-      };
+  void hostAndPortAreParsedSuccessfully() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '9999'",
+          "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
+        };
     Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
     RelayOptions relayOptions = new RelayOptions(config);
     assertThat(relayOptions.getServiceUri().toString()).isEqualTo("http://127.0.0.1:9999");
   }
 
   @Test
-  public void statusUrlIsParsedSuccessfully() {
-    String[] rawConfig = new String[]{
-      "[relay]",
-      "host = '127.0.0.1'",
-      "port = '8888'",
-      "status-endpoint = '/statusEndpoint'",
-      "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
-      };
+  void statusUrlIsParsedSuccessfully() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '8888'",
+          "status-endpoint = '/statusEndpoint'",
+          "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
+        };
     Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
     RelayOptions relayOptions = new RelayOptions(config);
     assertThat(relayOptions.getServiceUri().toString()).isEqualTo("http://127.0.0.1:8888");
     assertThat(relayOptions.getServiceStatusUri().toString())
-      .isEqualTo("http://127.0.0.1:8888/statusEndpoint");
+        .isEqualTo("http://127.0.0.1:8888/statusEndpoint");
   }
 
   @Test
-  public void missingConfigsThrowsConfigException() {
-    String[] rawConfig = new String[]{
-      "[relay]",
-      "host = '127.0.0.1'",
-      "port = '9999'",
-      };
+  void protocolVersionIsParsedSuccessfully() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '8888'",
+          "status-endpoint = '/statusEndpoint'",
+          "protocol-version = 'HTTP/1.1'",
+          "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
+        };
+    Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
+    RelayOptions relayOptions = new RelayOptions(config);
+    assertThat(relayOptions.getServiceProtocolVersion()).isEqualTo("HTTP_1_1");
+    rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '8888'",
+          "status-endpoint = '/statusEndpoint'",
+          "protocol-version = 'HTTP_1_1'",
+          "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
+        };
+    config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
+    relayOptions = new RelayOptions(config);
+    assertThat(relayOptions.getServiceProtocolVersion()).isEqualTo("HTTP_1_1");
+  }
+
+  @Test
+  void protocolVersionThrowsConfigException() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '8888'",
+          "status-endpoint = '/statusEndpoint'",
+          "protocol-version = 'HTTP/0.9'",
+          "configs = [\"5\", '{\"browserName\": \"firefox\"}']",
+        };
+    Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
+    RelayOptions relayOptions = new RelayOptions(config);
+    assertThatExceptionOfType(ConfigException.class)
+        .isThrownBy(relayOptions::getServiceProtocolVersion)
+        .withMessageContaining("Unsupported protocol version provided: HTTP/0.9");
+  }
+
+  @Test
+  void missingConfigsThrowsConfigException() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]", "host = '127.0.0.1'", "port = '9999'",
+        };
     Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
     NetworkOptions networkOptions = new NetworkOptions(config);
     Tracer tracer = DefaultTestTracer.createTracer();
     HttpClient.Factory httpClientFactory = networkOptions.getHttpClientFactory(tracer);
     assertThatExceptionOfType(ConfigException.class)
-      .isThrownBy(() -> new RelayOptions(config)
-        .getSessionFactories(tracer, httpClientFactory, Duration.ofSeconds(300)));
+        .isThrownBy(
+            () ->
+                new RelayOptions(config)
+                    .getSessionFactories(tracer, httpClientFactory, Duration.ofSeconds(300)));
   }
 
   @Test
-  public void incompleteConfigsThrowsConfigException() {
-    String[] rawConfig = new String[]{
-      "[relay]",
-      "host = '127.0.0.1'",
-      "port = '9999'",
-      "configs = ['{\"browserName\": \"firefox\"}']",
-      };
+  void incompleteConfigsThrowsConfigException() {
+    String[] rawConfig =
+        new String[] {
+          "[relay]",
+          "host = '127.0.0.1'",
+          "port = '9999'",
+          "configs = ['{\"browserName\": \"firefox\"}']",
+        };
     Config config = new TomlConfig(new StringReader(String.join("\n", rawConfig)));
     NetworkOptions networkOptions = new NetworkOptions(config);
     Tracer tracer = DefaultTestTracer.createTracer();
     HttpClient.Factory httpClientFactory = networkOptions.getHttpClientFactory(tracer);
     assertThatExceptionOfType(ConfigException.class)
-      .isThrownBy(() -> new RelayOptions(config)
-        .getSessionFactories(tracer, httpClientFactory, Duration.ofSeconds(300)));
+        .isThrownBy(
+            () ->
+                new RelayOptions(config)
+                    .getSessionFactories(tracer, httpClientFactory, Duration.ofSeconds(300)));
   }
-
 }

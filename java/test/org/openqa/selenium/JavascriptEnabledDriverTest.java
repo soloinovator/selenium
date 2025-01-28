@@ -17,13 +17,6 @@
 
 package org.openqa.selenium;
 
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.interactions.Locatable;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.testing.JupiterTestBase;
-import org.openqa.selenium.testing.NoDriverAfterTest;
-import org.openqa.selenium.testing.NotYetImplemented;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.openqa.selenium.WaitingConditions.elementTextToEqual;
@@ -32,10 +25,17 @@ import static org.openqa.selenium.WaitingConditions.windowToBeSwitchedToWithName
 import static org.openqa.selenium.support.ui.ExpectedConditions.titleIs;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
-public class JavascriptEnabledDriverTest extends JupiterTestBase {
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.interactions.Locatable;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.testing.JupiterTestBase;
+import org.openqa.selenium.testing.NoDriverAfterTest;
+import org.openqa.selenium.testing.NotYetImplemented;
+
+class JavascriptEnabledDriverTest extends JupiterTestBase {
 
   @Test
-  public void testDocumentShouldReflectLatestTitle() {
+  void testDocumentShouldReflectLatestTitle() {
     driver.get(pages.javascriptPage);
 
     assertThat(driver.getTitle()).isEqualTo("Testing Javascript");
@@ -61,7 +61,7 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldWaitForLoadsToCompleteAfterJavascriptCausesANewPageToLoad() {
+  void testShouldWaitForLoadsToCompleteAfterJavascriptCausesANewPageToLoad() {
     driver.get(pages.formPage);
 
     driver.findElement(By.id("changeme")).click();
@@ -71,7 +71,7 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToFindElementAfterJavascriptCausesANewPageToLoad() {
+  void testShouldBeAbleToFindElementAfterJavascriptCausesANewPageToLoad() {
     driver.get(pages.formPage);
 
     driver.findElement(By.id("changeme")).click();
@@ -119,7 +119,7 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
   }
 
   @Test
-  public void testIssue80ClickShouldGenerateClickEvent() {
+  void testIssue80ClickShouldGenerateClickEvent() {
     driver.get(pages.javascriptPage);
     WebElement element = driver.findElement(By.id("clickField"));
     assertThat(element.getAttribute("value")).isEqualTo("Hello");
@@ -143,7 +143,7 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
   }
 
   @Test
-  public void testIfNoElementHasFocusTheActiveElementIsTheBody() {
+  void testIfNoElementHasFocusTheActiveElementIsTheBody() {
     driver.get(pages.simpleTestPage);
 
     WebElement element = driver.switchTo().activeElement();
@@ -167,15 +167,14 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
 
     // I weep.
     assertThat(driver.findElement(By.id("result")).getText().trim())
-        .isIn("focus change blur focus blur", "focus blur change focus blur",
-              "focus blur change focus blur change", "focus change blur focus change blur");
+        .isIn(
+            "focus change blur focus blur", "focus blur change focus blur",
+            "focus blur change focus blur change", "focus change blur focus change blur");
   }
 
-  /**
-   * If the click handler throws an exception, the firefox driver freezes. This is suboptimal.
-   */
+  /** If the click handler throws an exception, the firefox driver freezes. This is suboptimal. */
   @Test
-  public void testShouldBeAbleToClickIfEvenSomethingHorribleHappens() {
+  void testShouldBeAbleToClickIfEvenSomethingHorribleHappens() {
     driver.get(pages.javascriptPage);
 
     driver.findElement(By.id("error")).click();
@@ -186,7 +185,7 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToGetTheLocationOfAnElement() {
+  void testShouldBeAbleToGetTheLocationOfAnElement() {
     assumeTrue(driver instanceof JavascriptExecutor);
 
     driver.get(pages.javascriptPage);
@@ -202,7 +201,6 @@ public class JavascriptEnabledDriverTest extends JupiterTestBase {
     // Element's Y coordinates can be 0, as the element is scrolled right to the top of the window.
     assertThat(point.getY()).as("Y coordinate").isGreaterThanOrEqualTo(0);
   }
-
 
   /*
    * There's a weird issue with this test, which means that I've added the needs fresh driver

@@ -17,13 +17,12 @@
 
 package org.openqa.selenium.testing.drivers;
 
+import java.util.function.Supplier;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 
-import java.util.function.Supplier;
-
-public class TestInternetExplorerSupplier implements Supplier<WebDriver> {
-  private Capabilities caps;
+class TestInternetExplorerSupplier implements Supplier<WebDriver> {
+  private final Capabilities caps;
 
   public TestInternetExplorerSupplier(Capabilities caps) {
     this.caps = caps;

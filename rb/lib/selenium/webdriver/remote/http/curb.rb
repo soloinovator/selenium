@@ -22,7 +22,6 @@ require 'curb'
 module Selenium
   module WebDriver
     module Remote
-
       module Http
         #
         # An alternative to the default Net::HTTP client.
@@ -38,6 +37,12 @@ module Selenium
         #
 
         class Curb < Common
+          attr_accessor :timeout
+
+          def initialize(timeout: nil)
+            @timeout = timeout
+            super()
+          end
 
           def quit_errors
             [Curl::Err::RecvError] + super
@@ -55,7 +60,7 @@ module Selenium
             client.headers = headers
 
             # http://github.com/taf2/curb/issues/issue/33
-            client.head   = false
+            client.head = false
             client.delete = false
 
             case verb
@@ -82,11 +87,10 @@ module Selenium
             @client ||= begin
               c = Curl::Easy.new
 
-              c.max_redirects   = MAX_REDIRECTS
+              c.max_redirects = MAX_REDIRECTS
               c.follow_location = true
-              c.timeout         = @timeout if @timeout
-              c.verbose         = WebDriver.logger.info?
-
+              c.timeout = timeout if timeout
+              c.verbose = WebDriver.logger.debug?
               c
             end
           end

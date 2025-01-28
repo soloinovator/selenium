@@ -20,46 +20,44 @@ package org.openqa.selenium.support.ui;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-
 import java.time.Clock;
 import java.time.Duration;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class SlowLoadableComponentTest {
+class SlowLoadableComponentTest {
 
   @Test
-  public void testShouldDoNothingIfComponentIsAlreadyLoaded() {
+  void testShouldDoNothingIfComponentIsAlreadyLoaded() {
     new DetonatingSlowLoader().get();
   }
 
   @Test
-  public void testShouldCauseTheLoadMethodToBeCalledIfTheComponentIsNotAlreadyLoaded() {
+  void testShouldCauseTheLoadMethodToBeCalledIfTheComponentIsNotAlreadyLoaded() {
     int numberOfTimesThroughLoop = 1;
-    SlowLoading slowLoading = new SlowLoading(
-        Clock.systemDefaultZone(), 1, numberOfTimesThroughLoop).get();
+    SlowLoading slowLoading =
+        new SlowLoading(Clock.systemDefaultZone(), 1, numberOfTimesThroughLoop).get();
 
     assertThat(slowLoading.getLoopCount()).isEqualTo(numberOfTimesThroughLoop);
   }
 
   @Test
-  public void testTheLoadMethodShouldOnlyBeCalledOnceIfTheComponentTakesALongTimeToLoad() {
+  void testTheLoadMethodShouldOnlyBeCalledOnceIfTheComponentTakesALongTimeToLoad() {
     new OnlyOneLoad(Clock.systemDefaultZone(), 5, 5).get();
   }
 
   @Test
-  public void testShouldThrowAnErrorIfCallingLoadDoesNotCauseTheComponentToLoadBeforeTimeout() {
+  void testShouldThrowAnErrorIfCallingLoadDoesNotCauseTheComponentToLoadBeforeTimeout() {
     TickingClock clock = new TickingClock();
     assertThatExceptionOfType(Error.class).isThrownBy(() -> new BasicSlowLoader(clock, 2).get());
   }
 
   @Test
-  public void testShouldCancelLoadingIfAnErrorIsDetected() {
+  void testShouldCancelLoadingIfAnErrorIsDetected() {
     HasError error = new HasError();
     assertThatExceptionOfType(CustomError.class).isThrownBy(error::get);
   }
-
 
   private static class DetonatingSlowLoader extends SlowLoadableComponent<DetonatingSlowLoader> {
 
@@ -80,7 +78,7 @@ public class SlowLoadableComponentTest {
 
   private static class SlowLoading extends SlowLoadableComponent<SlowLoading> {
 
-    private int counts;
+    private final int counts;
     private long loopCount;
 
     public SlowLoading(Clock clock, int timeOutInSeconds, int counts) {
@@ -169,7 +167,5 @@ public class SlowLoadableComponentTest {
     }
   }
 
-  private static class CustomError extends Error {
-
-  }
+  private static class CustomError extends Error {}
 }

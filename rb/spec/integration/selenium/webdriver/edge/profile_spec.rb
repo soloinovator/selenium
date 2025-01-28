@@ -22,8 +22,8 @@ require_relative '../spec_helper'
 module Selenium
   module WebDriver
     module Edge
-      describe Profile, exclusive: {browser: :edge} do
-        let(:profile) { Profile.new }
+      describe Profile, exclusive: [{bidi: false, reason: 'Not yet implemented with BiDi'}, {browser: :edge}] do
+        let(:profile) { described_class.new }
 
         it 'adds an extension' do
           ext_path = '/some/path.crx'

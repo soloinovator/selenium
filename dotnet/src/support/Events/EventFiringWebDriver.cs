@@ -1,26 +1,27 @@
-// <copyright file="EventFiringWebDriver.cs" company="WebDriver Committers">
+// <copyright file="EventFiringWebDriver.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
-using OpenQA.Selenium.Internal;
+using System.Threading.Tasks;
 
 namespace OpenQA.Selenium.Support.Events
 {
@@ -30,99 +31,105 @@ namespace OpenQA.Selenium.Support.Events
     /// </summary>
     public class EventFiringWebDriver : IWebDriver, IJavaScriptExecutor, ITakesScreenshot, IWrapsDriver
     {
-        private IWebDriver driver;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="EventFiringWebDriver"/> class.
         /// </summary>
         /// <param name="parentDriver">The driver to register events for.</param>
+        /// <exception cref="ArgumentNullException">If <paramref name="parentDriver"/> is <see langword="null"/>.</exception>
         public EventFiringWebDriver(IWebDriver parentDriver)
         {
-            this.driver = parentDriver;
+            this.WrappedDriver = parentDriver ?? throw new ArgumentNullException(nameof(parentDriver));
         }
 
         /// <summary>
         /// Fires before the driver begins navigation.
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> Navigating;
+        public event EventHandler<WebDriverNavigationEventArgs>? Navigating;
 
         /// <summary>
         /// Fires after the driver completes navigation
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> Navigated;
+        public event EventHandler<WebDriverNavigationEventArgs>? Navigated;
 
         /// <summary>
         /// Fires before the driver begins navigation back one entry in the browser history list.
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> NavigatingBack;
+        public event EventHandler<WebDriverNavigationEventArgs>? NavigatingBack;
 
         /// <summary>
         /// Fires after the driver completes navigation back one entry in the browser history list.
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> NavigatedBack;
+        public event EventHandler<WebDriverNavigationEventArgs>? NavigatedBack;
 
         /// <summary>
         /// Fires before the driver begins navigation forward one entry in the browser history list.
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> NavigatingForward;
+        public event EventHandler<WebDriverNavigationEventArgs>? NavigatingForward;
 
         /// <summary>
         /// Fires after the driver completes navigation forward one entry in the browser history list.
         /// </summary>
-        public event EventHandler<WebDriverNavigationEventArgs> NavigatedForward;
+        public event EventHandler<WebDriverNavigationEventArgs>? NavigatedForward;
 
         /// <summary>
         /// Fires before the driver clicks on an element.
         /// </summary>
-        public event EventHandler<WebElementEventArgs> ElementClicking;
+        public event EventHandler<WebElementEventArgs>? ElementClicking;
 
         /// <summary>
         /// Fires after the driver has clicked on an element.
         /// </summary>
-        public event EventHandler<WebElementEventArgs> ElementClicked;
+        public event EventHandler<WebElementEventArgs>? ElementClicked;
 
         /// <summary>
         /// Fires before the driver changes the value of an element via Clear(), SendKeys() or Toggle().
         /// </summary>
-        public event EventHandler<WebElementValueEventArgs> ElementValueChanging;
+        public event EventHandler<WebElementValueEventArgs>? ElementValueChanging;
 
         /// <summary>
         /// Fires after the driver has changed the value of an element via Clear(), SendKeys() or Toggle().
         /// </summary>
-        public event EventHandler<WebElementValueEventArgs> ElementValueChanged;
+        public event EventHandler<WebElementValueEventArgs>? ElementValueChanged;
 
         /// <summary>
         /// Fires before the driver starts to find an element.
         /// </summary>
-        public event EventHandler<FindElementEventArgs> FindingElement;
+        public event EventHandler<FindElementEventArgs>? FindingElement;
 
         /// <summary>
         /// Fires after the driver completes finding an element.
         /// </summary>
-        public event EventHandler<FindElementEventArgs> FindElementCompleted;
+        public event EventHandler<FindElementEventArgs>? FindElementCompleted;
+
+        /// <summary>
+        /// Fires before the driver starts to get a shadow root.
+        /// </summary>
+        public event EventHandler<GetShadowRootEventArgs>? GettingShadowRoot;
+
+        /// <summary>
+        /// Fires after the driver completes getting a shadow root.
+        /// </summary>
+        public event EventHandler<GetShadowRootEventArgs>? GetShadowRootCompleted;
 
         /// <summary>
         /// Fires before a script is executed.
         /// </summary>
-        public event EventHandler<WebDriverScriptEventArgs> ScriptExecuting;
+        public event EventHandler<WebDriverScriptEventArgs>? ScriptExecuting;
 
         /// <summary>
         /// Fires after a script is executed.
         /// </summary>
-        public event EventHandler<WebDriverScriptEventArgs> ScriptExecuted;
+        public event EventHandler<WebDriverScriptEventArgs>? ScriptExecuted;
 
         /// <summary>
         /// Fires when an exception is thrown.
         /// </summary>
-        public event EventHandler<WebDriverExceptionEventArgs> ExceptionThrown;
+        public event EventHandler<WebDriverExceptionEventArgs>? ExceptionThrown;
 
         /// <summary>
         /// Gets the <see cref="IWebDriver"/> wrapped by this EventsFiringWebDriver instance.
         /// </summary>
-        public IWebDriver WrappedDriver
-        {
-            get { return this.driver; }
-        }
+        public IWebDriver WrappedDriver { get; }
 
         /// <summary>
         /// Gets or sets the URL the browser is currently displaying.
@@ -142,14 +149,14 @@ namespace OpenQA.Selenium.Support.Events
         {
             get
             {
-                string url = string.Empty;
+                string url;
                 try
                 {
-                    url = this.driver.Url;
+                    url = this.WrappedDriver.Url;
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
 
@@ -160,14 +167,14 @@ namespace OpenQA.Selenium.Support.Events
             {
                 try
                 {
-                    WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.driver, value);
+                    WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.WrappedDriver, value);
                     this.OnNavigating(e);
-                    this.driver.Url = value;
+                    this.WrappedDriver.Url = value;
                     this.OnNavigated(e);
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
             }
@@ -180,14 +187,14 @@ namespace OpenQA.Selenium.Support.Events
         {
             get
             {
-                string title = string.Empty;
+                string title;
                 try
                 {
-                    title = this.driver.Title;
+                    title = this.WrappedDriver.Title;
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
 
@@ -211,14 +218,14 @@ namespace OpenQA.Selenium.Support.Events
         {
             get
             {
-                string source = string.Empty;
+                string source;
                 try
                 {
-                    source = this.driver.PageSource;
+                    source = this.WrappedDriver.PageSource;
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
 
@@ -234,14 +241,14 @@ namespace OpenQA.Selenium.Support.Events
         {
             get
             {
-                string handle = string.Empty;
+                string handle;
                 try
                 {
-                    handle = this.driver.CurrentWindowHandle;
+                    handle = this.WrappedDriver.CurrentWindowHandle;
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
 
@@ -256,14 +263,14 @@ namespace OpenQA.Selenium.Support.Events
         {
             get
             {
-                ReadOnlyCollection<string> handles = null;
+                ReadOnlyCollection<string> handles;
                 try
                 {
-                    handles = this.driver.WindowHandles;
+                    handles = this.WrappedDriver.WindowHandles;
                 }
                 catch (Exception ex)
                 {
-                    this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                    this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                     throw;
                 }
 
@@ -278,11 +285,11 @@ namespace OpenQA.Selenium.Support.Events
         {
             try
             {
-                this.driver.Close();
+                this.WrappedDriver.Close();
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
         }
@@ -294,11 +301,11 @@ namespace OpenQA.Selenium.Support.Events
         {
             try
             {
-                this.driver.Quit();
+                this.WrappedDriver.Quit();
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
         }
@@ -341,18 +348,18 @@ namespace OpenQA.Selenium.Support.Events
         /// <exception cref="NoSuchElementException">If no element matches the criteria.</exception>
         public IWebElement FindElement(By by)
         {
-            IWebElement wrappedElement = null;
+            IWebElement wrappedElement;
             try
             {
-                FindElementEventArgs e = new FindElementEventArgs(this.driver, by);
+                FindElementEventArgs e = new FindElementEventArgs(this.WrappedDriver, by);
                 this.OnFindingElement(e);
-                IWebElement element = this.driver.FindElement(by);
+                IWebElement element = this.WrappedDriver.FindElement(by);
                 this.OnFindElementCompleted(e);
                 wrappedElement = this.WrapElement(element);
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
 
@@ -368,26 +375,27 @@ namespace OpenQA.Selenium.Support.Events
         /// matching the current criteria, or an empty list if nothing matches.</returns>
         public ReadOnlyCollection<IWebElement> FindElements(By by)
         {
-            List<IWebElement> wrappedElementList = new List<IWebElement>();
             try
             {
-                FindElementEventArgs e = new FindElementEventArgs(this.driver, by);
+                FindElementEventArgs e = new FindElementEventArgs(this.WrappedDriver, by);
                 this.OnFindingElement(e);
-                ReadOnlyCollection<IWebElement> elements = this.driver.FindElements(by);
+                ReadOnlyCollection<IWebElement> elements = this.WrappedDriver.FindElements(by);
                 this.OnFindElementCompleted(e);
+
+                List<IWebElement> wrappedElementList = new List<IWebElement>(elements.Count);
                 foreach (IWebElement element in elements)
                 {
                     IWebElement wrappedElement = this.WrapElement(element);
                     wrappedElementList.Add(wrappedElement);
                 }
+                return wrappedElementList.AsReadOnly();
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
 
-            return wrappedElementList.AsReadOnly();
         }
 
         /// <summary>
@@ -407,7 +415,7 @@ namespace OpenQA.Selenium.Support.Events
         /// <returns>The value returned by the script.</returns>
         /// <remarks>
         /// <para>
-        /// The <see cref="ExecuteScript"/>method executes JavaScript in the context of
+        /// The ExecuteScript method executes JavaScript in the context of
         /// the currently selected frame or window. This means that "document" will refer
         /// to the current document. If the script has a return value, then the following
         /// steps will be taken:
@@ -434,26 +442,26 @@ namespace OpenQA.Selenium.Support.Events
         /// variable, as if the function were called via "Function.apply"
         /// </para>
         /// </remarks>
-        public object ExecuteScript(string script, params object[] args)
+        public object ExecuteScript(string script, params object?[] args)
         {
-            IJavaScriptExecutor javascriptDriver = this.driver as IJavaScriptExecutor;
-            if (javascriptDriver == null)
+            if (this.WrappedDriver is not IJavaScriptExecutor javascriptDriver)
             {
                 throw new NotSupportedException("Underlying driver instance does not support executing JavaScript");
             }
 
-            object scriptResult = null;
+            object scriptResult;
             try
             {
-                object[] unwrappedArgs = UnwrapElementArguments(args);
-                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.driver, script);
+                object?[] unwrappedArgs = UnwrapElementArguments(args);
+
+                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.WrappedDriver, script);
                 this.OnScriptExecuting(e);
                 scriptResult = javascriptDriver.ExecuteScript(script, unwrappedArgs);
                 this.OnScriptExecuted(e);
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
 
@@ -467,9 +475,10 @@ namespace OpenQA.Selenium.Support.Events
         /// <param name="script">A <see cref="PinnedScript"/> object containing the code to execute.</param>
         /// <param name="args">The arguments to the script.</param>
         /// <returns>The value returned by the script.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="script"/> is <see langword="null"/>.</exception>
         /// <remarks>
         /// <para>
-        /// The <see cref="ExecuteScript"/>method executes JavaScript in the context of
+        /// The ExecuteScript method executes JavaScript in the context of
         /// the currently selected frame or window. This means that "document" will refer
         /// to the current document. If the script has a return value, then the following
         /// steps will be taken:
@@ -496,26 +505,31 @@ namespace OpenQA.Selenium.Support.Events
         /// variable, as if the function were called via "Function.apply"
         /// </para>
         /// </remarks>
-        public object ExecuteScript(PinnedScript script, params object[] args)
+        public object ExecuteScript(PinnedScript script, params object?[] args)
         {
-            IJavaScriptExecutor javascriptDriver = this.driver as IJavaScriptExecutor;
-            if (javascriptDriver == null)
+            if (script == null)
+            {
+                throw new ArgumentNullException(nameof(script));
+            }
+
+            if (this.WrappedDriver is not IJavaScriptExecutor javascriptDriver)
             {
                 throw new NotSupportedException("Underlying driver instance does not support executing JavaScript");
             }
 
-            object scriptResult = null;
+            object scriptResult;
             try
             {
-                object[] unwrappedArgs = UnwrapElementArguments(args);
-                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.driver, script.Source);
+                object?[] unwrappedArgs = UnwrapElementArguments(args);
+
+                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.WrappedDriver, script.Source);
                 this.OnScriptExecuting(e);
                 scriptResult = javascriptDriver.ExecuteScript(script, unwrappedArgs);
                 this.OnScriptExecuted(e);
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
 
@@ -528,26 +542,26 @@ namespace OpenQA.Selenium.Support.Events
         /// <param name="script">The JavaScript code to execute.</param>
         /// <param name="args">The arguments to the script.</param>
         /// <returns>The value returned by the script.</returns>
-        public object ExecuteAsyncScript(string script, params object[] args)
+        public object ExecuteAsyncScript(string script, params object?[] args)
         {
-            object scriptResult = null;
-            IJavaScriptExecutor javascriptDriver = this.driver as IJavaScriptExecutor;
-            if (javascriptDriver == null)
+            if (this.WrappedDriver is not IJavaScriptExecutor javascriptDriver)
             {
                 throw new NotSupportedException("Underlying driver instance does not support executing JavaScript");
             }
 
+            object scriptResult;
             try
             {
-                object[] unwrappedArgs = UnwrapElementArguments(args);
-                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.driver, script);
+                object?[] unwrappedArgs = UnwrapElementArguments(args);
+
+                WebDriverScriptEventArgs e = new WebDriverScriptEventArgs(this.WrappedDriver, script);
                 this.OnScriptExecuting(e);
                 scriptResult = javascriptDriver.ExecuteAsyncScript(script, unwrappedArgs);
                 this.OnScriptExecuted(e);
             }
             catch (Exception ex)
             {
-                this.OnException(new WebDriverExceptionEventArgs(this.driver, ex));
+                this.OnException(new WebDriverExceptionEventArgs(this.WrappedDriver, ex));
                 throw;
             }
 
@@ -560,15 +574,12 @@ namespace OpenQA.Selenium.Support.Events
         /// <returns>A <see cref="Screenshot"/> object containing the image.</returns>
         public Screenshot GetScreenshot()
         {
-            ITakesScreenshot screenshotDriver = this.driver as ITakesScreenshot;
-            if (this.driver == null)
+            if (this.WrappedDriver is not ITakesScreenshot screenshotDriver)
             {
                 throw new NotSupportedException("Underlying driver instance does not support taking screenshots");
             }
 
-            Screenshot screen = null;
-            screen = screenshotDriver.GetScreenshot();
-            return screen;
+            return screenshotDriver.GetScreenshot();
         }
 
         /// <summary>
@@ -580,7 +591,7 @@ namespace OpenQA.Selenium.Support.Events
         {
             if (disposing)
             {
-                this.driver.Dispose();
+                this.WrappedDriver.Dispose();
             }
         }
 
@@ -729,6 +740,30 @@ namespace OpenQA.Selenium.Support.Events
         }
 
         /// <summary>
+        /// Raises the <see cref="OnGettingShadowRoot"/> event.
+        /// </summary>
+        /// <param name="e">A <see cref="GetShadowRootEventArgs"/> that contains the event data.</param>
+        protected virtual void OnGettingShadowRoot(GetShadowRootEventArgs e)
+        {
+            if (this.GettingShadowRoot != null)
+            {
+                this.GettingShadowRoot(this, e);
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="OnGetShadowRootCompleted"/> event.
+        /// </summary>
+        /// <param name="e">A <see cref="GetShadowRootEventArgs"/> that contains the event data.</param>
+        protected virtual void OnGetShadowRootCompleted(GetShadowRootEventArgs e)
+        {
+            if (this.GetShadowRootCompleted != null)
+            {
+                this.GetShadowRootCompleted(this, e);
+            }
+        }
+
+        /// <summary>
         /// Raises the <see cref="ScriptExecuting"/> event.
         /// </summary>
         /// <param name="e">A <see cref="WebDriverScriptEventArgs"/> that contains the event data.</param>
@@ -764,14 +799,18 @@ namespace OpenQA.Selenium.Support.Events
             }
         }
 
-        private static object[] UnwrapElementArguments(object[] args)
+        private static object?[] UnwrapElementArguments(object?[] args)
         {
-            // Walk the args: the various drivers expect unwrapped versions of the elements
-            List<object> unwrappedArgs = new List<object>();
-            foreach (object arg in args)
+            if (args is null)
             {
-                IWrapsElement eventElementArg = arg as IWrapsElement;
-                if (eventElementArg != null)
+                throw new InvalidOperationException("Cannot unwrap null args");
+            }
+
+            // Walk the args: the various drivers expect unwrapped versions of the elements
+            List<object?> unwrappedArgs = new List<object?>(args.Length);
+            foreach (object? arg in args)
+            {
+                if (arg is IWrapsElement eventElementArg)
                 {
                     unwrappedArgs.Add(eventElementArg.WrappedElement);
                 }
@@ -786,8 +825,7 @@ namespace OpenQA.Selenium.Support.Events
 
         private IWebElement WrapElement(IWebElement underlyingElement)
         {
-            IWebElement wrappedElement = new EventFiringWebElement(this, underlyingElement);
-            return wrappedElement;
+            return new EventFiringWebElement(this, underlyingElement);
         }
 
         /// <summary>
@@ -795,8 +833,8 @@ namespace OpenQA.Selenium.Support.Events
         /// </summary>
         private class EventFiringNavigation : INavigation
         {
-            private EventFiringWebDriver parentDriver;
-            private INavigation wrappedNavigation;
+            private readonly EventFiringWebDriver parentDriver;
+            private readonly INavigation wrappedNavigation;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="EventFiringNavigation"/> class
@@ -804,7 +842,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <param name="driver">Driver in use</param>
             public EventFiringNavigation(EventFiringWebDriver driver)
             {
-                this.parentDriver = driver;
+                this.parentDriver = driver ?? throw new ArgumentNullException(nameof(driver));
                 this.wrappedNavigation = this.parentDriver.WrappedDriver.Navigate();
             }
 
@@ -813,11 +851,24 @@ namespace OpenQA.Selenium.Support.Events
             /// </summary>
             public void Back()
             {
+                Task.Run(async delegate
+                {
+                    await this.BackAsync();
+                }).GetAwaiter().GetResult();
+            }
+
+            /// <summary>
+            /// Move the browser back as an asynchronous task.
+            /// </summary>
+            /// <returns>A task object representing the asynchronous operation</returns>
+            public async Task BackAsync()
+            {
                 try
                 {
                     WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.parentDriver);
+
                     this.parentDriver.OnNavigatingBack(e);
-                    this.wrappedNavigation.Back();
+                    await this.wrappedNavigation.BackAsync().ConfigureAwait(false);
                     this.parentDriver.OnNavigatedBack(e);
                 }
                 catch (Exception ex)
@@ -828,15 +879,27 @@ namespace OpenQA.Selenium.Support.Events
             }
 
             /// <summary>
-            /// Move the browser forward
+            /// Move a single "item" forward in the browser's history.
             /// </summary>
             public void Forward()
+            {
+                Task.Run(async delegate
+                {
+                    await this.ForwardAsync();
+                }).GetAwaiter().GetResult();
+            }
+
+            /// <summary>
+            /// Move a single "item" forward in the browser's history as an asynchronous task.
+            /// </summary>
+            /// <returns>A task object representing the asynchronous operation.</returns>
+            public async Task ForwardAsync()
             {
                 try
                 {
                     WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.parentDriver);
                     this.parentDriver.OnNavigatingForward(e);
-                    this.wrappedNavigation.Forward();
+                    await this.wrappedNavigation.ForwardAsync().ConfigureAwait(false);
                     this.parentDriver.OnNavigatedForward(e);
                 }
                 catch (Exception ex)
@@ -847,30 +910,23 @@ namespace OpenQA.Selenium.Support.Events
             }
 
             /// <summary>
-            /// Navigate to a url for your test
+            /// Navigate to a url.
             /// </summary>
             /// <param name="url">String of where you want the browser to go to</param>
             public void GoToUrl(string url)
             {
-                try
+                Task.Run(async delegate
                 {
-                    WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.parentDriver, url);
-                    this.parentDriver.OnNavigating(e);
-                    this.wrappedNavigation.GoToUrl(url);
-                    this.parentDriver.OnNavigated(e);
-                }
-                catch (Exception ex)
-                {
-                    this.parentDriver.OnException(new WebDriverExceptionEventArgs(this.parentDriver, ex));
-                    throw;
-                }
+                    await this.GoToUrlAsync(url);
+                }).GetAwaiter().GetResult();
             }
 
             /// <summary>
-            /// Navigate to a url for your test
+            /// Navigate to a url as an asynchronous task.
             /// </summary>
-            /// <param name="url">Uri object of where you want the browser to go to</param>
-            public void GoToUrl(Uri url)
+            /// <param name="url">String of where you want the browser to go.</param>
+            /// <returns>A task object representing the asynchronous operation.</returns>
+            public async Task GoToUrlAsync(string url)
             {
                 if (url == null)
                 {
@@ -879,9 +935,9 @@ namespace OpenQA.Selenium.Support.Events
 
                 try
                 {
-                    WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.parentDriver, url.ToString());
+                    WebDriverNavigationEventArgs e = new WebDriverNavigationEventArgs(this.parentDriver, url);
                     this.parentDriver.OnNavigating(e);
-                    this.wrappedNavigation.GoToUrl(url);
+                    await this.wrappedNavigation.GoToUrlAsync(url).ConfigureAwait(false);
                     this.parentDriver.OnNavigated(e);
                 }
                 catch (Exception ex)
@@ -892,13 +948,52 @@ namespace OpenQA.Selenium.Support.Events
             }
 
             /// <summary>
-            /// Refresh the browser
+            /// Navigate to a url.
+            /// </summary>
+            /// <param name="url">Uri object of where you want the browser to go to</param>
+            public void GoToUrl(Uri url)
+            {
+                Task.Run(async delegate
+                {
+                    await this.GoToUrlAsync(url);
+                }).GetAwaiter().GetResult();
+            }
+
+            /// <summary>
+            /// Navigate to a url as an asynchronous task.
+            /// </summary>
+            /// <param name="url">Uri object of where you want the browser to go.</param>
+            /// <returns>A task object representing the asynchronous operation.</returns>
+            public async Task GoToUrlAsync(Uri url)
+            {
+                if (url == null)
+                {
+                    throw new ArgumentNullException(nameof(url), "url cannot be null");
+                }
+
+                await this.GoToUrlAsync(url.ToString()).ConfigureAwait(false);
+            }
+
+            /// <summary>
+            /// Reload the current page.
             /// </summary>
             public void Refresh()
             {
+                Task.Run(async delegate
+                {
+                    await this.RefreshAsync();
+                }).GetAwaiter().GetResult();
+            }
+
+            /// <summary>
+            /// Reload the current page as an asynchronous task.
+            /// </summary>
+            /// <returns>A task object representing the asynchronous operation.</returns>
+            public async Task RefreshAsync()
+            {
                 try
                 {
-                    this.wrappedNavigation.Refresh();
+                    await this.wrappedNavigation.RefreshAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -913,7 +1008,7 @@ namespace OpenQA.Selenium.Support.Events
         /// </summary>
         private class EventFiringOptions : IOptions
         {
-            private IOptions wrappedOptions;
+            private readonly IOptions wrappedOptions;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="EventFiringOptions"/> class
@@ -927,30 +1022,18 @@ namespace OpenQA.Selenium.Support.Events
             /// <summary>
             /// Gets an object allowing the user to manipulate cookies on the page.
             /// </summary>
-            public ICookieJar Cookies
-            {
-                get { return this.wrappedOptions.Cookies; }
-            }
+            public ICookieJar Cookies => this.wrappedOptions.Cookies;
 
             /// <summary>
             /// Gets an object allowing the user to manipulate the currently-focused browser window.
             /// </summary>
             /// <remarks>"Currently-focused" is defined as the browser window having the window handle
             /// returned when IWebDriver.CurrentWindowHandle is called.</remarks>
-            public IWindow Window
-            {
-                get { return this.wrappedOptions.Window; }
-            }
+            public IWindow Window => this.wrappedOptions.Window;
 
-            public ILogs Logs
-            {
-                get { return this.wrappedOptions.Logs; }
-            }
+            public ILogs Logs => this.wrappedOptions.Logs;
 
-            public INetwork Network
-            {
-                get { return this.wrappedOptions.Network; }
-            }
+            public INetwork Network => this.wrappedOptions.Network;
 
             /// <summary>
             /// Provides access to the timeouts defined for this driver.
@@ -967,8 +1050,8 @@ namespace OpenQA.Selenium.Support.Events
         /// </summary>
         private class EventFiringTargetLocator : ITargetLocator
         {
-            private ITargetLocator wrappedLocator;
-            private EventFiringWebDriver parentDriver;
+            private readonly ITargetLocator wrappedLocator;
+            private readonly EventFiringWebDriver parentDriver;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="EventFiringTargetLocator"/> class
@@ -976,7 +1059,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <param name="driver">The driver that is currently in use</param>
             public EventFiringTargetLocator(EventFiringWebDriver driver)
             {
-                this.parentDriver = driver;
+                this.parentDriver = driver ?? throw new ArgumentNullException(nameof(driver));
                 this.wrappedLocator = this.parentDriver.WrappedDriver.SwitchTo();
             }
 
@@ -987,7 +1070,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A WebDriver instance that is currently in use</returns>
             public IWebDriver Frame(int frameIndex)
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.Frame(frameIndex);
@@ -1008,7 +1091,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A WebDriver instance that is currently in use</returns>
             public IWebDriver Frame(string frameName)
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.Frame(frameName);
@@ -1029,10 +1112,10 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A WebDriver instance that is currently in use.</returns>
             public IWebDriver Frame(IWebElement frameElement)
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
-                    IWrapsElement wrapper = frameElement as IWrapsElement;
+                    IWrapsElement wrapper = (IWrapsElement)frameElement;
                     driver = this.wrappedLocator.Frame(wrapper.WrappedElement);
                 }
                 catch (Exception ex)
@@ -1050,7 +1133,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>An <see cref="IWebDriver"/> instance focused on the specified frame.</returns>
             public IWebDriver ParentFrame()
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.ParentFrame();
@@ -1071,7 +1154,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A WebDriver instance that is currently in use</returns>
             public IWebDriver Window(string windowName)
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.Window(windowName);
@@ -1096,7 +1179,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>An <see cref="IWebDriver"/> instance focused on the new browser.</returns>
             public IWebDriver NewWindow(WindowType typeHint)
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.NewWindow(typeHint);
@@ -1116,7 +1199,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>Element of the default</returns>
             public IWebDriver DefaultContent()
             {
-                IWebDriver driver = null;
+                IWebDriver driver;
                 try
                 {
                     driver = this.wrappedLocator.DefaultContent();
@@ -1136,7 +1219,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>Element that is active</returns>
             public IWebElement ActiveElement()
             {
-                IWebElement element = null;
+                IWebElement element;
                 try
                 {
                     element = this.wrappedLocator.ActiveElement();
@@ -1156,7 +1239,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A handle to the dialog.</returns>
             public IAlert Alert()
             {
-                IAlert alert = null;
+                IAlert alert;
                 try
                 {
                     alert = this.wrappedLocator.Alert();
@@ -1176,7 +1259,7 @@ namespace OpenQA.Selenium.Support.Events
         /// </summary>
         private class EventFiringTimeouts : ITimeouts
         {
-            private ITimeouts wrappedTimeouts;
+            private readonly ITimeouts wrappedTimeouts;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="EventFiringTimeouts"/> class
@@ -1206,8 +1289,8 @@ namespace OpenQA.Selenium.Support.Events
             /// </remarks>
             public TimeSpan ImplicitWait
             {
-                get { return this.wrappedTimeouts.ImplicitWait; }
-                set { this.wrappedTimeouts.ImplicitWait = value; }
+                get => this.wrappedTimeouts.ImplicitWait;
+                set => this.wrappedTimeouts.ImplicitWait = value;
             }
 
             /// <summary>
@@ -1218,8 +1301,8 @@ namespace OpenQA.Selenium.Support.Events
             /// </summary>
             public TimeSpan AsynchronousJavaScript
             {
-                get { return this.wrappedTimeouts.AsynchronousJavaScript; }
-                set { this.wrappedTimeouts.AsynchronousJavaScript = value; }
+                get => this.wrappedTimeouts.AsynchronousJavaScript;
+                set => this.wrappedTimeouts.AsynchronousJavaScript = value;
             }
 
             /// <summary>
@@ -1229,8 +1312,8 @@ namespace OpenQA.Selenium.Support.Events
             /// </summary>
             public TimeSpan PageLoad
             {
-                get { return this.wrappedTimeouts.PageLoad; }
-                set { this.wrappedTimeouts.PageLoad = value; }
+                get => this.wrappedTimeouts.PageLoad;
+                set => this.wrappedTimeouts.PageLoad = value;
             }
         }
 
@@ -1239,8 +1322,7 @@ namespace OpenQA.Selenium.Support.Events
         /// </summary>
         private class EventFiringWebElement : ITakesScreenshot, IWebElement, IWrapsElement, IWrapsDriver
         {
-            private IWebElement underlyingElement;
-            private EventFiringWebDriver parentDriver;
+            private readonly EventFiringWebDriver parentDriver;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="EventFiringWebElement"/> class.
@@ -1249,25 +1331,19 @@ namespace OpenQA.Selenium.Support.Events
             /// <param name="element">The <see cref="IWebElement"/> to wrap for event firing.</param>
             public EventFiringWebElement(EventFiringWebDriver driver, IWebElement element)
             {
-                this.underlyingElement = element;
-                this.parentDriver = driver;
+                this.WrappedElement = element ?? throw new ArgumentNullException(nameof(element));
+                this.parentDriver = driver ?? throw new ArgumentNullException(nameof(driver));
             }
 
             /// <summary>
             /// Gets the underlying wrapped <see cref="IWebElement"/>.
             /// </summary>
-            public IWebElement WrappedElement
-            {
-                get { return this.underlyingElement; }
-            }
+            public IWebElement WrappedElement { get; }
 
             /// <summary>
             /// Gets the underlying parent wrapped <see cref="IWebDriver"/>
             /// </summary>
-            public IWebDriver WrappedDriver
-            {
-                get { return this.parentDriver; }
-            }
+            public IWebDriver WrappedDriver => this.parentDriver;
 
             /// <summary>
             /// Gets the DOM Tag of element
@@ -1276,10 +1352,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    string tagName = string.Empty;
+                    string tagName;
                     try
                     {
-                        tagName = this.underlyingElement.TagName;
+                        tagName = this.WrappedElement.TagName;
                     }
                     catch (Exception ex)
                     {
@@ -1298,10 +1374,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    string text = string.Empty;
+                    string text;
                     try
                     {
-                        text = this.underlyingElement.Text;
+                        text = this.WrappedElement.Text;
                     }
                     catch (Exception ex)
                     {
@@ -1320,10 +1396,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    bool enabled = false;
+                    bool enabled;
                     try
                     {
-                        enabled = this.underlyingElement.Enabled;
+                        enabled = this.WrappedElement.Enabled;
                     }
                     catch (Exception ex)
                     {
@@ -1342,10 +1418,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    bool selected = false;
+                    bool selected;
                     try
                     {
-                        selected = this.underlyingElement.Selected;
+                        selected = this.WrappedElement.Selected;
                     }
                     catch (Exception ex)
                     {
@@ -1364,10 +1440,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    Point location = default(Point);
+                    Point location;
                     try
                     {
-                        location = this.underlyingElement.Location;
+                        location = this.WrappedElement.Location;
                     }
                     catch (Exception ex)
                     {
@@ -1386,10 +1462,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    Size size = default(Size);
+                    Size size;
                     try
                     {
-                        size = this.underlyingElement.Size;
+                        size = this.WrappedElement.Size;
                     }
                     catch (Exception ex)
                     {
@@ -1408,10 +1484,10 @@ namespace OpenQA.Selenium.Support.Events
             {
                 get
                 {
-                    bool displayed = false;
+                    bool displayed;
                     try
                     {
-                        displayed = this.underlyingElement.Displayed;
+                        displayed = this.WrappedElement.Displayed;
                     }
                     catch (Exception ex)
                     {
@@ -1426,10 +1502,7 @@ namespace OpenQA.Selenium.Support.Events
             /// <summary>
             /// Gets the underlying EventFiringWebDriver for this element.
             /// </summary>
-            protected EventFiringWebDriver ParentDriver
-            {
-                get { return this.parentDriver; }
-            }
+            protected EventFiringWebDriver ParentDriver => this.parentDriver;
 
             /// <summary>
             /// Method to clear the text out of an Input element
@@ -1438,9 +1511,9 @@ namespace OpenQA.Selenium.Support.Events
             {
                 try
                 {
-                    WebElementValueEventArgs e = new WebElementValueEventArgs(this.parentDriver.WrappedDriver, this.underlyingElement, null);
+                    WebElementValueEventArgs e = new WebElementValueEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement, null);
                     this.parentDriver.OnElementValueChanging(e);
-                    this.underlyingElement.Clear();
+                    this.WrappedElement.Clear();
                     this.parentDriver.OnElementValueChanged(e);
                 }
                 catch (Exception ex)
@@ -1458,9 +1531,9 @@ namespace OpenQA.Selenium.Support.Events
             {
                 try
                 {
-                    WebElementValueEventArgs e = new WebElementValueEventArgs(this.parentDriver.WrappedDriver, this.underlyingElement, text);
+                    WebElementValueEventArgs e = new WebElementValueEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement, text);
                     this.parentDriver.OnElementValueChanging(e);
-                    this.underlyingElement.SendKeys(text);
+                    this.WrappedElement.SendKeys(text);
                     this.parentDriver.OnElementValueChanged(e);
                 }
                 catch (Exception ex)
@@ -1478,7 +1551,7 @@ namespace OpenQA.Selenium.Support.Events
             {
                 try
                 {
-                    this.underlyingElement.Submit();
+                    this.WrappedElement.Submit();
                 }
                 catch (Exception ex)
                 {
@@ -1499,9 +1572,9 @@ namespace OpenQA.Selenium.Support.Events
             {
                 try
                 {
-                    WebElementEventArgs e = new WebElementEventArgs(this.parentDriver.WrappedDriver, this.underlyingElement);
+                    WebElementEventArgs e = new WebElementEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement);
                     this.parentDriver.OnElementClicking(e);
-                    this.underlyingElement.Click();
+                    this.WrappedElement.Click();
                     this.parentDriver.OnElementClicked(e);
                 }
                 catch (Exception ex)
@@ -1518,10 +1591,10 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>The attribute's current value or null if the value is not set.</returns>
             public string GetAttribute(string attributeName)
             {
-                string attribute = string.Empty;
+                string attribute;
                 try
                 {
-                    attribute = this.underlyingElement.GetAttribute(attributeName);
+                    attribute = this.WrappedElement.GetAttribute(attributeName);
                 }
                 catch (Exception ex)
                 {
@@ -1546,10 +1619,10 @@ namespace OpenQA.Selenium.Support.Events
             /// </remarks>
             public string GetDomAttribute(string attributeName)
             {
-                string attribute = string.Empty;
+                string attribute;
                 try
                 {
-                    attribute = this.underlyingElement.GetDomAttribute(attributeName);
+                    attribute = this.WrappedElement.GetDomAttribute(attributeName);
                 }
                 catch (Exception ex)
                 {
@@ -1568,10 +1641,10 @@ namespace OpenQA.Selenium.Support.Events
             /// value is not set or the property does not exist.</returns>
             public string GetDomProperty(string propertyName)
             {
-                string elementProperty = string.Empty;
+                string elementProperty;
                 try
                 {
-                    elementProperty = this.underlyingElement.GetDomProperty(propertyName);
+                    elementProperty = this.WrappedElement.GetDomProperty(propertyName);
                 }
                 catch (Exception ex)
                 {
@@ -1589,10 +1662,10 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>string value of the CSS property</returns>
             public string GetCssValue(string propertyName)
             {
-                string cssValue = string.Empty;
+                string cssValue;
                 try
                 {
-                    cssValue = this.underlyingElement.GetCssValue(propertyName);
+                    cssValue = this.WrappedElement.GetCssValue(propertyName);
                 }
                 catch (Exception ex)
                 {
@@ -1610,10 +1683,14 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A shadow root representation.</returns>
             public ISearchContext GetShadowRoot()
             {
-                ISearchContext shadowRoot = null;
+                ISearchContext shadowRoot;
                 try
                 {
-                    shadowRoot = this.underlyingElement.GetShadowRoot();
+                    GetShadowRootEventArgs e = new GetShadowRootEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement);
+                    this.parentDriver.OnGettingShadowRoot(e);
+                    shadowRoot = this.WrappedElement.GetShadowRoot();
+                    this.parentDriver.OnGetShadowRootCompleted(e);
+                    shadowRoot = new EventFiringShadowRoot(this.parentDriver, shadowRoot);
                 }
                 catch (Exception ex)
                 {
@@ -1631,12 +1708,12 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>IWebElement object so that you can interaction that object</returns>
             public IWebElement FindElement(By by)
             {
-                IWebElement wrappedElement = null;
+                IWebElement wrappedElement;
                 try
                 {
-                    FindElementEventArgs e = new FindElementEventArgs(this.parentDriver.WrappedDriver, this.underlyingElement, by);
+                    FindElementEventArgs e = new FindElementEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement, by);
                     this.parentDriver.OnFindingElement(e);
-                    IWebElement element = this.underlyingElement.FindElement(by);
+                    IWebElement element = this.WrappedElement.FindElement(by);
                     this.parentDriver.OnFindElementCompleted(e);
                     wrappedElement = this.parentDriver.WrapElement(element);
                 }
@@ -1656,26 +1733,27 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>ReadOnlyCollection of IWebElement</returns>
             public ReadOnlyCollection<IWebElement> FindElements(By by)
             {
-                List<IWebElement> wrappedElementList = new List<IWebElement>();
                 try
                 {
-                    FindElementEventArgs e = new FindElementEventArgs(this.parentDriver.WrappedDriver, this.underlyingElement, by);
+                    FindElementEventArgs e = new FindElementEventArgs(this.parentDriver.WrappedDriver, this.WrappedElement, by);
                     this.parentDriver.OnFindingElement(e);
-                    ReadOnlyCollection<IWebElement> elements = this.underlyingElement.FindElements(by);
+                    ReadOnlyCollection<IWebElement> elements = this.WrappedElement.FindElements(by);
                     this.parentDriver.OnFindElementCompleted(e);
+
+                    List<IWebElement> wrappedElementList = new List<IWebElement>(elements.Count);
                     foreach (IWebElement element in elements)
                     {
                         IWebElement wrappedElement = this.parentDriver.WrapElement(element);
                         wrappedElementList.Add(wrappedElement);
                     }
+
+                    return wrappedElementList.AsReadOnly();
                 }
                 catch (Exception ex)
                 {
                     this.parentDriver.OnException(new WebDriverExceptionEventArgs(this.parentDriver, ex));
                     throw;
                 }
-
-                return wrappedElementList.AsReadOnly();
             }
 
             /// <summary>
@@ -1684,15 +1762,12 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A <see cref="Screenshot"/> object containing the image.</returns>
             public Screenshot GetScreenshot()
             {
-                ITakesScreenshot screenshotDriver = this.underlyingElement as ITakesScreenshot;
-                if (this.underlyingElement == null)
+                if (this.WrappedElement is not ITakesScreenshot screenshotDriver)
                 {
                     throw new NotSupportedException("Underlying element instance does not support taking screenshots");
                 }
 
-                Screenshot screen = null;
-                screen = screenshotDriver.GetScreenshot();
-                return screen;
+                return screenshotDriver.GetScreenshot();
             }
 
             /// <summary>
@@ -1702,19 +1777,17 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns><see langword="true"/> if the specified <see cref="EventFiringWebElement"/> is equal to the current <see cref="EventFiringWebElement"/>; otherwise, <see langword="false"/>.</returns>
             public override bool Equals(object obj)
             {
-                IWebElement other = obj as IWebElement;
-                if (other == null)
+                if (obj is not IWebElement other)
                 {
                     return false;
                 }
 
-                IWrapsElement otherWrapper = other as IWrapsElement;
-                if (otherWrapper != null)
+                if (other is IWrapsElement otherWrapper)
                 {
                     other = otherWrapper.WrappedElement;
                 }
 
-                return underlyingElement.Equals(other);
+                return WrappedElement.Equals(other);
             }
 
             /// <summary>
@@ -1723,7 +1796,116 @@ namespace OpenQA.Selenium.Support.Events
             /// <returns>A 32-bit signed integer hash code.</returns>
             public override int GetHashCode()
             {
-                return this.underlyingElement.GetHashCode();
+                return this.WrappedElement.GetHashCode();
+            }
+        }
+
+        /// <summary>
+        /// EventFiringShadowElement allows you to have access to specific shadow elements
+        /// </summary>
+        private class EventFiringShadowRoot : ISearchContext, IWrapsDriver
+        {
+            private readonly EventFiringWebDriver parentDriver;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="EventFiringShadowRoot"/> class.
+            /// </summary>
+            /// <param name="driver">The <see cref="EventFiringWebDriver"/> instance hosting this element.</param>
+            /// <param name="searchContext">The <see cref="ISearchContext"/> to wrap for event firing.</param>
+            public EventFiringShadowRoot(EventFiringWebDriver driver, ISearchContext searchContext)
+            {
+                this.WrappedSearchContext = searchContext ?? throw new ArgumentNullException(nameof(searchContext));
+                this.parentDriver = driver;
+            }
+
+            /// <summary>
+            /// Gets the underlying wrapped <see cref="ISearchContext"/>.
+            /// </summary>
+            public ISearchContext WrappedSearchContext { get; }
+
+            /// <summary>
+            /// Gets the underlying parent wrapped <see cref="IWebDriver"/>
+            /// </summary>
+            public IWebDriver WrappedDriver => this.parentDriver;
+
+            /// <summary>
+            /// Finds the first element in the page that matches the <see cref="By"/> object
+            /// </summary>
+            /// <param name="by">By mechanism to find the element</param>
+            /// <returns>IWebElement object so that you can interaction that object</returns>
+            public IWebElement FindElement(By by)
+            {
+                IWebElement wrappedElement;
+                try
+                {
+                    GetShadowRootEventArgs e = new GetShadowRootEventArgs(this.parentDriver.WrappedDriver, this.WrappedSearchContext);
+                    this.parentDriver.OnGettingShadowRoot(e);
+                    IWebElement element = this.WrappedSearchContext.FindElement(by);
+                    this.parentDriver.OnGetShadowRootCompleted(e);
+                    wrappedElement = new EventFiringWebElement(this.parentDriver, element);
+                }
+                catch (Exception ex)
+                {
+                    this.parentDriver.OnException(new WebDriverExceptionEventArgs(this.parentDriver, ex));
+                    throw;
+                }
+
+                return wrappedElement;
+            }
+
+            /// <summary>
+            /// Finds the elements on the page by using the <see cref="By"/> object and returns a ReadOnlyCollection of the Elements on the page
+            /// </summary>
+            /// <param name="by">By mechanism to find the element</param>
+            /// <returns>ReadOnlyCollection of IWebElement</returns>
+            public ReadOnlyCollection<IWebElement> FindElements(By by)
+            {
+                try
+                {
+                    GetShadowRootEventArgs e = new GetShadowRootEventArgs(this.parentDriver.WrappedDriver, this.WrappedSearchContext);
+                    this.parentDriver.OnGettingShadowRoot(e);
+                    ReadOnlyCollection<IWebElement> elements = this.WrappedSearchContext.FindElements(by);
+                    this.parentDriver.OnGetShadowRootCompleted(e);
+
+                    List<IWebElement> wrappedElementList = new List<IWebElement>(elements.Count);
+                    foreach (IWebElement element in elements)
+                    {
+                        IWebElement wrappedElement = this.parentDriver.WrapElement(element);
+                        wrappedElementList.Add(wrappedElement);
+                    }
+
+                    return wrappedElementList.AsReadOnly();
+                }
+                catch (Exception ex)
+                {
+                    this.parentDriver.OnException(new WebDriverExceptionEventArgs(this.parentDriver, ex));
+                    throw;
+                }
+
+            }
+
+            /// <summary>
+            /// Determines whether the specified <see cref="EventFiringShadowRoot"/> is equal to the current <see cref="EventFiringShadowRoot"/>.
+            /// </summary>
+            /// <param name="obj">The <see cref="EventFiringWebElement"/> to compare to the current <see cref="EventFiringShadowRoot"/>.</param>
+            /// <returns><see langword="true"/> if the specified <see cref="EventFiringShadowRoot"/> is equal to the current <see cref="EventFiringShadowRoot"/>; otherwise, <see langword="false"/>.</returns>
+            public override bool Equals(object obj)
+            {
+                if (obj is not ISearchContext other)
+                {
+                    return false;
+                }
+
+                return WrappedSearchContext.Equals(other);
+            }
+
+            /// <summary>
+            /// Return the hash code for this <see cref="EventFiringWebElement"/>.
+            /// </summary>
+            /// <returns>A 32-bit signed integer hash code.</returns>
+            public override int GetHashCode()
+            {
+                return this.WrappedSearchContext.GetHashCode();
             }
         }
     }

@@ -1,7 +1,16 @@
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
+load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//common:browsers.bzl", "chrome_data", "firefox_data")
 load("//java:browsers.bzl", "chrome_jvm_flags", "firefox_jvm_flags")
 load("//java:defs.bzl", "artifact")
-load("@rules_python//python:defs.bzl", "py_runtime_pair")
+
+exports_files([
+    "package.json",
+    "pnpm-workspace.yaml",
+])
+
+npm_link_all_packages(name = "node_modules")
 
 filegroup(
     name = "license",
@@ -12,27 +21,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-py_runtime(
-    name = "py3_runtime",
-    interpreter_path = select({
-        "@platforms//os:macos": "/usr/bin/python3",
-        "@platforms//os:linux": "/usr/bin/python",
-        "@platforms//os:windows": "C:\\Python310\\python",
-    }),
-    python_version = "PY3",
-    stub_shebang = "#!/usr/bin/python3",
-)
-
-py_runtime_pair(
-    name = "py_runtime_pair",
-    py2_runtime = None,
-    py3_runtime = ":py3_runtime",
-)
-
-toolchain(
-    name = "py_toolchain",
-    toolchain = ":py_runtime_pair",
-    toolchain_type = "@rules_python//python:toolchain_type",
+filegroup(
+    name = "rakefile",
+    srcs = [
+        "Rakefile",
+    ],
+    visibility = ["//rb:__subpackages__"],
 )
 
 alias(
@@ -76,10 +70,24 @@ java_binary(
     ],
 )
 
+npm_link_package(
+    name = "node_modules/selenium-webdriver",
+    src = "//javascript/node/selenium-webdriver",
+)
+
 platform(
     name = "rosetta",
     constraint_values = [
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
+    ],
+)
+
+buildifier(
+    name = "buildifier",
+    lint_mode = "fix",
+    mode = "fix",
+    tags = [
+        "manual",
     ],
 )

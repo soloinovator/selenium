@@ -24,10 +24,14 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
-
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openqa.selenium.WebDriverException;
@@ -36,19 +40,11 @@ import org.openqa.selenium.logging.LogEntries;
 import org.openqa.selenium.logging.LogEntry;
 import org.openqa.selenium.logging.LogType;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
-
 @Tag("UnitTests")
-public class RemoteLogsTest {
-  @Mock
-  private ExecuteMethod executeMethod;
+class RemoteLogsTest {
+  @Mock private ExecuteMethod executeMethod;
 
-  @Mock
-  private LocalLogs localLogs;
+  @Mock private LocalLogs localLogs;
 
   private RemoteLogs remoteLogs;
 
@@ -59,16 +55,17 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void canGetProfilerLogs() {
+  void canGetProfilerLogs() {
     List<LogEntry> entries = new ArrayList<>();
     entries.add(new LogEntry(Level.INFO, 0, "hello"));
     when(localLogs.get(LogType.PROFILER)).thenReturn(new LogEntries(entries));
 
-    when(
-        executeMethod.execute(
+    when(executeMethod.execute(
             DriverCommand.GET_LOG, ImmutableMap.of(RemoteLogs.TYPE_KEY, LogType.PROFILER)))
-        .thenReturn(singletonList(
-            ImmutableMap.of("level", Level.INFO.getName(), "timestamp", 1L, "message", "world")));
+        .thenReturn(
+            singletonList(
+                ImmutableMap.of(
+                    "level", Level.INFO.getName(), "timestamp", 1L, "message", "world")));
 
     LogEntries logEntries = remoteLogs.get(LogType.PROFILER);
     List<LogEntry> allLogEntries = logEntries.getAll();
@@ -78,13 +75,12 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void canGetLocalProfilerLogsIfNoRemoteProfilerLogSupport() {
+  void canGetLocalProfilerLogsIfNoRemoteProfilerLogSupport() {
     List<LogEntry> entries = new ArrayList<>();
     entries.add(new LogEntry(Level.INFO, 0, "hello"));
     when(localLogs.get(LogType.PROFILER)).thenReturn(new LogEntries(entries));
 
-    when(
-        executeMethod.execute(
+    when(executeMethod.execute(
             DriverCommand.GET_LOG, ImmutableMap.of(RemoteLogs.TYPE_KEY, LogType.PROFILER)))
         .thenThrow(
             new WebDriverException("IGNORE THIS LOG MESSAGE AND STACKTRACE; IT IS EXPECTED."));
@@ -96,7 +92,7 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void canGetClientLogs() {
+  void canGetClientLogs() {
     List<LogEntry> entries = new ArrayList<>();
     entries.add(new LogEntry(Level.SEVERE, 0, "hello"));
     when(localLogs.get(LogType.CLIENT)).thenReturn(new LogEntries(entries));
@@ -110,12 +106,13 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void canGetServerLogs() {
-    when(
-        executeMethod.execute(
+  void canGetServerLogs() {
+    when(executeMethod.execute(
             DriverCommand.GET_LOG, ImmutableMap.of(RemoteLogs.TYPE_KEY, LogType.SERVER)))
-        .thenReturn(singletonList(
-            ImmutableMap.of("level", Level.INFO.getName(), "timestamp", 0L, "message", "world")));
+        .thenReturn(
+            singletonList(
+                ImmutableMap.of(
+                    "level", Level.INFO.getName(), "timestamp", 0L, "message", "world")));
 
     LogEntries logEntries = remoteLogs.get(LogType.SERVER);
     assertThat(logEntries.getAll()).hasSize(1);
@@ -126,14 +123,14 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void throwsOnBogusRemoteLogsResponse() {
-    when(
-        executeMethod.execute(
+  void throwsOnBogusRemoteLogsResponse() {
+    when(executeMethod.execute(
             DriverCommand.GET_LOG, ImmutableMap.of(RemoteLogs.TYPE_KEY, LogType.BROWSER)))
-        .thenReturn(ImmutableMap.of(
-            "error", "unknown method",
-            "message", "Command not found: POST /session/11037/log",
-            "stacktrace", ""));
+        .thenReturn(
+            ImmutableMap.of(
+                "error", "unknown method",
+                "message", "Command not found: POST /session/11037/log",
+                "stacktrace", ""));
 
     assertThatExceptionOfType(WebDriverException.class)
         .isThrownBy(() -> remoteLogs.get(LogType.BROWSER));
@@ -142,7 +139,7 @@ public class RemoteLogsTest {
   }
 
   @Test
-  public void canGetAvailableLogTypes() {
+  void canGetAvailableLogTypes() {
     List<String> remoteAvailableLogTypes = new ArrayList<>();
     remoteAvailableLogTypes.add(LogType.PROFILER);
     remoteAvailableLogTypes.add(LogType.SERVER);

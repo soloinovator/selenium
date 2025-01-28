@@ -24,6 +24,8 @@ module Selenium
                        set_window_rect timeouts unhandled_prompt_behavior strict_file_interactability
                        web_socket_url].freeze
 
+      GRID_OPTIONS = %i[enable_downloads].freeze
+
       class << self
         attr_reader :driver_path
 
@@ -38,12 +40,12 @@ module Selenium
         def ie(**opts)
           IE::Options.new(**opts)
         end
-        alias_method :internet_explorer, :ie
+        alias internet_explorer ie
 
         def edge(**opts)
           Edge::Options.new(**opts)
         end
-        alias_method :microsoftedge, :edge
+        alias microsoftedge edge
 
         def safari(**opts)
           Safari::Options.new(**opts)
@@ -57,7 +59,7 @@ module Selenium
               @options[key]
             end
 
-            define_method "#{key}=" do |value|
+            define_method :"#{key}=" do |value|
               @options[key] = value
             end
           end
@@ -85,7 +87,7 @@ module Selenium
       #
 
       def add_option(name, value = nil)
-        @options[name.keys.first] = name.values.first if value.nil? && name.is_a?(Hash)
+        name, value = name.first if value.nil? && name.is_a?(Hash)
         @options[name] = value
       end
 
@@ -95,7 +97,7 @@ module Selenium
         as_json == other.as_json
       end
 
-      alias_method :eql?, :==
+      alias eql? ==
 
       #
       # @api private
@@ -104,13 +106,18 @@ module Selenium
       def as_json(*)
         options = @options.dup
 
+        downloads = options.delete(:enable_downloads)
+        options['se:downloadsEnabled'] = downloads unless downloads.nil?
         w3c_options = process_w3c_options(options)
 
-        self.class::CAPABILITIES.each do |capability_alias, capability_name|
+        browser_options = self.class::CAPABILITIES.each_with_object({}) do |(capability_alias, capability_name), hash|
           capability_value = options.delete(capability_alias)
-          options[capability_name] = capability_value if !capability_value.nil? && !options.key?(capability_name)
+          hash[capability_name] = capability_value unless capability_value.nil?
         end
-        browser_options = defined?(self.class::KEY) ? {self.class::KEY => options} : options
+
+        raise Error::WebDriverError, "These options are not w3c compliant: #{options}" unless options.empty?
+
+        browser_options = {self.class::KEY => browser_options} if defined?(self.class::KEY)
 
         process_browser_options(browser_options)
         generate_as_json(w3c_options.merge(browser_options))
@@ -123,7 +130,7 @@ module Selenium
       end
 
       def process_w3c_options(options)
-        w3c_options = options.select { |key, _val| w3c?(key) }
+        w3c_options = options.select { |key, val| w3c?(key) && !val.nil? }
         w3c_options[:unhandled_prompt_behavior] &&= w3c_options[:unhandled_prompt_behavior]&.to_s&.tr('_', ' ')
         options.delete_if { |key, _val| w3c?(key) }
         w3c_options
@@ -170,7 +177,7 @@ module Selenium
       end
 
       def camel_case(str)
-        str.gsub(/_([a-z])/) { Regexp.last_match(1).upcase }
+        str.gsub(/_([a-z])/) { Regexp.last_match(1)&.upcase }
       end
     end # Options
   end # WebDriver

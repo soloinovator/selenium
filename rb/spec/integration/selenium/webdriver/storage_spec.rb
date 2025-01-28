@@ -22,7 +22,7 @@ require_relative 'spec_helper'
 module Selenium
   module WebDriver
     module DriverExtensions
-      describe HasWebStorage do
+      describe HasWebStorage, exclusive: {bidi: false, reason: 'Not yet implemented with BiDi'} do
         shared_examples 'web storage' do
           before do
             driver.navigate.to url_for('clicks.html')
@@ -99,15 +99,26 @@ module Selenium
               storage.fetch('no-such-key')
             }.to raise_error(IndexError, /missing key/)
           end
+
+          it 'logs a deprecated warning when calling a deprecated method' do
+            storage_type = storage.is_a?(HTML5::LocalStorage) ? 'local' : 'session'
+
+            expect { storage['foo'] }.to have_deprecated(:"#{storage_type}_storage_item")
+            expect { storage['foo'] = 'bar' }.to have_deprecated(:"#{storage_type}_storage_item")
+            expect { storage.delete('foo') }.to have_deprecated(:"remove_#{storage_type}_storage_item")
+            expect { storage.size }.to have_deprecated(:"#{storage_type}_storage_size")
+            expect { storage.clear }.to have_deprecated(:"clear_#{storage_type}_storage")
+            expect { storage.keys }.to have_deprecated(:"#{storage_type}_storage_keys")
+          end
         end
 
-        context 'local storage' do
+        describe 'local storage' do
           let(:storage) { driver.local_storage }
 
           it_behaves_like 'web storage'
         end
 
-        context 'session storage' do
+        describe 'session storage' do
           let(:storage) { driver.session_storage }
 
           it_behaves_like 'web storage'

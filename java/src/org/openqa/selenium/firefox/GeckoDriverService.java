@@ -17,53 +17,60 @@
 
 package org.openqa.selenium.firefox;
 
-import com.google.auto.service.AutoService;
-import com.google.common.io.ByteStreams;
-
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.internal.Require;
-import org.openqa.selenium.net.PortProber;
-import org.openqa.selenium.remote.service.DriverService;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.openqa.selenium.remote.Browser.FIREFOX;
 
-/**
- * Manages the life and death of an GeckoDriver aka 'wires'.
- */
+import com.google.auto.service.AutoService;
+import java.io.File;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.net.PortProber;
+import org.openqa.selenium.remote.service.DriverService;
+
+/** Manages the life and death of an GeckoDriver */
 public class GeckoDriverService extends FirefoxDriverService {
 
+  public static final String GECKO_DRIVER_NAME = "geckodriver";
+
   /**
-   * System property that defines the location of the GeckoDriver executable
-   * that will be used by the {@link #createDefaultService() default service}.
+   * System property that defines the location of the GeckoDriver executable that will be used by
+   * the {@link #createDefaultService() default service}.
    */
   public static final String GECKO_DRIVER_EXE_PROPERTY = "webdriver.gecko.driver";
 
   /**
-   * @param executable The GeckoDriver executable.
-   * @param port Which port to start the GeckoDriver on.
-   * @param args The arguments to the launched server.
-   * @param environment The environment for the launched server.
-   * @throws IOException If an I/O error occurs.
+   * System property that defines the location of the file where GeckoDriver should write log
+   * messages to.
    */
-  public GeckoDriverService(
-      File executable,
-      int port,
-      List<String> args,
-      Map<String, String> environment) throws IOException {
-    super(executable, port, DEFAULT_TIMEOUT, args, environment);
-  }
+  public static final String GECKO_DRIVER_LOG_PROPERTY = "webdriver.firefox.logfile";
+
+  /**
+   * System property that defines the {@link FirefoxDriverLogLevel} for GeckoDriver logs. See {@link
+   * Builder#withLogLevel(FirefoxDriverLogLevel)}
+   */
+  public static final String GECKO_DRIVER_LOG_LEVEL_PROPERTY = "webdriver.firefox.logLevel";
+
+  /**
+   * Boolean system property to disable truncation of long log lines. See {@link
+   * Builder#withTruncatedLogs(Boolean)}
+   */
+  public static final String GECKO_DRIVER_LOG_NO_TRUNCATE = "webdriver.firefox.logTruncate";
+
+  /**
+   * System property that defines the location of the directory in which to create profiles See
+   * {@link Builder#withProfileRoot(File)}
+   */
+  public static final String GECKO_DRIVER_PROFILE_ROOT = "webdriver.firefox.profileRoot";
 
   /**
    * @param executable The GeckoDriver executable.
@@ -78,41 +85,39 @@ public class GeckoDriverService extends FirefoxDriverService {
       int port,
       Duration timeout,
       List<String> args,
-      Map<String, String> environment) throws IOException {
-    super(executable, port, timeout, args, environment);
+      Map<String, String> environment)
+      throws IOException {
+    super(
+        executable,
+        port,
+        timeout,
+        unmodifiableList(new ArrayList<>(args)),
+        unmodifiableMap(new HashMap<>(environment)));
+  }
+
+  public String getDriverName() {
+    return GECKO_DRIVER_NAME;
+  }
+
+  public String getDriverProperty() {
+    return GECKO_DRIVER_EXE_PROPERTY;
+  }
+
+  @Override
+  public Capabilities getDefaultDriverOptions() {
+    return new FirefoxOptions();
   }
 
   /**
    * Configures and returns a new {@link GeckoDriverService} using the default configuration. In
-   * this configuration, the service will use the GeckoDriver executable identified by the
-   * {@link #GECKO_DRIVER_EXE_PROPERTY} system property. Each service created by this method will
-   * be configured to use a free port on the current system.
+   * this configuration, the service will use the GeckoDriver executable identified by the {@link
+   * org.openqa.selenium.remote.service.DriverFinder#getResult(DriverService, Capabilities)}. Each
+   * service created by this method will be configured to use a free port on the current system.
    *
    * @return A new GeckoDriverService using the default configuration.
    */
   public static GeckoDriverService createDefaultService() {
     return new Builder().build();
-  }
-
-  static GeckoDriverService createDefaultService(Capabilities caps) {
-    Builder builder = new Builder();
-
-    Object binary = caps.getCapability(FirefoxDriver.Capability.BINARY);
-    if (binary != null) {
-      FirefoxBinary actualBinary;
-      if (binary instanceof FirefoxBinary) {
-        actualBinary = (FirefoxBinary) binary;
-      } else if (binary instanceof String) {
-        actualBinary = new FirefoxBinary(new File(String.valueOf(binary)));
-      } else {
-        throw new IllegalArgumentException(
-            "Expected binary to be a string or a binary: " + binary);
-      }
-
-      builder.usingFirefoxBinary(actualBinary);
-    }
-
-    return builder.build();
   }
 
   @Override
@@ -125,25 +130,19 @@ public class GeckoDriverService extends FirefoxDriverService {
     return false;
   }
 
-  /**
-   * Builder used to configure new {@link GeckoDriverService} instances.
-   */
+  /** Builder used to configure new {@link GeckoDriverService} instances. */
+  @SuppressWarnings({"rawtypes", "RedundantSuppression"})
   @AutoService(DriverService.Builder.class)
-  public static class Builder extends FirefoxDriverService.Builder<
-        GeckoDriverService, GeckoDriverService.Builder> {
+  public static class Builder
+      extends FirefoxDriverService.Builder<GeckoDriverService, GeckoDriverService.Builder> {
 
-    private FirefoxBinary firefoxBinary;
-
-    public Builder() {
-    }
+    private String allowHosts;
+    private FirefoxDriverLogLevel logLevel;
+    private Boolean logTruncate;
+    private File profileRoot;
 
     @Override
     public int score(Capabilities capabilities) {
-      if (capabilities.getCapability(FirefoxDriver.Capability.MARIONETTE) != null
-          && ! capabilities.is(FirefoxDriver.Capability.MARIONETTE)) {
-        return 0;
-      }
-
       int score = 0;
 
       if (FIREFOX.is(capabilities)) {
@@ -158,86 +157,103 @@ public class GeckoDriverService extends FirefoxDriverService {
     }
 
     /**
-     * Sets which browser executable the builder will use.
+     * Values of the Host header to allow for incoming requests.
      *
-     * @param firefoxBinary The browser executable to use.
+     * @param allowHosts Space-separated list of host names.
      * @return A self reference.
      */
-    public Builder usingFirefoxBinary(FirefoxBinary firefoxBinary) {
-      Require.nonNull("Firefox binary", firefoxBinary);
-      checkExecutable(firefoxBinary.getFile());
-      this.firefoxBinary = firefoxBinary;
+    public Builder withAllowHosts(String allowHosts) {
+      this.allowHosts = allowHosts;
+      return this;
+    }
+
+    /**
+     * @param logLevel which log events to record.
+     * @return A self reference.
+     */
+    public Builder withLogLevel(FirefoxDriverLogLevel logLevel) {
+      this.logLevel = logLevel;
+      return this;
+    }
+
+    /**
+     * @param truncate whether to truncate long lines in the log. Log lines are truncated by
+     *     default; setting "false" removes truncation
+     * @return A self reference.
+     */
+    public Builder withTruncatedLogs(Boolean truncate) {
+      this.logTruncate = truncate;
+      return this;
+    }
+
+    /**
+     * This is necessary when you do not have permissions to write to the default directory.
+     *
+     * @param root location to store temporary profiles Defaults to the system temporary directory.
+     * @return A self reference.
+     */
+    public GeckoDriverService.Builder withProfileRoot(File root) {
+      this.profileRoot = root;
       return this;
     }
 
     @Override
-    protected FirefoxDriverService.Builder withOptions(FirefoxOptions options) {
-      usingFirefoxBinary(options.getBinary());
-      return this;
-    }
-
-    @Override
-    protected File findDefaultExecutable() {
-      return findExecutable(
-        "geckodriver", GECKO_DRIVER_EXE_PROPERTY,
-        "https://github.com/mozilla/geckodriver",
-        "https://github.com/mozilla/geckodriver/releases");
+    protected void loadSystemProperties() {
+      parseLogOutput(GECKO_DRIVER_LOG_PROPERTY);
+      if (logLevel == null) {
+        String logFilePath = System.getProperty(GECKO_DRIVER_LOG_LEVEL_PROPERTY);
+        if (logFilePath != null) {
+          this.logLevel = FirefoxDriverLogLevel.fromString(logFilePath);
+        }
+      }
+      if (logTruncate == null) {
+        logTruncate = !Boolean.getBoolean(GECKO_DRIVER_LOG_NO_TRUNCATE);
+      }
+      if (profileRoot == null) {
+        String profileRootFromProperty = System.getProperty(GECKO_DRIVER_PROFILE_ROOT);
+        if (profileRootFromProperty != null) {
+          profileRoot = new File(profileRootFromProperty);
+        }
+      }
     }
 
     @Override
     protected List<String> createArgs() {
       List<String> args = new ArrayList<>();
+      args.add(String.format(Locale.ROOT, "--port=%d", getPort()));
+
       int wsPort = PortProber.findFreePort();
-      args.add(String.format("--port=%d", getPort()));
       args.add(String.format("--websocket-port=%d", wsPort));
-      args.add(String.format("--allow-origins=http://localhost:%d", wsPort));
-      if (firefoxBinary != null) {
-        args.add("-b");
-        args.add(firefoxBinary.getPath());
-      } else {
-        // Read system property for Firefox binary and use those if they are set
-        Optional<Executable> executable =
-          Optional.ofNullable(FirefoxBinary.locateFirefoxBinaryFromSystemProperty());
-        executable.ifPresent(e -> {
-          args.add("-b");
-          args.add(e.getPath());
-        });
+
+      args.add("--allow-origins");
+      args.add(String.format("http://127.0.0.1:%d", wsPort));
+      args.add(String.format("http://localhost:%d", wsPort));
+      args.add(String.format("http://[::1]:%d", wsPort));
+
+      if (logLevel != null) {
+        args.add("--log");
+        args.add(logLevel.toString());
       }
-      // If the binary stays null, GeckoDriver will be responsible for finding Firefox on the PATH or via a capability.
+      if (logTruncate != null && logTruncate.equals(Boolean.FALSE)) {
+        args.add("--log-no-truncate");
+      }
+      if (profileRoot != null) {
+        args.add("--profile-root");
+        args.add(profileRoot.getAbsolutePath());
+      }
+
+      if (allowHosts != null) {
+        args.add("--allow-hosts");
+        args.addAll(Arrays.asList(allowHosts.split(" ")));
+      }
       return unmodifiableList(args);
     }
 
     @Override
-    protected GeckoDriverService createDriverService(File exe, int port,
-                                                     Duration timeout,
-                                                     List<String> args,
-                                                     Map<String, String> environment) {
+    protected GeckoDriverService createDriverService(
+        File exe, int port, Duration timeout, List<String> args, Map<String, String> environment) {
       try {
-        GeckoDriverService service = new GeckoDriverService(exe, port, timeout, args, environment);
-        String firefoxLogFile = System.getProperty(FirefoxDriver.SystemProperty.BROWSER_LOGFILE);
-        if (firefoxLogFile != null) { // System property has higher precedence
-          switch (firefoxLogFile) {
-            case "/dev/stdout":
-              service.sendOutputTo(System.out);
-              break;
-            case "/dev/stderr":
-              service.sendOutputTo(System.err);
-              break;
-            case "/dev/null":
-              service.sendOutputTo(ByteStreams.nullOutputStream());
-              break;
-            default:
-              service.sendOutputTo(new FileOutputStream(firefoxLogFile));
-              break;
-          }
-        } else {
-          if (getLogFile() != null) {
-            service.sendOutputTo(new FileOutputStream(getLogFile()));
-          } else {
-            service.sendOutputTo(System.err);
-          }
-        }
-        return service;
+        return new GeckoDriverService(exe, port, timeout, args, environment);
       } catch (IOException e) {
         throw new WebDriverException(e);
       }

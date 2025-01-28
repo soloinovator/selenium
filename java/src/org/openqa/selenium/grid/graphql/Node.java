@@ -18,6 +18,12 @@
 package org.openqa.selenium.grid.graphql;
 
 import com.google.common.collect.ImmutableList;
+import java.net.URI;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.grid.data.Availability;
 import org.openqa.selenium.grid.data.NodeId;
@@ -26,12 +32,6 @@ import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.json.Json;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class Node {
 
   private static final Json JSON = new Json();
@@ -39,22 +39,24 @@ public class Node {
   private final URI uri;
   private final Availability status;
   private final int maxSession;
+  private final Duration sessionTimeout;
   private final Map<Capabilities, Integer> stereotypes;
   private final Map<Session, Slot> activeSessions;
   private final String version;
   private final OsInfo osInfo;
   private final int slotCount;
 
-
-  public Node(NodeId id,
-              URI uri,
-              Availability status,
-              int maxSession,
-              int slotCount,
-              Map<Capabilities, Integer> stereotypes,
-              Map<Session, Slot> activeSessions,
-              String version,
-              OsInfo osInfo) {
+  public Node(
+      NodeId id,
+      URI uri,
+      Availability status,
+      int maxSession,
+      Duration sessionTimeout,
+      int slotCount,
+      Map<Capabilities, Integer> stereotypes,
+      Map<Session, Slot> activeSessions,
+      String version,
+      OsInfo osInfo) {
     this.id = Require.nonNull("Node id", id);
     this.uri = Require.nonNull("Node uri", uri);
     this.status = status;
@@ -64,12 +66,13 @@ public class Node {
     this.activeSessions = Require.nonNull("Active sessions", activeSessions);
     this.version = Require.nonNull("Grid Node version", version);
     this.osInfo = Require.nonNull("Grid Node OS info", osInfo);
+    this.sessionTimeout = Require.positive("Node session timeout", sessionTimeout);
   }
 
   public List<org.openqa.selenium.grid.graphql.Session> getSessions() {
     return activeSessions.entrySet().stream()
-      .map(this::createGraphqlSession)
-      .collect(ImmutableList.toImmutableList());
+        .map(this::createGraphqlSession)
+        .collect(ImmutableList.toImmutableList());
   }
 
   public int getSlotCount() {
@@ -93,8 +96,9 @@ public class Node {
   }
 
   public List<String> getActiveSessionIds() {
-    return activeSessions.keySet().stream().map(session -> session.getId().toString())
-      .collect(ImmutableList.toImmutableList());
+    return activeSessions.keySet().stream()
+        .map(session -> session.getId().toString())
+        .collect(ImmutableList.toImmutableList());
   }
 
   public String getStereotypes() {
@@ -122,19 +126,22 @@ public class Node {
     return osInfo;
   }
 
+  public Duration getSessionTimeout() {
+    return sessionTimeout;
+  }
+
   private org.openqa.selenium.grid.graphql.Session createGraphqlSession(
-    Map.Entry<Session, Slot> entry) {
+      Map.Entry<Session, Slot> entry) {
     Session session = entry.getKey();
     Slot slot = entry.getValue();
 
     return new org.openqa.selenium.grid.graphql.Session(
-      session.getId().toString(),
-      session.getCapabilities(),
-      session.getStartTime(),
-      session.getUri(),
-      id.toString(),
-      uri,
-      slot
-    );
+        session.getId().toString(),
+        session.getCapabilities(),
+        session.getStartTime(),
+        session.getUri(),
+        id.toString(),
+        uri,
+        slot);
   }
 }

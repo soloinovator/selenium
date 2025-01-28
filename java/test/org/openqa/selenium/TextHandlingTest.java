@@ -18,9 +18,7 @@
 package org.openqa.selenium;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.openqa.selenium.testing.TestUtilities.isFirefox;
 import static org.openqa.selenium.testing.drivers.Browser.ALL;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
 import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
@@ -30,12 +28,12 @@ import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NotYetImplemented;
 
-public class TextHandlingTest extends JupiterTestBase {
+class TextHandlingTest extends JupiterTestBase {
 
   private static final String NEW_LINE = "\n";
 
   @Test
-  public void testShouldReturnTheTextContentOfASingleElementWithNoChildren() {
+  void testShouldReturnTheTextContentOfASingleElementWithNoChildren() {
     driver.get(pages.simpleTestPage);
     String selectText = driver.findElement(By.id("oneline")).getText();
     assertThat(selectText).isEqualTo("A single line of text");
@@ -45,14 +43,12 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldReturnTheEntireTextContentOfChildElements() {
+  void testShouldReturnTheEntireTextContentOfChildElements() {
     driver.get(pages.simpleTestPage);
     String text = driver.findElement(By.id("multiline")).getText();
 
-    assertThat(text).contains(
-        "A div containing",
-        "More than one line of text",
-        "and block level elements");
+    assertThat(text)
+        .contains("A div containing", "More than one line of text", "and block level elements");
   }
 
   @Test
@@ -151,7 +147,7 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldReturnTheEntireTextOfInlineElements() {
+  void testShouldReturnTheEntireTextOfInlineElements() {
     driver.get(pages.simpleTestPage);
     String text = driver.findElement(By.id("span")).getText();
 
@@ -159,28 +155,32 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldRetainTheFormattingOfTextWithinAPreElement() {
+  void testShouldRetainTheFormattingOfTextWithinAPreElement() {
     driver.get(pages.simpleTestPage);
     String text = driver.findElement(By.id("preformatted")).getText();
 
-    assertThat(text).isEqualTo("   This section has a preformatted\n" +
-                               "    text block    \n" +
-                               "  split in four lines\n" +
-                               "         ");
+    assertThat(text)
+        .isEqualTo(
+            "   This section has a preformatted\n"
+                + "    text block    \n"
+                + "  split in four lines\n"
+                + "         ");
   }
 
   @Test
   @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
-  public void testShouldRetainTheFormatingOfTextWithinAPreElementThatIsWithinARegularBlock() {
+  public void testShouldRetainTheFormattingOfTextWithinAPreElementThatIsWithinARegularBlock() {
     driver.get(pages.simpleTestPage);
     String text = driver.findElement(By.id("div-with-pre")).getText();
 
-    assertThat(text).isEqualTo("before pre\n" +
-                               "   This section has a preformatted\n" +
-                               "    text block    \n" +
-                               "  split in four lines\n" +
-                               "         \n" +
-                               "after pre");
+    assertThat(text)
+        .isEqualTo(
+            "before pre\n"
+                + "   This section has a preformatted\n"
+                + "    text block    \n"
+                + "  split in four lines\n"
+                + "         \n"
+                + "after pre");
   }
 
   @Test
@@ -201,7 +201,7 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToEnterDatesAfterFillingInOtherValuesFirst() {
+  void testShouldBeAbleToEnterDatesAfterFillingInOtherValuesFirst() {
     driver.get(pages.formPage);
     WebElement input = driver.findElement(By.id("working"));
     String expectedValue = "10/03/2007 to 30/07/1993";
@@ -217,27 +217,27 @@ public class TextHandlingTest extends JupiterTestBase {
     driver.get(pages.xhtmlTestPage);
     String text = driver.findElement(By.id("spaces")).getText();
 
-    assertThat(text).isEqualTo("");
+    assertThat(text).isEmpty();
   }
 
   @Test
-  public void testShouldReturnEmptyStringWhenTextIsEmpty() {
+  void testShouldReturnEmptyStringWhenTextIsEmpty() {
     driver.get(pages.xhtmlTestPage);
     String text = driver.findElement(By.id("empty")).getText();
 
-    assertThat(text).isEqualTo("");
+    assertThat(text).isEmpty();
   }
 
   @Test
-  public void testShouldReturnEmptyStringWhenTagIsSelfClosing() {
+  void testShouldReturnEmptyStringWhenTagIsSelfClosing() {
     driver.get(pages.xhtmlFormPage);
     String text = driver.findElement(By.id("self-closed")).getText();
 
-    assertThat(text).isEqualTo("");
+    assertThat(text).isEmpty();
   }
 
   @Test
-  public void testShouldNotTrimSpacesWhenLineWraps() {
+  void testShouldNotTrimSpacesWhenLineWraps() {
     driver.get(pages.simpleTestPage);
     String text = driver.findElement(By.xpath("//table/tbody/tr[1]/td[1]")).getText();
 
@@ -260,8 +260,16 @@ public class TextHandlingTest extends JupiterTestBase {
     String text = driver.findElement(By.id("nestedblocks")).getText();
 
     assertThat(text)
-        .isEqualTo("Cheese" + NEW_LINE + "Some text" + NEW_LINE + "Some more text" + NEW_LINE
-                   + "and also" + NEW_LINE + "Brie");
+        .isEqualTo(
+            "Cheese"
+                + NEW_LINE
+                + "Some text"
+                + NEW_LINE
+                + "Some more text"
+                + NEW_LINE
+                + "and also"
+                + NEW_LINE
+                + "Brie");
   }
 
   @Test
@@ -274,7 +282,7 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testReadALargeAmountOfData() {
+  void testReadALargeAmountOfData() {
     driver.get(pages.macbethPage);
     String source = driver.getPageSource().trim().toLowerCase();
 
@@ -300,7 +308,7 @@ public class TextHandlingTest extends JupiterTestBase {
     String empty = driver.findElement(By.id("suppressedParagraph")).getText();
     String explicit = driver.findElement(By.id("outer")).getText();
 
-    assertThat(empty).isEqualTo("");
+    assertThat(empty).isEmpty();
     assertThat(explicit).isEqualTo("sub-element that is explicitly visible");
   }
 
@@ -316,15 +324,15 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testTextOfAnInputFieldShouldBeEmpty() {
+  void testTextOfAnInputFieldShouldBeEmpty() {
     driver.get(pages.formPage);
     String text = driver.findElement(By.id("inputWithText")).getText();
 
-    assertThat(text).isEqualTo("");
+    assertThat(text).isEmpty();
   }
 
   @Test
-  public void testTextOfATextAreaShouldBeEqualToItsDefaultText() {
+  void testTextOfATextAreaShouldBeEqualToItsDefaultText() {
     driver.get(pages.formPage);
     String text = driver.findElement(By.id("withText")).getText();
 
@@ -348,33 +356,35 @@ public class TextHandlingTest extends JupiterTestBase {
     driver.get(pages.formPage);
     WebElement area = driver.findElement(By.id("withText"));
     String oldText = area.getAttribute("value");
-    ((JavascriptExecutor) driver).executeScript("arguments[0].value = arguments[1]", area, "New Text");
+    ((JavascriptExecutor) driver)
+        .executeScript("arguments[0].value = arguments[1]", area, "New Text");
     assertThat(area.getText()).isEqualTo(oldText);
   }
 
   @Test
-  public void testShouldGetTextWhichIsAValidJSONObject() {
+  void testShouldGetTextWhichIsAValidJSONObject() {
     driver.get(pages.simpleTestPage);
     WebElement element = driver.findElement(By.id("simpleJsonText"));
     assertThat(element.getText()).isEqualTo("{a=\"b\", c=1, d=true}");
   }
 
   @Test
-  public void testShouldGetTextWhichIsAValidComplexJSONObject() {
+  void testShouldGetTextWhichIsAValidComplexJSONObject() {
     driver.get(pages.simpleTestPage);
     WebElement element = driver.findElement(By.id("complexJsonText"));
     assertThat(element.getText()).isEqualTo("{a=\"\\\\b\\\\\\\"\'\\\'\"}");
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   @NotYetImplemented(SAFARI)
   public void testShouldNotReturnLtrMarks() {
     driver.get(pages.unicodeLtrPage);
     WebElement element = driver.findElement(By.id("EH")).findElement(By.tagName("nobr"));
     String text = element.getText();
     String expected = "Some notes";
-    assertThat(text.codePointAt(0)).describedAs("RTL mark should not be present").isNotEqualTo(8206);
+    assertThat(text.codePointAt(0))
+        .describedAs("RTL mark should not be present")
+        .isNotEqualTo(8206);
     // Note: If this assertion fails but the content of the strings *looks* the same
     // it may be because of hidden unicode LTR character being included in the string.
     // That's the reason for the previous assert.
@@ -391,11 +401,14 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  public void canHandleTextThatLooksLikeANumber() {
-    driver.get(appServer.create(new Page()
-        .withBody("<div id='point'>12.345</div>",
-                  "<div id='comma'>12,345</div>",
-                  "<div id='space'>12 345</div>")));
+  void canHandleTextThatLooksLikeANumber() {
+    driver.get(
+        appServer.create(
+            new Page()
+                .withBody(
+                    "<div id='point'>12.345</div>",
+                    "<div id='comma'>12,345</div>",
+                    "<div id='space'>12 345</div>")));
 
     assertThat(driver.findElement(By.id("point")).getText()).isEqualTo("12.345");
     assertThat(driver.findElement(By.id("comma")).getText()).isEqualTo("12,345");
@@ -403,16 +416,14 @@ public class TextHandlingTest extends JupiterTestBase {
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void canHandleTextTransformProperty() {
     driver.get(pages.simpleTestPage);
     assertThat(driver.findElement(By.id("capitalized")).getText())
-        .isEqualTo(isFirefox(driver) ? "Hello, World! Bla-bla-BLA" : "Hello, World! Bla-Bla-BLA");
+        .isEqualTo("Hello, World! Bla-Bla-BLA");
     assertThat(driver.findElement(By.id("lowercased")).getText())
         .isEqualTo("hello, world! bla-bla-bla");
     assertThat(driver.findElement(By.id("uppercased")).getText())
         .isEqualTo("HELLO, WORLD! BLA-BLA-BLA");
   }
-
 }

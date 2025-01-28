@@ -25,33 +25,32 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebElement;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 @Tag("UnitTests")
-public class ByChainedTest {
+class ByChainedTest {
 
   private static final List<WebElement> NO_ELEMENTS = Collections.emptyList();
 
   @Test
-  public void findElementZeroBy() {
+  void findElementZeroBy() {
     final AllDriver driver = mock(AllDriver.class);
 
     ByChained by = new ByChained();
     assertThatExceptionOfType(NoSuchElementException.class)
-      .isThrownBy(() -> by.findElement(driver));
+        .isThrownBy(() -> by.findElement(driver));
   }
 
   @Test
-  public void findElementsZeroBy() {
+  void findElementsZeroBy() {
     final AllDriver driver = mock(AllDriver.class);
 
     ByChained by = new ByChained();
@@ -59,7 +58,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementOneBy() {
+  void findElementOneBy() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(WebElement.class, "webElement2");
@@ -74,7 +73,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementsOneBy() {
+  void findElementsOneBy() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(WebElement.class, "webElement2");
@@ -89,7 +88,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementOneByEmpty() {
+  void findElementOneByEmpty() {
     final AllDriver driver = mock(AllDriver.class);
     final List<WebElement> elems = new ArrayList<>();
 
@@ -97,11 +96,11 @@ public class ByChainedTest {
 
     ByChained by = new ByChained(By.name("cheese"));
     assertThatExceptionOfType(NoSuchElementException.class)
-      .isThrownBy(() -> by.findElement(driver));
+        .isThrownBy(() -> by.findElement(driver));
   }
 
   @Test
-  public void findElementsOneByEmpty() {
+  void findElementsOneByEmpty() {
     final AllDriver driver = mock(AllDriver.class);
     final List<WebElement> elems = new ArrayList<>();
 
@@ -112,7 +111,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementTwoBy() {
+  void findElementTwoBy() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(AllElement.class, "webElement1");
     final WebElement elem2 = mock(AllElement.class, "webElement2");
@@ -140,7 +139,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementTwoByEmptyParent() {
+  void findElementTwoByEmptyParent() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(AllElement.class, "webElement2");
@@ -165,11 +164,11 @@ public class ByChainedTest {
 
     ByChained by = new ByChained(By.name("cheese"), By.name("photo"));
     assertThatExceptionOfType(NoSuchElementException.class)
-      .isThrownBy(() -> by.findElement(driver));
+        .isThrownBy(() -> by.findElement(driver));
   }
 
   @Test
-  public void findElementsTwoByEmptyParent() {
+  void findElementsTwoByEmptyParent() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(AllElement.class, "webElement2");
@@ -197,7 +196,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementTwoByEmptyChild() {
+  void findElementTwoByEmptyChild() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(AllElement.class, "webElement2");
@@ -227,7 +226,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementsTwoByEmptyChild() {
+  void findElementsTwoByEmptyChild() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(AllElement.class, "webElement2");
@@ -257,7 +256,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementsThreeBy_firstFindsOne_secondEmpty() {
+  void findElementsThreeBy_firstFindsOne_secondEmpty() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
 
@@ -265,7 +264,7 @@ public class ByChainedTest {
     By by2 = By.name("by2");
     By by3 = By.name("by3");
 
-    when(driver.findElements(by1)).thenReturn(asList(elem1));
+    when(driver.findElements(by1)).thenReturn(Collections.singletonList(elem1));
     when(elem1.findElements(by2)).thenReturn(NO_ELEMENTS);
 
     ByChained by = new ByChained(by1, by2, by3);
@@ -275,7 +274,7 @@ public class ByChainedTest {
   }
 
   @Test
-  public void findElementThreeBy_firstFindsTwo_secondEmpty() {
+  void findElementThreeBy_firstFindsTwo_secondEmpty() {
     final AllDriver driver = mock(AllDriver.class);
     final WebElement elem1 = mock(WebElement.class, "webElement1");
     final WebElement elem2 = mock(WebElement.class, "webElement2");
@@ -296,15 +295,15 @@ public class ByChainedTest {
   }
 
   @Test
-  public void testEquals() {
+  void testEquals() {
     assertThat(new ByChained(By.id("cheese"), By.name("photo")))
-      .isEqualTo(new ByChained(By.id("cheese"), By.name("photo")));
+        .isEqualTo(new ByChained(By.id("cheese"), By.name("photo")));
   }
 
   @Test
-  public void testToString() {
+  void testToString() {
     assertThat(new ByChained(By.id("cheese"), By.name("photo")))
-      .hasToString("By.chained({By.id: cheese,By.name: photo})");
+        .hasToString("By.chained({By.id: cheese,By.name: photo})");
   }
 
   private interface AllDriver extends SearchContext {

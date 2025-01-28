@@ -17,28 +17,31 @@
 
 package org.openqa.selenium.interactions;
 
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.WrapsElement;
-import org.openqa.selenium.internal.Require;
+import static org.openqa.selenium.internal.Require.nonNegative;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
-import static org.openqa.selenium.internal.Require.nonNegative;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+import org.openqa.selenium.Point;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.WrapsElement;
+import org.openqa.selenium.internal.Require;
 
 /**
  * Models a <a href="https://www.w3.org/TR/webdriver/#dfn-pointer-input-source">pointer input
  * source</a>.
  */
+@NullMarked
 public class PointerInput implements InputSource, Encodable {
 
   private final Kind kind;
   private final String name;
 
-  public PointerInput(Kind kind, String name) {
+  public PointerInput(Kind kind, @Nullable String name) {
     this.kind = Require.nonNull("Kind of pointer device", kind);
     this.name = Optional.ofNullable(name).orElse(UUID.randomUUID().toString());
   }
@@ -71,20 +74,22 @@ public class PointerInput implements InputSource, Encodable {
     return new Move(this, duration, origin, x, y);
   }
 
-  public Interaction createPointerMove(Duration duration, Origin origin, int x, int y, PointerEventProperties eventProperties) {
+  public Interaction createPointerMove(Duration duration, Origin origin, Point offset) {
+    return createPointerMove(duration, origin, offset.x, offset.y);
+  }
+
+  public Interaction createPointerMove(
+      Duration duration, Origin origin, int x, int y, PointerEventProperties eventProperties) {
     return new Move(this, duration, origin, x, y, eventProperties);
+  }
+
+  public Interaction createPointerMove(
+      Duration duration, Origin origin, Point offset, PointerEventProperties eventProperties) {
+    return createPointerMove(duration, origin, offset.x, offset.y, eventProperties);
   }
 
   public Interaction createPointerDown(int button) {
     return new PointerPress(this, PointerPress.Direction.DOWN, button);
-  }
-
-  /**
-   * @deprecated always use the method with the button
-   */
-  @Deprecated
-  public Interaction createPointerDown(PointerEventProperties eventProperties) {
-    return createPointerDown(0, eventProperties);
   }
 
   public Interaction createPointerDown(int button, PointerEventProperties eventProperties) {
@@ -93,14 +98,6 @@ public class PointerInput implements InputSource, Encodable {
 
   public Interaction createPointerUp(int button) {
     return new PointerPress(this, PointerPress.Direction.UP, button);
-  }
-
-  /**
-   * @deprecated always use the method with the button
-   */
-  @Deprecated
-  public Interaction createPointerUp(PointerEventProperties eventProperties) {
-    return createPointerUp(0, eventProperties);
   }
 
   public Interaction createPointerUp(int button, PointerEventProperties eventProperties) {
@@ -130,11 +127,16 @@ public class PointerInput implements InputSource, Encodable {
      * @deprecated always use the constructor with the button
      */
     @Deprecated
-    public PointerPress(InputSource source, Direction direction, PointerEventProperties eventProperties) {
+    public PointerPress(
+        InputSource source, Direction direction, PointerEventProperties eventProperties) {
       this(source, direction, 0, eventProperties);
     }
 
-    public PointerPress(InputSource source, Direction direction, int button, PointerEventProperties eventProperties) {
+    public PointerPress(
+        InputSource source,
+        Direction direction,
+        int button,
+        PointerEventProperties eventProperties) {
       super(source);
       this.button = button;
       this.eventProperties = Require.nonNull("pointer event properties", eventProperties);
@@ -181,7 +183,7 @@ public class PointerInput implements InputSource, Encodable {
         Origin origin,
         int x,
         int y,
-      PointerEventProperties eventProperties) {
+        PointerEventProperties eventProperties) {
       super(source);
 
       this.origin = Require.nonNull("Origin of move", origin);
@@ -218,10 +220,10 @@ public class PointerInput implements InputSource, Encodable {
   public enum Kind {
     MOUSE("mouse"),
     PEN("pen"),
-    TOUCH("touch"),;
+    TOUCH("touch"),
+    ;
 
     private final String wireName;
-
 
     Kind(String pointerSubType) {
       this.wireName = pointerSubType;
@@ -284,15 +286,15 @@ public class PointerInput implements InputSource, Encodable {
   }
 
   public static class PointerEventProperties implements Encodable {
-    private Float width = null;
-    private Float height = null;
-    private Float pressure = null;
-    private Float tangentialPressure = null;
-    private Integer tiltX = null;
-    private Integer tiltY = null;
-    private Integer twist = null;
-    private Float altitudeAngle = null;
-    private Float azimuthAngle = null;
+    private @Nullable Float width = null;
+    private @Nullable Float height = null;
+    private @Nullable Float pressure = null;
+    private @Nullable Float tangentialPressure = null;
+    private @Nullable Integer tiltX = null;
+    private @Nullable Integer tiltY = null;
+    private @Nullable Integer twist = null;
+    private @Nullable Float altitudeAngle = null;
+    private @Nullable Float azimuthAngle = null;
 
     public PointerEventProperties setWidth(float width) {
       Require.nonNull("width", width);

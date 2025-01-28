@@ -19,22 +19,24 @@ package org.openqa.selenium.json;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
 public class SimplePropertyDescriptor {
 
-  private static final Function<Object, Object> GET_CLASS_NAME = obj -> {
-    if (obj == null) {
-      return null;
-    }
+  private static final Function<Object, Object> GET_CLASS_NAME =
+      obj -> {
+        if (obj == null) {
+          return null;
+        }
 
-    if (obj instanceof Class) {
-      return ((Class<?>) obj).getName();
-    }
+        if (obj instanceof Class) {
+          return ((Class<?>) obj).getName();
+        }
 
-    return obj.getClass().getName();
-  };
+        return obj.getClass().getName();
+      };
 
   private final String name;
   private final Function<Object, Object> read;
@@ -61,13 +63,10 @@ public class SimplePropertyDescriptor {
   public static SimplePropertyDescriptor[] getPropertyDescriptors(Class<?> clazz) {
     Map<String, SimplePropertyDescriptor> properties = new HashMap<>();
 
-    properties.put(
-        "class",
-        new SimplePropertyDescriptor("class", GET_CLASS_NAME, null));
+    properties.put("class", new SimplePropertyDescriptor("class", GET_CLASS_NAME, null));
 
     for (Method m : clazz.getMethods()) {
-      if (Class.class.equals(m.getDeclaringClass()) ||
-          Object.class.equals(m.getDeclaringClass())) {
+      if (Class.class.equals(m.getDeclaringClass()) || Object.class.equals(m.getDeclaringClass())) {
         continue;
       }
 
@@ -99,18 +98,21 @@ public class SimplePropertyDescriptor {
       if (readMethod != null) {
         final Method finalReadMethod = readMethod;
 
-        read = obj -> {
-          try {
-            finalReadMethod.setAccessible(true);
-            return finalReadMethod.invoke(obj);
-          } catch (ReflectiveOperationException e) {
-            throw new JsonException(e);
-          }
-        };
+        read =
+            obj -> {
+              try {
+                finalReadMethod.setAccessible(true);
+                return finalReadMethod.invoke(obj);
+              } catch (ReflectiveOperationException e) {
+                throw new JsonException(e);
+              }
+            };
       }
 
       if (readMethod != null || writeMethod != null) {
-        SimplePropertyDescriptor descriptor = properties.getOrDefault(propertyName, new SimplePropertyDescriptor(propertyName, null, null));
+        SimplePropertyDescriptor descriptor =
+            properties.getOrDefault(
+                propertyName, new SimplePropertyDescriptor(propertyName, null, null));
 
         properties.put(
             propertyName,
@@ -126,7 +128,7 @@ public class SimplePropertyDescriptor {
   }
 
   private static String uncapitalize(String s) {
-    return s.substring(0, 1).toLowerCase() + s.substring(1);
+    return s.substring(0, 1).toLowerCase(Locale.ENGLISH) + s.substring(1);
   }
 
   private static boolean hasPrefix(String prefix, String methodName) {

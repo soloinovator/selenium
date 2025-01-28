@@ -19,28 +19,21 @@ package org.openqa.selenium.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.openqa.selenium.remote.CapabilityType.ENABLE_PROFILING_CAPABILITY;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
-import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
+import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
-import org.openqa.selenium.testing.drivers.WebDriverBuilder;
 
-import java.util.Set;
-
-@Ignore(HTMLUNIT)
 @Ignore(IE)
 @Ignore(FIREFOX)
 @Ignore(SAFARI)
-public class AvailableLogsTest extends JupiterTestBase {
+class AvailableLogsTest extends JupiterTestBase {
 
   private WebDriver localDriver;
 
@@ -53,19 +46,21 @@ public class AvailableLogsTest extends JupiterTestBase {
   }
 
   @Test
-  public void browserLogShouldBeEnabledByDefault() {
+  void browserLogShouldBeEnabledByDefault() {
     Set<String> logTypes = driver.manage().logs().getAvailableLogTypes();
     assertThat(logTypes.contains(LogType.BROWSER))
-        .describedAs("Browser logs should be enabled by default").isTrue();
+        .describedAs("Browser logs should be enabled by default")
+        .isTrue();
   }
 
   @Test
-  public void clientLogShouldBeEnabledByDefault() {
+  void clientLogShouldBeEnabledByDefault() {
     // Do one action to have *something* in the client logs.
     driver.get(pages.formPage);
     Set<String> logTypes = driver.manage().logs().getAvailableLogTypes();
     assertThat(logTypes.contains(LogType.CLIENT))
-        .describedAs("Client logs should be enabled by default").isTrue();
+        .describedAs("Client logs should be enabled by default")
+        .isTrue();
     boolean foundExecutingStatement = false;
     boolean foundExecutedStatement = false;
     for (LogEntry logEntry : driver.manage().logs().get(LogType.CLIENT)) {
@@ -78,36 +73,28 @@ public class AvailableLogsTest extends JupiterTestBase {
   }
 
   @Test
-  public void driverLogShouldBeEnabledByDefault() {
+  void driverLogShouldBeEnabledByDefault() {
     Set<String> logTypes = driver.manage().logs().getAvailableLogTypes();
     assertThat(logTypes.contains(LogType.DRIVER))
-        .describedAs("Remote driver logs should be enabled by default").isTrue();
+        .describedAs("Remote driver logs should be enabled by default")
+        .isTrue();
   }
 
   @Test
-  public void profilerLogShouldBeDisabledByDefault() {
+  void profilerLogShouldBeDisabledByDefault() {
     Set<String> logTypes = driver.manage().logs().getAvailableLogTypes();
     assertThat(logTypes.contains(LogType.PROFILER))
-        .describedAs("Profiler logs should not be enabled by default").isFalse();
+        .describedAs("Profiler logs should not be enabled by default")
+        .isFalse();
   }
 
   @Test
-  @Ignore(value = SAFARI, reason = "Safari does not support profiler logs")
-  public void shouldBeAbleToEnableProfilerLog() {
-    Capabilities caps = new ImmutableCapabilities(ENABLE_PROFILING_CAPABILITY, true);
-    localDriver = new WebDriverBuilder().get(caps);
-    Set<String> logTypes = localDriver.manage().logs().getAvailableLogTypes();
-    assertThat(logTypes.contains(LogType.PROFILER))
-        .describedAs("Profiler log should be enabled").isTrue();
-  }
-
-  @Test
-  public void serverLogShouldBeEnabledByDefaultOnRemote() {
+  void serverLogShouldBeEnabledByDefaultOnRemote() {
     assumeTrue(Boolean.getBoolean("selenium.browser.remote"));
 
     Set<String> logTypes = driver.manage().logs().getAvailableLogTypes();
     assertThat(logTypes.contains(LogType.SERVER))
-        .describedAs("Server logs should be enabled by default").isTrue();
+        .describedAs("Server logs should be enabled by default")
+        .isTrue();
   }
-
 }

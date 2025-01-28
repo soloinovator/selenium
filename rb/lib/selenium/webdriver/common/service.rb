@@ -39,12 +39,13 @@ module Selenium
         def ie(**opts)
           IE::Service.new(**opts)
         end
-        alias_method :internet_explorer, :ie
+        alias internet_explorer ie
 
         def edge(**opts)
           Edge::Service.new(**opts)
         end
-        alias_method :microsoftedge, :edge
+        alias microsoftedge edge
+        alias msedge edge
 
         def safari(**opts)
           Safari::Service.new(**opts)
@@ -56,8 +57,8 @@ module Selenium
         end
       end
 
-      attr_accessor :host
-      attr_reader :executable_path, :port, :extra_args
+      attr_accessor :host, :executable_path, :port, :log, :args
+      alias extra_args args
 
       #
       # End users should use a class method for the desired driver, rather than using this directly.
@@ -65,46 +66,43 @@ module Selenium
       # @api private
       #
 
-      def initialize(path: nil, port: nil, args: nil)
-        path ||= self.class.driver_path
+      def initialize(path: nil, port: nil, log: nil, args: nil)
         port ||= self.class::DEFAULT_PORT
         args ||= []
+        path ||= env_path
 
-        @executable_path = binary_path(path)
+        @executable_path = path
         @host = Platform.localhost
         @port = Integer(port)
-
-        @extra_args = args.is_a?(Hash) ? extract_service_args(args) : args
+        @log = case log
+               when :stdout
+                 $stdout
+               when :stderr
+                 $stderr
+               else
+                 log
+               end
+        @args = args
 
         raise Error::WebDriverError, "invalid port: #{@port}" if @port < 1
       end
 
       def launch
-        sm = ServiceManager.new(self)
-        sm.start
-        sm
+        @executable_path ||= env_path || find_driver_path
+        ServiceManager.new(self).tap(&:start)
       end
 
       def shutdown_supported
         self.class::SHUTDOWN_SUPPORTED
       end
 
-      protected
-
-      def extract_service_args(driver_opts)
-        driver_opts.key?(:args) ? driver_opts.delete(:args) : []
+      def find_driver_path
+        default_options = WebDriver.const_get("#{self.class.name&.split('::')&.[](2)}::Options").new
+        DriverFinder.new(default_options, self).driver_path
       end
 
-      private
-
-      def binary_path(path = nil)
-        path = path.call if path.is_a?(Proc)
-        path ||= Platform.find_binary(self.class::EXECUTABLE)
-
-        raise Error::WebDriverError, self.class::MISSING_TEXT unless path
-
-        Platform.assert_executable path
-        path
+      def env_path
+        ENV.fetch(self.class::DRIVER_PATH_ENV_KEY, nil)
       end
     end # Service
   end # WebDriver

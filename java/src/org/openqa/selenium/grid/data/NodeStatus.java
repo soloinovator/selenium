@@ -17,10 +17,8 @@
 
 package org.openqa.selenium.grid.data;
 
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.internal.Require;
-import org.openqa.selenium.json.JsonInput;
-import org.openqa.selenium.json.TypeToken;
+import static java.util.Collections.unmodifiableMap;
+import static java.util.Collections.unmodifiableSet;
 
 import java.net.URI;
 import java.time.Duration;
@@ -30,9 +28,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-
-import static java.util.Collections.unmodifiableMap;
-import static java.util.Collections.unmodifiableSet;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.internal.Require;
+import org.openqa.selenium.json.JsonInput;
+import org.openqa.selenium.json.TypeToken;
 
 public class NodeStatus {
 
@@ -43,26 +42,29 @@ public class NodeStatus {
   private final Set<Slot> slots;
   private final Availability availability;
   private final Duration heartbeatPeriod;
+  private final Duration sessionTimeout;
   private final String version;
   private final Map<String, String> osInfo;
 
   public NodeStatus(
-    NodeId nodeId,
-    URI externalUri,
-    int maxSessionCount,
-    Set<Slot> slots,
-    Availability availability,
-    Duration heartbeatPeriod,
-    String version,
-    Map<String, String> osInfo) {
+      NodeId nodeId,
+      URI externalUri,
+      int maxSessionCount,
+      Set<Slot> slots,
+      Availability availability,
+      Duration heartbeatPeriod,
+      Duration sessionTimeout,
+      String version,
+      Map<String, String> osInfo) {
     this.nodeId = Require.nonNull("Node id", nodeId);
     this.externalUri = Require.nonNull("URI", externalUri);
-    this.maxSessionCount = Require.positive("Max session count",
-      maxSessionCount,
-      "Make sure that a driver is available on $PATH");
+    this.maxSessionCount =
+        Require.positive(
+            "Max session count", maxSessionCount, "Make sure that a driver is available on $PATH");
     this.slots = unmodifiableSet(new HashSet<>(Require.nonNull("Slots", slots)));
     this.availability = Require.nonNull("Availability", availability);
     this.heartbeatPeriod = heartbeatPeriod;
+    this.sessionTimeout = sessionTimeout;
     this.version = Require.nonNull("Grid Node version", version);
     this.osInfo = Require.nonNull("Node host OS info", osInfo);
   }
@@ -74,6 +76,7 @@ public class NodeStatus {
     Set<Slot> slots = null;
     Availability availability = null;
     Duration heartbeatPeriod = null;
+    Duration sessionTimeout = null;
     String version = null;
     Map<String, String> osInfo = null;
 
@@ -88,6 +91,10 @@ public class NodeStatus {
           heartbeatPeriod = Duration.ofMillis(input.read(Long.class));
           break;
 
+        case "sessionTimeout":
+          sessionTimeout = Duration.ofMillis(input.read(Long.class));
+          break;
+
         case "nodeId":
           nodeId = input.read(NodeId.class);
           break;
@@ -97,8 +104,7 @@ public class NodeStatus {
           break;
 
         case "slots":
-          slots = input.read(new TypeToken<Set<Slot>>() {
-          }.getType());
+          slots = input.read(new TypeToken<Set<Slot>>() {}.getType());
           break;
 
         case "externalUri":
@@ -121,28 +127,31 @@ public class NodeStatus {
     input.endObject();
 
     return new NodeStatus(
-      nodeId,
-      externalUri,
-      maxSessions,
-      slots,
-      availability,
-      heartbeatPeriod,
-      version,
-      osInfo);
+        nodeId,
+        externalUri,
+        maxSessions,
+        slots,
+        availability,
+        heartbeatPeriod,
+        sessionTimeout,
+        version,
+        osInfo);
   }
 
-  public boolean hasCapability(Capabilities caps) {
-    return slots.stream().anyMatch(slot -> slot.isSupporting(caps));
+  public boolean hasCapability(Capabilities caps, SlotMatcher slotMatcher) {
+    return slots.stream().anyMatch(slot -> slot.isSupporting(caps, slotMatcher));
   }
 
   public boolean hasCapacity() {
     return slots.stream().filter(slot -> slot.getSession() != null).count() < maxSessionCount;
   }
 
-  // Check if the Node's max session limit is not exceeded and has a free slot that supports the capability.
-  public boolean hasCapacity(Capabilities caps) {
-    return slots.stream().filter(slot -> slot.getSession() != null).count() < maxSessionCount &&
-           slots.stream().anyMatch(slot -> slot.getSession() == null && slot.isSupporting(caps));
+  // Check if the Node's max session limit is not exceeded and has a free slot that supports the
+  // capability.
+  public boolean hasCapacity(Capabilities caps, SlotMatcher slotMatcher) {
+    return slots.stream().filter(slot -> slot.getSession() != null).count() < maxSessionCount
+        && slots.stream()
+            .anyMatch(slot -> slot.getSession() == null && slot.isSupporting(caps, slotMatcher));
   }
 
   public int getMaxSessionCount() {
@@ -169,6 +178,10 @@ public class NodeStatus {
     return heartbeatPeriod;
   }
 
+  public Duration getSessionTimeout() {
+    return sessionTimeout;
+  }
+
   public String getVersion() {
     return version;
   }
@@ -178,19 +191,25 @@ public class NodeStatus {
   }
 
   public float getLoad() {
-    float inUse = slots.parallelStream()
-      .filter(slot -> slot.getSession() != null)
-      .count();
+    float inUse = slots.parallelStream().filter(slot -> slot.getSession() != null).count();
 
     return (inUse / (float) maxSessionCount) * 100f;
   }
 
   public long getLastSessionCreated() {
     return slots.parallelStream()
-      .map(Slot::getLastStarted)
-      .mapToLong(Instant::toEpochMilli)
-      .max()
-      .orElse(0);
+        .map(Slot::getLastStarted)
+        .mapToLong(Instant::toEpochMilli)
+        .max()
+        .orElse(0);
+  }
+
+  public String getBrowserVersion() {
+    return slots.stream()
+        .map(slot -> slot.getStereotype().getBrowserVersion())
+        .filter(Objects::nonNull)
+        .max(new SemanticVersionComparator())
+        .orElse("");
   }
 
   @Override
@@ -200,12 +219,14 @@ public class NodeStatus {
     }
 
     NodeStatus that = (NodeStatus) o;
-    return Objects.equals(this.nodeId, that.nodeId) &&
-      Objects.equals(this.externalUri, that.externalUri) &&
-      this.maxSessionCount == that.maxSessionCount &&
-      Objects.equals(this.slots, that.slots) &&
-      Objects.equals(this.availability, that.availability) &&
-      Objects.equals(this.version, that.version);
+    return Objects.equals(this.nodeId, that.nodeId)
+        && Objects.equals(this.externalUri, that.externalUri)
+        && this.maxSessionCount == that.maxSessionCount
+        && this.sessionTimeout.compareTo(that.sessionTimeout) == 0
+        && this.heartbeatPeriod.compareTo(that.heartbeatPeriod) == 0
+        && Objects.equals(this.slots, that.slots)
+        && Objects.equals(this.availability, that.availability)
+        && Objects.equals(this.version, that.version);
   }
 
   @Override
@@ -213,7 +234,7 @@ public class NodeStatus {
     return Objects.hash(nodeId, externalUri, maxSessionCount, slots, version);
   }
 
-  private Map<String, Object> toJson() {
+  public Map<String, Object> toJson() {
     Map<String, Object> toReturn = new TreeMap<>();
     toReturn.put("nodeId", nodeId);
     toReturn.put("externalUri", externalUri);
@@ -221,6 +242,7 @@ public class NodeStatus {
     toReturn.put("slots", slots);
     toReturn.put("availability", availability);
     toReturn.put("heartbeatPeriod", heartbeatPeriod.toMillis());
+    toReturn.put("sessionTimeout", sessionTimeout.toMillis());
     toReturn.put("version", version);
     toReturn.put("osInfo", osInfo);
 

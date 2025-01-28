@@ -43,7 +43,9 @@
 #define IE_SERVER_CHILD_WINDOW_CLASS "Internet Explorer_Server"
 #define ANDIE_FRAME_WINDOW_CLASS "Chrome_WidgetWin_1"
 
+#define EDGE_REGISTRY_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe"
 #define IE_CLSID_REGISTRY_KEY L"SOFTWARE\\Classes\\InternetExplorer.Application\\CLSID"
+#define IE_REDIRECT L"Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Ext\\CLSID"
 #define IE_SECURITY_ZONES_REGISTRY_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones"
 #define IE_TABPROCGROWTH_REGISTRY_KEY L"Software\\Microsoft\\Internet Explorer\\Main"
 
@@ -94,10 +96,12 @@ namespace webdriver {
 
 BrowserFactory::BrowserFactory(void) {
   // Must be done in the constructor. Do not move to Initialize().
-  this->GetExecutableLocation();
+  this->GetEdgeExecutableLocation();
+  this->GetIEExecutableLocation();
   this->GetIEVersion();
   this->oleacc_instance_handle_ = NULL;
   this->edge_ie_mode_ = false;
+  this->ignore_process_match_ = false;
 }
 
 BrowserFactory::~BrowserFactory(void) {
@@ -117,17 +121,18 @@ std::string BrowserFactory::browser_command_line_switches(void) {
 void BrowserFactory::Initialize(BrowserFactorySettings settings) {
   LOG(TRACE) << "Entering BrowserFactory::Initialize";
   this->ignore_protected_mode_settings_ = settings.ignore_protected_mode_settings;
-  this->ignore_zoom_setting_ = settings.ignore_zoom_setting;
   this->browser_attach_timeout_ = settings.browser_attach_timeout;
   this->force_createprocess_api_ = settings.force_create_process_api;
   this->force_shell_windows_api_ = settings.force_shell_windows_api;
   this->clear_cache_ = settings.clear_cache_before_launch;
   this->browser_command_line_switches_ = StringUtilities::ToWString(settings.browser_command_line_switches);
   this->initial_browser_url_ = StringUtilities::ToWString(settings.initial_browser_url);
-  this->edge_ie_mode_ = settings.attach_to_edge_ie;
+  this->edge_ie_mode_ = settings.attach_to_edge_ie || this->ie_redirects_edge_;
+  this->ignore_process_match_ = settings.ignore_process_match;
+  this->ignore_zoom_setting_ = settings.ignore_zoom_setting || this->edge_ie_mode_;
   LOG(DEBUG) << "path before was " << settings.edge_executable_path << "\n";
   this->edge_executable_location_ = StringUtilities::ToWString(settings.edge_executable_path);
-  LOG(DEBUG) << "path after was " << this->edge_executable_location_.c_str() << "\n";
+  LOG(DEBUG) << "path after was " << StringUtilities::ToString(this->edge_executable_location_) << "\n";
   this->html_getobject_msg_ = ::RegisterWindowMessage(HTML_GETOBJECT_MSG);
 
   // Explicitly load MSAA so we know if it's installed
@@ -209,7 +214,8 @@ DWORD BrowserFactory::LaunchBrowserProcess(std::string* error_message) {
       }
     } else {
       ::WaitForInputIdle(proc_info.hProcess, 2000);
-      LOG(DEBUG) << "IE launched successfully with process ID " << process_id;
+      std::string browser_launched = this->edge_ie_mode_ ? "Edge in IE Mode" : "IE";
+      LOG(DEBUG) << browser_launched << " launched successfully with process ID " << process_id;
       std::vector<wchar_t> image_buffer(MAX_PATH);
       int buffer_count = ::GetProcessImageFileName(proc_info.hProcess, &image_buffer[0], MAX_PATH);
       std::wstring full_image_path = &image_buffer[0];
@@ -240,7 +246,7 @@ bool BrowserFactory::IsIELaunchURLAvailable() {
     FARPROC proc_address = 0;
     proc_address = ::GetProcAddress(library_handle, IELAUNCHURL_FUNCTION_NAME);
     if (proc_address == NULL || proc_address == 0) {
-      LOGERR(DEBUG) << "Unable to get address of " << IELAUNCHURL_FUNCTION_NAME 
+      LOGERR(DEBUG) << "Unable to get address of " << IELAUNCHURL_FUNCTION_NAME
                     << " method in " << IEFRAME_LIBRARY_NAME;
     } else {
       api_is_available = true;
@@ -385,7 +391,10 @@ void BrowserFactory::LaunchEdgeInIEMode(PROCESS_INFORMATION* proc_info,
 
   std::wstring executable_and_url = this->edge_executable_location_;
   if (executable_and_url == L"") {
-    executable_and_url = L"msedge.exe"; // Assume it's on the path if it's not passed
+    executable_and_url = this->edge_executable_located_location_; // Locate Edge via Registry if not passed
+    if (executable_and_url == L"") {
+      executable_and_url = L"msedge.exe"; // Assume it's on the path
+    }
   }
 
   // These flags force Edge into a mode where it will only run MSHTML
@@ -400,16 +409,26 @@ void BrowserFactory::LaunchEdgeInIEMode(PROCESS_INFORMATION* proc_info,
     this->edge_user_data_dir_ = temp_dir;
   }
 
+  // Prevent Edge from showing first run experience tab.
   executable_and_url.append(L" --no-first-run");
+
+  // Disable Edge prelaunch and other background processes on startup.
   executable_and_url.append(L" --no-service-autorun");
+
+  // Disable profile sync and implicit MS account sign-in.
   executable_and_url.append(L" --disable-sync");
   executable_and_url.append(L" --disable-features=msImplicitSignin");
+
+  // ALways allow popups for testing.
   executable_and_url.append(L" --disable-popup-blocking");
+
+  // Ensure IE Mode tabs have a chance to shut down cleanly before the Edge process exits.
+  executable_and_url.append(L" --enable-features=msIEModeAlwaysWaitForUnload");
 
   executable_and_url.append(L" ");
   executable_and_url.append(this->initial_browser_url_);
 
-  LOG(TRACE) << "IE starting command line is: '"
+  LOG(TRACE) << "Edge in IE Mode starting command line is: '"
              << LOGWSTRING(executable_and_url) << "'.";
 
   LPWSTR command_line = new WCHAR[executable_and_url.size() + 1];
@@ -511,7 +530,7 @@ bool BrowserFactory::AttachToBrowser(ProcessWindowInfo* process_window_info,
       zoom_level = this->GetBrowserZoomLevel(process_window_info->pBrowser);
     }
     if (zoom_level != 100) {
-      std::string zoom_level_error = 
+      std::string zoom_level_error =
           StringUtilities::Format(ZOOM_SETTING_ERROR_MESSAGE, zoom_level);
       LOG(WARN) << zoom_level_error;
       *error_message = zoom_level_error;
@@ -548,8 +567,18 @@ bool BrowserFactory::AttachToBrowserUsingActiveAccessibility
                     reinterpret_cast<LPARAM>(process_window_info));
     } else {
       // If we're in edge_ie_mode, we need to look for different windows
-      ::EnumWindows(&BrowserFactory::FindEdgeWindow,
+      if (this->ignore_process_match_) {
+        LOG(TRACE) << "Finding window handle for IE Mode on Edge, "
+                   << "ignoring process id match. This assumes only one "
+                   << "Edge instance is running on the host.";
+        ::EnumWindows(&BrowserFactory::FindEdgeWindowIgnoringProcessMatch,
+                      reinterpret_cast<LPARAM>(process_window_info));
+      } else {
+        LOG(TRACE) << "Finding window handle for IE Mode on Edge";
+        ::EnumWindows(&BrowserFactory::FindEdgeWindow,
                     reinterpret_cast<LPARAM>(process_window_info));
+
+      }
     }
 
     if (process_window_info->hwndBrowser == NULL) {
@@ -664,7 +693,7 @@ bool BrowserFactory::AttachToBrowserUsingShellWindows(
         hr = shell_browser->GetWindow(&hwnd);
         if (SUCCEEDED(hr)) {
           ::EnumChildWindows(hwnd,
-                             &BrowserFactory::FindChildWindowForProcess, 
+                             &BrowserFactory::FindChildWindowForProcess,
                              reinterpret_cast<LPARAM>(process_window_info));
           if (process_window_info->hwndBrowser != NULL) {
             LOG(DEBUG) << "Found window handle "
@@ -876,7 +905,7 @@ IWebBrowser2* BrowserFactory::CreateBrowser(bool is_protected_mode) {
                 << "be successfully created.";
   }
   clock_t timeout = clock() + (45 * CLOCKS_PER_SEC);
-  while (FAILED(hr) && 
+  while (FAILED(hr) &&
          HRESULT_CODE(hr) == ERROR_SHUTDOWN_IS_SCHEDULED &&
          clock() < timeout) {
     ::Sleep(500);
@@ -925,7 +954,7 @@ bool BrowserFactory::CreateLowIntegrityLevelToken(HANDLE* process_token_handle,
     }
    }
 
-  if (result) {     
+  if (result) {
     result = ::ConvertStringSidToSid(SDDL_ML_LOW, sid);
     if (result) {
       tml.Label.Attributes = SE_GROUP_INTEGRITY;
@@ -969,13 +998,13 @@ void BrowserFactory::InvokeClearCacheUtility(bool use_low_integrity_level) {
   PSID    sid = NULL;
 
   bool can_create_process = true;
-  if (!use_low_integrity_level || 
+  if (!use_low_integrity_level ||
       this->CreateLowIntegrityLevelToken(&process_token, &mic_token, &sid)) {
     if (0 != system_path_size &&
         system_path_size <= static_cast<int>(system_path_buffer.size())) {
       if (::PathCombine(&rundll_exe_path_buffer[0],
                         &system_path_buffer[0],
-                        RUNDLL_EXE_NAME) && 
+                        RUNDLL_EXE_NAME) &&
           ::PathCombine(&inetcpl_path_buffer[0],
                         &system_path_buffer[0],
                         INTERNET_CONTROL_PANEL_APPLET_NAME)) {
@@ -1099,6 +1128,21 @@ BOOL CALLBACK BrowserFactory::FindEdgeWindow(HWND hwnd, LPARAM arg) {
   return EnumChildWindows(hwnd, FindEdgeChildWindowForProcess, arg);
 }
 
+BOOL CALLBACK BrowserFactory::FindEdgeWindowIgnoringProcessMatch(HWND hwnd, LPARAM arg) {
+  // Could this be an EdgeChrome window?
+  // 19 == "Chrome_WidgetWin_1"
+  char name[20];
+  if (::GetClassNameA(hwnd, name, 20) == 0) {
+    // No match found. Skip
+    return TRUE;
+  }
+
+  // continue if it is not "Chrome_WidgetWin_1"
+  if (strcmp(ANDIE_FRAME_WINDOW_CLASS, name) != 0) return TRUE;
+
+  return EnumChildWindows(hwnd, FindEdgeChildWindowForProcess, arg);
+}
+
 BOOL CALLBACK BrowserFactory::FindIEBrowserHandles(HWND hwnd, LPARAM arg) {
   std::vector<HWND>* handles = reinterpret_cast<std::vector<HWND>*>(arg);
 
@@ -1202,14 +1246,14 @@ BOOL CALLBACK BrowserFactory::FindDialogWindowForProcess(HWND hwnd, LPARAM arg) 
     // No match found. Skip
     return TRUE;
   }
-  
-  if (strcmp(ALERT_WINDOW_CLASS, name) != 0 && 
+
+  if (strcmp(ALERT_WINDOW_CLASS, name) != 0 &&
       strcmp(HTML_DIALOG_WINDOW_CLASS, name) != 0 &&
       strcmp(SECURITY_DIALOG_WINDOW_CLASS, name) != 0) {
     return TRUE;
   } else {
-    // If the window style has the WS_DISABLED bit set or the 
-    // WS_VISIBLE bit unset, it can't be handled via the UI, 
+    // If the window style has the WS_DISABLED bit set or the
+    // WS_VISIBLE bit unset, it can't be handled via the UI,
     // and must not be a visible dialog. Furthermore, if the
     // window style does not display a caption bar, it's not a
     // dialog displayed by the browser, but likely by an add-on
@@ -1235,15 +1279,26 @@ BOOL CALLBACK BrowserFactory::FindDialogWindowForProcess(HWND hwnd, LPARAM arg) 
   return TRUE;
 }
 
-void BrowserFactory::GetExecutableLocation() {
-  LOG(TRACE) << "Entering BrowserFactory::GetExecutableLocation";
+void BrowserFactory::GetIEExecutableLocation() {
+  LOG(TRACE) << "Entering BrowserFactory::GetIEExecutableLocation";
+
+   std::wstring redirection;
+    if (RegistryUtilities::GetRegistryValue(HKEY_LOCAL_MACHINE,
+      IE_REDIRECT,
+      L"{1FD49718-1D00-4B19-AF5F-070AF6D5D54C}",
+      &redirection)) {
+      this->ie_redirects_edge_ = redirection == L"1";
+    }
+    else {
+      LOG(WARN) << "Unable to determine IE to Edge Redirection";
+    }
 
   std::wstring class_id;
   if (RegistryUtilities::GetRegistryValue(HKEY_LOCAL_MACHINE,
                                           IE_CLSID_REGISTRY_KEY,
                                           L"",
                                           &class_id)) {
-    std::wstring location_key = L"SOFTWARE\\Classes\\CLSID\\" + 
+    std::wstring location_key = L"SOFTWARE\\Classes\\CLSID\\" +
                                 class_id +
                                 L"\\LocalServer32";
     std::wstring executable_location;
@@ -1284,11 +1339,40 @@ void BrowserFactory::GetExecutableLocation() {
   }
 }
 
+void BrowserFactory::GetEdgeExecutableLocation() {
+   LOG(TRACE) << "Entering BrowserFactory::GetEdgeExecutableLocation";
+ std::wstring edge_executable_location;
+  if (RegistryUtilities::GetRegistryValue(HKEY_LOCAL_MACHINE,
+                                          EDGE_REGISTRY_KEY,
+                                          L"",
+                                          true,
+                                          &edge_executable_location)) {
+    // If the executable location in the registry has an environment
+    // variable in it, expand the environment variable to an absolute
+    // path.
+    DWORD expanded_location_size = ::ExpandEnvironmentStrings(edge_executable_location.c_str(), NULL, 0);
+    std::vector<wchar_t> expanded_location(expanded_location_size);
+    ::ExpandEnvironmentStrings(edge_executable_location.c_str(), &expanded_location[0], expanded_location_size);
+    edge_executable_location = &expanded_location[0];
+    this->edge_executable_located_location_ = edge_executable_location;
+    size_t arg_start_pos = edge_executable_location.find(L" -");
+    if (arg_start_pos != std::string::npos) {
+      this->edge_executable_located_location_ = edge_executable_location.substr(0, arg_start_pos);
+    }
+    if (this->edge_executable_located_location_.substr(0, 1) == L"\"") {
+      this->edge_executable_located_location_.erase(0, 1);
+      this->edge_executable_located_location_.erase(this->edge_executable_located_location_.size() - 1, 1);
+    }
+  } else {
+    LOG(WARN) << "Unable to get Edge executable location from registry";
+  }
+}
+
 void BrowserFactory::GetIEVersion() {
   LOG(TRACE) << "Entering BrowserFactory::GetIEVersion";
 
   std::string ie_version = FileUtilities::GetFileVersion(this->ie_executable_location_);
-  
+
   if (ie_version.size() == 0) {
     // 64-bit Windows 8 has a bug where it does not return the executable location properly
     this->ie_major_version_ = -1;
@@ -1446,7 +1530,7 @@ bool BrowserFactory::IsWindowsVersionOrGreater(unsigned short major_version,
                             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR,
                             dwlConditionMask) != FALSE;
 }
- 
+
 bool BrowserFactory::IsWindowsVistaOrGreater() {
   return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0);
 }
@@ -1457,7 +1541,7 @@ bool BrowserFactory::IsEdgeMode() const {
 
 // delete a folder recursively
 int BrowserFactory::DeleteDirectory(const std::wstring &dir_name) {
-  WIN32_FIND_DATA file_info;      
+  WIN32_FIND_DATA file_info;
 
   std::wstring file_pattern = dir_name + L"\\*.*";
   HANDLE file_handle = ::FindFirstFile(file_pattern.c_str(), &file_info);

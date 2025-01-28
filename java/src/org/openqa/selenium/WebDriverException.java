@@ -17,20 +17,22 @@
 
 package org.openqa.selenium;
 
-import org.openqa.selenium.net.HostIdentifier;
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+import org.openqa.selenium.net.HostIdentifier;
 
+@NullMarked
 public class WebDriverException extends RuntimeException {
 
   public static final String SESSION_ID = "Session ID";
   public static final String DRIVER_INFO = "Driver info";
-  protected static final String BASE_SUPPORT_URL = "https://selenium.dev/exceptions/";
+  protected static final String BASE_SUPPORT_URL =
+      "https://www.selenium.dev/documentation/webdriver/troubleshooting/errors";
 
   private final Map<String, String> extraInfo = new ConcurrentHashMap<>();
 
@@ -38,31 +40,31 @@ public class WebDriverException extends RuntimeException {
     super();
   }
 
-  public WebDriverException(String message) {
+  public WebDriverException(@Nullable String message) {
     super(message);
   }
 
-  public WebDriverException(Throwable cause) {
+  public WebDriverException(@Nullable Throwable cause) {
     super(cause);
   }
 
-  public WebDriverException(String message, Throwable cause) {
+  public WebDriverException(@Nullable String message, @Nullable Throwable cause) {
     super(message, cause);
   }
 
   /**
-   * Returns the detail message string of this exception that includes not only the original
-   * message passed to the exception constructor but also driver information, system
-   * information and extra information added by {@link #addInfo(String, String)} method.
-   *
-   * To get the original message use {@link #getRawMessage()}
+   * Returns the detail message string of this exception that includes not only the original message
+   * passed to the exception constructor but also driver information, system information and extra
+   * information added by {@link #addInfo(String, String)} method. To get the original message use
+   * {@link #getRawMessage()}
    *
    * @return the detail message string of this exception.
    */
   @Override
-  public String getMessage() {
+  public @Nullable String getMessage() {
     return getCause() instanceof WebDriverException
-           ? super.getMessage() : createMessage(super.getMessage());
+        ? super.getMessage()
+        : createMessage(super.getMessage());
   }
 
   /**
@@ -71,33 +73,42 @@ public class WebDriverException extends RuntimeException {
    * @return the simple message string of this exception.
    * @see #getMessage()
    */
-  public String getRawMessage() {
+  public @Nullable String getRawMessage() {
     return super.getMessage();
   }
 
-  private String createMessage(String originalMessageString) {
-    String supportMessage = Optional.ofNullable(getSupportUrl())
-      .map(url -> String.format("For documentation on this error, please visit: %s", url))
-      .orElse("");
+  private String createMessage(@Nullable String originalMessageString) {
+    String supportMessage =
+        Optional.ofNullable(getSupportUrl())
+            .map(url -> String.format("For documentation on this error, please visit: %s", url))
+            .orElse("");
 
     return Stream.of(
-      originalMessageString == null ? "" : originalMessageString,
-      supportMessage,
-      getBuildInformation().toString(),
-      getSystemInformation(),
-      getAdditionalInformation()
-    ).filter(s -> !(s == null || s.equals(""))).collect(Collectors.joining("\n"));
+            originalMessageString == null ? "" : originalMessageString,
+            supportMessage,
+            getBuildInformation().toString(),
+            getSystemInformation(),
+            getAdditionalInformation())
+        .filter(s -> !(s == null || s.isEmpty()))
+        .collect(Collectors.joining("\n"));
   }
 
   public String getSystemInformation() {
     return String.format(
-      "System info: host: '%s', ip: '%s', os.name: '%s', os.arch: '%s', os.version: '%s', java.version: '%s'",
-      HostIdentifier.getHostName(), HostIdentifier.getHostAddress(),
-      System.getProperty("os.name"), System.getProperty("os.arch"),
-      System.getProperty("os.version"), System.getProperty("java.version"));
+        "System info: os.name: '%s', os.arch: '%s', os.version: '%s', java.version: '%s'",
+        System.getProperty("os.name"),
+        System.getProperty("os.arch"),
+        System.getProperty("os.version"),
+        System.getProperty("java.version"));
   }
 
-  public String getSupportUrl() {
+  public static String getHostInformation() {
+    return String.format(
+        "Host info: host: '%s', ip: '%s'",
+        HostIdentifier.getHostName(), HostIdentifier.getHostAddress());
+  }
+
+  public @Nullable String getSupportUrl() {
     return null;
   }
 
@@ -107,13 +118,14 @@ public class WebDriverException extends RuntimeException {
 
   public static String getDriverName(StackTraceElement[] stackTraceElements) {
     return Stream.of(stackTraceElements)
-      .filter(e -> e.getClassName().endsWith("Driver"))
-      .map(e -> {
-        String[] bits = e.getClassName().split("\\.");
-        return bits[bits.length - 1];
-      })
-      .reduce((first, last) -> last)
-      .orElse("unknown");
+        .filter(e -> e.getClassName().endsWith("Driver"))
+        .map(
+            e -> {
+              String[] bits = e.getClassName().split("\\.");
+              return bits[bits.length - 1];
+            })
+        .reduce((first, last) -> last)
+        .orElse("unknown");
   }
 
   public void addInfo(String key, String value) {
@@ -122,12 +134,14 @@ public class WebDriverException extends RuntimeException {
 
   public String getAdditionalInformation() {
     extraInfo.computeIfAbsent(
-      DRIVER_INFO, key -> "driver.version: " + getDriverName(getStackTrace()));
+        DRIVER_INFO, key -> "driver.version: " + getDriverName(getStackTrace()));
 
     return extraInfo.entrySet().stream()
-      .map(entry -> entry.getValue() != null && entry.getValue().startsWith(entry.getKey())
+        .map(
+            entry ->
+                entry.getValue() != null && entry.getValue().startsWith(entry.getKey())
                     ? entry.getValue()
                     : entry.getKey() + ": " + entry.getValue())
-      .collect(Collectors.joining("\n"));
+        .collect(Collectors.joining("\n"));
   }
 }

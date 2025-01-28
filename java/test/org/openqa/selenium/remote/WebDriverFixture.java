@@ -25,6 +25,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.reflect.Array;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.stubbing.OngoingStubbing;
@@ -32,16 +41,7 @@ import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.WebDriverException;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.lang.reflect.Array;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-public class WebDriverFixture {
+class WebDriverFixture {
 
   public final CommandExecutor executor;
   public final RemoteWebDriver driver;
@@ -85,16 +85,20 @@ public class WebDriverFixture {
   public void verifyCommands(CommandPayload... commands) {
     InOrder inOrder = Mockito.inOrder(executor);
     try {
-      inOrder.verify(executor).execute(argThat(
-        command -> command.getName().equals(DriverCommand.NEW_SESSION)));
+      inOrder
+          .verify(executor)
+          .execute(argThat(command -> command.getName().equals(DriverCommand.NEW_SESSION)));
       for (CommandPayload target : commands) {
-        int x = target instanceof MultiCommandPayload
-                ? ((MultiCommandPayload) target).getTimes()
-                : 1;
-        inOrder.verify(executor, times(x)).execute(argThat(
-          cmd -> cmd.getSessionId().equals(sessionId)
-                 && cmd.getName().equals(target.getName())
-                 && areEqual(cmd.getParameters(), target.getParameters())));
+        int x =
+            target instanceof MultiCommandPayload ? ((MultiCommandPayload) target).getTimes() : 1;
+        inOrder
+            .verify(executor, times(x))
+            .execute(
+                argThat(
+                    cmd ->
+                        cmd.getSessionId().equals(sessionId)
+                            && cmd.getName().equals(target.getName())
+                            && areEqual(cmd.getParameters(), target.getParameters())));
       }
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
@@ -137,19 +141,22 @@ public class WebDriverFixture {
 
   public static final Function<Command, Response> nullResponder = cmd -> null;
 
-  public static final Function<Command, Response> exceptionResponder = cmd -> {
-    throw new InternalError("BOOM!!!");
-  };
+  public static final Function<Command, Response> exceptionResponder =
+      cmd -> {
+        throw new InternalError("BOOM!!!");
+      };
 
-  public static final Function<Command, Response> webDriverExceptionResponder = cmd -> {
-    throw new WebDriverException("BOOM!!!");
-  };
+  public static final Function<Command, Response> webDriverExceptionResponder =
+      cmd -> {
+        throw new WebDriverException("BOOM!!!");
+      };
 
   public static final Function<Command, Response> nullValueResponder = valueResponder(null);
 
   public static Function<Command, Response> valueResponder(Object value) {
     return cmd -> {
       Response response = new Response();
+      response.setState("success");
       response.setValue(value);
       response.setSessionId(cmd.getSessionId() != null ? cmd.getSessionId().toString() : null);
       return response;
@@ -167,13 +174,19 @@ public class WebDriverFixture {
     };
   }
 
-  public static final Function<Command, Response> echoCapabilities = cmd -> {
-    Response response = new Response();
-    response.setValue(
-      ((Capabilities) cmd.getParameters().get("desiredCapabilities")).asMap()
-        .entrySet().stream()
-        .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toString())));
-    response.setSessionId(UUID.randomUUID().toString());
-    return response;
-  };
+  public static final Function<Command, Response> echoCapabilities =
+      cmd -> {
+        Response response = new Response();
+
+        @SuppressWarnings("unchecked")
+        Collection<Capabilities> capabilities =
+            (Collection<Capabilities>) cmd.getParameters().get("capabilities");
+
+        response.setState("success");
+        response.setValue(
+            capabilities.iterator().next().asMap().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())));
+        response.setSessionId(UUID.randomUUID().toString());
+        return response;
+      };
 }

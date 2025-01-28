@@ -1,25 +1,24 @@
-// <copyright file="InternetExplorerOptions.cs" company="WebDriver Committers">
+// <copyright file="InternetExplorerOptions.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using OpenQA.Selenium.Remote;
 
 namespace OpenQA.Selenium.IE
 {
@@ -92,6 +91,7 @@ namespace OpenQA.Selenium.IE
         private const string EdgeExecutablePathCapability = "ie.edgepath";
         private const string LegacyFileUploadDialogHandlingCapability = "ie.useLegacyFileUploadDialogHandling";
         private const string AttachToEdgeChromeCapability = "ie.edgechromium";
+        private const string IgnoreProcessMatchCapability = "ie.ignoreprocessmatch";
 
         private bool ignoreProtectedModeSettings;
         private bool ignoreZoomLevel;
@@ -105,6 +105,7 @@ namespace OpenQA.Selenium.IE
         private bool enableFullPageScreenshot = true;
         private bool legacyFileUploadDialogHandling;
         private bool attachToEdgeChrome;
+        private bool ignoreProcessMatch;
         private TimeSpan browserAttachTimeout = TimeSpan.MinValue;
         private TimeSpan fileUploadDialogTimeout = TimeSpan.MinValue;
         private string initialBrowserUrl = string.Empty;
@@ -140,6 +141,7 @@ namespace OpenQA.Selenium.IE
             this.AddKnownCapabilityName(LegacyFileUploadDialogHandlingCapability, "LegacyFileUploadDialogHanlding property");
             this.AddKnownCapabilityName(AttachToEdgeChromeCapability, "AttachToEdgeChrome property");
             this.AddKnownCapabilityName(EdgeExecutablePathCapability, "EdgeExecutablePath property");
+            this.AddKnownCapabilityName(IgnoreProcessMatchCapability, "IgnoreProcessMatch property");
         }
 
         /// <summary>
@@ -310,6 +312,15 @@ namespace OpenQA.Selenium.IE
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether to ignore process id match with IE Mode on Edge.
+        /// </summary>
+        public bool IgnoreProcessMatch
+        {
+            get { return this.ignoreProcessMatch; }
+            set { this.ignoreProcessMatch = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the path to the Edge Browser Executable.
         /// </summary>
         public string EdgeExecutablePath
@@ -440,6 +451,11 @@ namespace OpenQA.Selenium.IE
             if (this.attachToEdgeChrome)
             {
                 internetExplorerOptionsDictionary[AttachToEdgeChromeCapability] = true;
+            }
+
+            if (this.ignoreProcessMatch)
+            {
+                internetExplorerOptionsDictionary[IgnoreProcessMatchCapability] = true;
             }
 
             if (!string.IsNullOrEmpty(this.edgeExecutablePath))

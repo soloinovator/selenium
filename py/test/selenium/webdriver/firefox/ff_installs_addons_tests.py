@@ -16,32 +16,101 @@
 # under the License.
 
 import os
+import zipfile
 
-from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 
-
-def test_install_addon_temporary(driver):
-    extension = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             'webextensions-selenium-example.xpi')
-
-    id = driver.install_addon(extension, True)
-    assert id == 'webextensions-selenium-example@example.com'
+extensions = os.path.abspath("../../../../../../test/extensions/")
 
 
-def test_install_addon(driver):
-    extension = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             'webextensions-selenium-example.xpi')
-
-    id = driver.install_addon(extension, False)
-    assert id == 'webextensions-selenium-example@example.com'
-
-
-def test_uninstall_addon(driver):
-    extension = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             'webextensions-selenium-example.xpi')
+def test_install_uninstall_signed_addon_xpi(driver, pages):
+    extension = os.path.join(extensions, "webextensions-selenium-example.xpi")
 
     id = driver.install_addon(extension)
-    try:
-        driver.uninstall_addon(id)
-    except WebDriverException as exc:
-        assert False, exc
+    assert id == "webextensions-selenium-example-v3@example.com"
+
+    pages.load("blank.html")
+    injected = WebDriverWait(driver, timeout=2).until(
+        lambda dr: dr.find_element(By.ID, "webextensions-selenium-example")
+    )
+    assert injected.text == "Content injected by webextensions-selenium-example"
+
+    driver.uninstall_addon(id)
+    driver.refresh()
+    assert len(driver.find_elements(By.ID, "webextensions-selenium-example")) == 0
+
+
+def test_install_uninstall_signed_addon_zip(driver, pages):
+    extension = os.path.join(extensions, "webextensions-selenium-example.zip")
+
+    id = driver.install_addon(extension)
+    assert id == "webextensions-selenium-example-v3@example.com"
+
+    pages.load("blank.html")
+    injected = WebDriverWait(driver, timeout=2).until(
+        lambda dr: dr.find_element(By.ID, "webextensions-selenium-example")
+    )
+    assert injected.text == "Content injected by webextensions-selenium-example"
+
+    driver.uninstall_addon(id)
+    driver.refresh()
+    assert len(driver.find_elements(By.ID, "webextensions-selenium-example")) == 0
+
+
+def test_install_uninstall_unsigned_addon_zip(driver, pages):
+    extension = os.path.join(extensions, "webextensions-selenium-example-unsigned.zip")
+
+    id = driver.install_addon(extension, temporary=True)
+    assert id == "webextensions-selenium-example-v3@example.com"
+
+    pages.load("blank.html")
+    injected = WebDriverWait(driver, timeout=2).until(
+        lambda dr: dr.find_element(By.ID, "webextensions-selenium-example")
+    )
+    assert injected.text == "Content injected by webextensions-selenium-example"
+
+    driver.uninstall_addon(id)
+    driver.refresh()
+    assert len(driver.find_elements(By.ID, "webextensions-selenium-example")) == 0
+
+
+def test_install_uninstall_signed_addon_dir(driver, pages):
+    zip = os.path.join(extensions, "webextensions-selenium-example.zip")
+
+    target = os.path.join(extensions, "webextensions-selenium-example")
+    with zipfile.ZipFile(zip, "r") as zip_ref:
+        zip_ref.extractall(target)
+
+    id = driver.install_addon(target)
+    assert id == "webextensions-selenium-example-v3@example.com"
+
+    pages.load("blank.html")
+    injected = WebDriverWait(driver, timeout=2).until(
+        lambda dr: dr.find_element(By.ID, "webextensions-selenium-example")
+    )
+    assert injected.text == "Content injected by webextensions-selenium-example"
+
+    driver.uninstall_addon(id)
+    driver.refresh()
+    assert len(driver.find_elements(By.ID, "webextensions-selenium-example")) == 0
+
+
+def test_install_uninstall_unsigned_addon_dir(driver, pages):
+    zip = os.path.join(extensions, "webextensions-selenium-example-unsigned.zip")
+    target = os.path.join(extensions, "webextensions-selenium-example-unsigned")
+    with zipfile.ZipFile(zip, "r") as zip_ref:
+        zip_ref.extractall(target)
+
+    id = driver.install_addon(target, temporary=True)
+    assert id == "webextensions-selenium-example-v3@example.com"
+
+    pages.load("blank.html")
+    injected = WebDriverWait(driver, timeout=2).until(
+        lambda dr: dr.find_element(By.ID, "webextensions-selenium-example")
+    )
+    assert injected.text == "Content injected by webextensions-selenium-example"
+
+    driver.uninstall_addon(id)
+    driver.refresh()
+    assert len(driver.find_elements(By.ID, "webextensions-selenium-example")) == 0

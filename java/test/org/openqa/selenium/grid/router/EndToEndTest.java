@@ -17,8 +17,28 @@
 
 package org.openqa.selenium.grid.router;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
+import static org.openqa.selenium.remote.http.Contents.asJson;
+import static org.openqa.selenium.remote.http.Contents.string;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+import static org.openqa.selenium.remote.http.HttpMethod.POST;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -49,29 +69,7 @@ import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.testing.Safely;
 import org.openqa.selenium.testing.TearDownFixture;
 
-import java.io.StringReader;
-import java.io.UncheckedIOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.openqa.selenium.json.Json.MAP_TYPE;
-import static org.openqa.selenium.remote.http.Contents.asJson;
-import static org.openqa.selenium.remote.http.Contents.string;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-import static org.openqa.selenium.remote.http.HttpMethod.POST;
-
-public class EndToEndTest {
+class EndToEndTest {
 
   private static final Capabilities CAPS = new ImmutableCapabilities("browserName", "cheese");
   private final Json json = new Json();
@@ -83,16 +81,18 @@ public class EndToEndTest {
     }
 
     Config additionalConfig =
-      new TomlConfig(
-        new StringReader(
-          "[node]\n" +
-            "detect-drivers = false\n" +
-            "driver-factories = [\n" +
-            String.format("\"%s\",", TestSessionFactoryFactory.class.getName()) + "\n" +
-            String.format("\"%s\"", rawCaps.toString().replace("\"", "\\\"")) + "\n" +
-            "]\n" +
-            "[sessionqueue]\n" +
-            "session-request-timeout = 5"));
+        new TomlConfig(
+            new StringReader(
+                "[node]\n"
+                    + "detect-drivers = false\n"
+                    + "driver-factories = [\n"
+                    + String.format("\"%s\",", TestSessionFactoryFactory.class.getName())
+                    + "\n"
+                    + String.format("\"%s\"", rawCaps.toString().replace("\"", "\\\""))
+                    + "\n"
+                    + "]\n"
+                    + "[sessionqueue]\n"
+                    + "session-request-timeout = 5"));
 
     Supplier<Deployment> s1 = () -> DeploymentTypes.DISTRIBUTED.start(CAPS, additionalConfig);
     Supplier<Deployment> s2 = () -> DeploymentTypes.HUB_AND_NODE.start(CAPS, additionalConfig);
@@ -123,16 +123,16 @@ public class EndToEndTest {
   private static void waitUntilReady(Server<?> server, Duration duration) {
     try (HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl())) {
       new FluentWait<>(client)
-        .withTimeout(duration)
-        .pollingEvery(Duration.ofSeconds(1))
-        .until(
-          c -> {
-            HttpResponse response = c.execute(new HttpRequest(GET, "/status"));
-            System.out.println(Contents.string(response));
-            Map<String, Object> status = Values.get(response, MAP_TYPE);
-            return Boolean.TRUE.equals(
-              status != null && Boolean.parseBoolean(status.get("ready").toString()));
-          });
+          .withTimeout(duration)
+          .pollingEvery(Duration.ofSeconds(1))
+          .until(
+              c -> {
+                HttpResponse response = c.execute(new HttpRequest(GET, "/status"));
+                System.out.println(Contents.string(response));
+                Map<String, Object> status = Values.get(response, MAP_TYPE);
+                return Boolean.TRUE.equals(
+                    status != null && Boolean.parseBoolean(status.get("ready").toString()));
+              });
     }
   }
 
@@ -156,7 +156,12 @@ public class EndToEndTest {
   private static class SpoofSession extends Session implements HttpHandler {
 
     private SpoofSession(URI serverUri, Capabilities capabilities) {
-      super(new SessionId(UUID.randomUUID()), serverUri, new ImmutableCapabilities(), capabilities, Instant.now());
+      super(
+          new SessionId(UUID.randomUUID()),
+          serverUri,
+          new ImmutableCapabilities(),
+          capabilities,
+          Instant.now());
     }
 
     @Override
@@ -167,11 +172,11 @@ public class EndToEndTest {
 
   @ParameterizedTest
   @MethodSource("data")
-  public void success(Supplier<Deployment> values) {
+  void success(Supplier<Deployment> values) {
     setFields(values);
 
     // The node added only has a single node. Make sure we can start and stop sessions.
-    Capabilities caps = new ImmutableCapabilities("browserName", "cheese", "type", "cheddar");
+    Capabilities caps = new ImmutableCapabilities("browserName", "cheese", "se:type", "cheddar");
     WebDriver driver = new RemoteWebDriver(server.getUrl(), caps);
     driver.get("http://www.google.com");
 
@@ -183,11 +188,11 @@ public class EndToEndTest {
 
   @ParameterizedTest
   @MethodSource("data")
-  public void exerciseDriver(Supplier<Deployment> values) {
+  void exerciseDriver(Supplier<Deployment> values) {
     setFields(values);
 
     // The node added only has a single node. Make sure we can start and stop sessions.
-    Capabilities caps = new ImmutableCapabilities("browserName", "cheese", "type", "cheddar");
+    Capabilities caps = new ImmutableCapabilities("browserName", "cheese", "se:type", "cheddar");
     WebDriver driver = new RemoteWebDriver(server.getUrl(), caps);
     driver.get("http://www.google.com");
 
@@ -214,14 +219,15 @@ public class EndToEndTest {
 
   @ParameterizedTest
   @MethodSource("data")
-  public void shouldAllowPassthroughForW3CMode(Supplier<Deployment> values) {
+  void shouldAllowPassthroughForW3CMode(Supplier<Deployment> values) {
     setFields(values);
 
     HttpRequest request = new HttpRequest(POST, "/session");
-    request.setContent(asJson(
-      ImmutableMap.of(
-        "capabilities", ImmutableMap.of(
-          "alwaysMatch", ImmutableMap.of("browserName", "cheese")))));
+    request.setContent(
+        asJson(
+            ImmutableMap.of(
+                "capabilities",
+                ImmutableMap.of("alwaysMatch", ImmutableMap.of("browserName", "cheese")))));
 
     HttpResponse response = client.execute(request);
 
@@ -242,7 +248,7 @@ public class EndToEndTest {
 
   @ParameterizedTest
   @MethodSource("data")
-  public void shouldRejectSessionRequestIfCapsNotSupported(Supplier<Deployment> values) {
+  void shouldRejectSessionRequestIfCapsNotSupported(Supplier<Deployment> values) {
     setFields(values);
 
     try {
@@ -257,40 +263,13 @@ public class EndToEndTest {
 
   @ParameterizedTest
   @MethodSource("data")
-  public void shouldAllowPassthroughForJWPMode(Supplier<Deployment> values) {
-    setFields(values);
-
-    HttpRequest request = new HttpRequest(POST, "/session");
-    request.setContent(asJson(
-      ImmutableMap.of(
-        "desiredCapabilities", ImmutableMap.of(
-          "browserName", "cheese"))));
-
-    HttpResponse response = client.execute(request);
-
-    assertEquals(200, response.getStatus());
-
-    Map<String, Object> topLevel = json.toType(string(response), MAP_TYPE);
-
-    // There should be a numeric status field
-    assertEquals(0L, topLevel.get("status"), topLevel.toString());
-    // The session id
-    assertTrue(topLevel.containsKey("sessionId"), string(request));
-
-    // And the value should be the capabilities.
-    Map<?, ?> value = (Map<?, ?>) topLevel.get("value");
-    assertEquals("cheese", value.get("browserName"), string(request));
-  }
-
-  @ParameterizedTest
-  @MethodSource("data")
-  public void shouldDoProtocolTranslationFromW3CLocalEndToJWPRemoteEnd(Supplier<Deployment> values) {
+  void shouldDoProtocolTranslationFromW3CLocalEndToJWPRemoteEnd(Supplier<Deployment> values) {
     setFields(values);
   }
 
   @ParameterizedTest
   @MethodSource("data")
-  public void responseShouldHaveContentTypeAndCacheControlHeaders(Supplier<Deployment> values) {
+  void responseShouldHaveContentTypeAndCacheControlHeaders(Supplier<Deployment> values) {
     setFields(values);
 
     try (HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl())) {

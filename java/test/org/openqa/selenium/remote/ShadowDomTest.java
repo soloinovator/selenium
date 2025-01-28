@@ -17,9 +17,22 @@
 
 package org.openqa.selenium.remote;
 
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.util.Collections.singletonMap;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.openqa.selenium.json.Json.JSON_UTF_8;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+import static org.openqa.selenium.remote.http.HttpMethod.POST;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
@@ -32,22 +45,8 @@ import org.openqa.selenium.remote.http.Contents;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Function;
-
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.util.Collections.singletonMap;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.openqa.selenium.json.Json.JSON_UTF_8;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-import static org.openqa.selenium.remote.http.HttpMethod.POST;
-
 @Tag("UnitTests")
-public class ShadowDomTest {
+class ShadowDomTest {
 
   private final SessionId id = new SessionId(UUID.randomUUID());
   private final UUID elementId = UUID.randomUUID();
@@ -60,27 +59,38 @@ public class ShadowDomTest {
     Function<Command, HttpRequest> toHttpReq = Dialect.W3C.getCommandCodec()::encode;
     Function<HttpResponse, Response> toHttpRes = Dialect.W3C.getResponseCodec()::decode;
 
-    Function<HttpRequest, HttpResponse> handler = req -> {
-      HttpResponse res = cannedResponses.entrySet().stream()
-        .filter(e -> e.getKey().getMethod() == req.getMethod() && e.getKey().getUri().equals(req.getUri()))
-        .map(Map.Entry::getValue)
-        .findFirst()
-        .orElse(new HttpResponse()
-          .setStatus(HTTP_NOT_FOUND)
-          .setContent(Contents.asJson(
-            Map.of("value", Map.of("error", "unknown command", "message", req.getUri())))));
+    Function<HttpRequest, HttpResponse> handler =
+        req -> {
+          HttpResponse res =
+              cannedResponses.entrySet().stream()
+                  .filter(
+                      e ->
+                          e.getKey().getMethod() == req.getMethod()
+                              && e.getKey().getUri().equals(req.getUri()))
+                  .map(Map.Entry::getValue)
+                  .findFirst()
+                  .orElse(
+                      new HttpResponse()
+                          .setStatus(HTTP_NOT_FOUND)
+                          .setContent(
+                              Contents.asJson(
+                                  Map.of(
+                                      "value",
+                                      Map.of(
+                                          "error", "unknown command", "message", req.getUri())))));
 
-      return res.setHeader("Content-Type", JSON_UTF_8);
-    };
+          return res.setHeader("Content-Type", JSON_UTF_8);
+        };
 
     CommandExecutor executor = cmd -> toHttpReq.andThen(handler).andThen(toHttpRes).apply(cmd);
 
-    driver = new RemoteWebDriver(executor, new ImmutableCapabilities()) {
-      @Override
-      protected void startSession(Capabilities capabilities) {
-        setSessionId(id.toString());
-      }
-    };
+    driver =
+        new RemoteWebDriver(executor, new ImmutableCapabilities()) {
+          @Override
+          protected void startSession(Capabilities capabilities) {
+            setSessionId(id.toString());
+          }
+        };
 
     element = new RemoteWebElement();
     element.setParent(driver);
@@ -88,29 +98,34 @@ public class ShadowDomTest {
   }
 
   @Test
-  public void shouldThrowAnExceptionIfTheShadowRootCannotBeFound() {
-    HttpRequest expected = new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
+  void shouldThrowAnExceptionIfTheShadowRootCannotBeFound() {
+    HttpRequest expected =
+        new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
 
     cannedResponses.put(
-      expected,
-      new HttpResponse()
-        .setStatus(HTTP_NOT_FOUND)
-        .setContent(Contents.asJson(
-          Map.of("value", Map.of("error", "no such shadow root", "message", "")))));
+        expected,
+        new HttpResponse()
+            .setStatus(HTTP_NOT_FOUND)
+            .setContent(
+                Contents.asJson(
+                    Map.of("value", Map.of("error", "no such shadow root", "message", "")))));
 
     assertThatExceptionOfType(NoSuchShadowRootException.class).isThrownBy(element::getShadowRoot);
   }
 
   @Test
-  public void shouldGetShadowRoot() {
-    HttpRequest expected = new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
+  void shouldGetShadowRoot() {
+    HttpRequest expected =
+        new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
     UUID shadowId = UUID.randomUUID();
 
     cannedResponses.put(
-      expected,
-      new HttpResponse()
-        .setContent(Contents.asJson(
-          singletonMap("value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId)))));
+        expected,
+        new HttpResponse()
+            .setContent(
+                Contents.asJson(
+                    singletonMap(
+                        "value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId)))));
 
     SearchContext context = element.getShadowRoot();
 
@@ -118,16 +133,18 @@ public class ShadowDomTest {
   }
 
   @Test
-  public void shouldBeAbleToFindAnElementFromAShadowRoot() {
+  void shouldBeAbleToFindAnElementFromAShadowRoot() {
     String shadowId = UUID.randomUUID().toString();
     UUID elementId = UUID.randomUUID();
 
-    HttpRequest expected = new HttpRequest(POST, String.format("/session/%s/shadow/%s/element", id, shadowId));
+    HttpRequest expected =
+        new HttpRequest(POST, String.format("/session/%s/shadow/%s/element", id, shadowId));
     cannedResponses.put(
-      expected,
-      new HttpResponse()
-        .setContent(Contents.asJson(
-          Map.of("value", Map.of(Dialect.W3C.getEncodedElementKey(), elementId)))));
+        expected,
+        new HttpResponse()
+            .setContent(
+                Contents.asJson(
+                    Map.of("value", Map.of(Dialect.W3C.getEncodedElementKey(), elementId)))));
 
     SearchContext context = new ShadowRoot(driver, shadowId);
 
@@ -138,16 +155,19 @@ public class ShadowDomTest {
   }
 
   @Test
-  public void shouldBeAbleToFindElementsFromAShadowRoot() {
+  void shouldBeAbleToFindElementsFromAShadowRoot() {
     String shadowId = UUID.randomUUID().toString();
     UUID elementId = UUID.randomUUID();
 
-    HttpRequest expected = new HttpRequest(POST, String.format("/session/%s/shadow/%s/elements", id, shadowId));
+    HttpRequest expected =
+        new HttpRequest(POST, String.format("/session/%s/shadow/%s/elements", id, shadowId));
     cannedResponses.put(
-      expected,
-      new HttpResponse()
-        .setContent(Contents.asJson(
-          Map.of("value", List.of(Map.of(Dialect.W3C.getEncodedElementKey(), elementId))))));
+        expected,
+        new HttpResponse()
+            .setContent(
+                Contents.asJson(
+                    Map.of(
+                        "value", List.of(Map.of(Dialect.W3C.getEncodedElementKey(), elementId))))));
 
     SearchContext context = new ShadowRoot(driver, shadowId);
 
@@ -159,45 +179,52 @@ public class ShadowDomTest {
   }
 
   @Test
-  public void failingToFindAnElementFromAShadowRootThrowsAnException() {
+  void failingToFindAnElementFromAShadowRootThrowsAnException() {
     String shadowId = UUID.randomUUID().toString();
 
-    HttpRequest expected = new HttpRequest(POST, String.format("/session/%s/shadow/%s/element", id, shadowId));
+    HttpRequest expected =
+        new HttpRequest(POST, String.format("/session/%s/shadow/%s/element", id, shadowId));
     cannedResponses.put(
-      expected,
-      new HttpResponse()
-        .setStatus(HTTP_NOT_FOUND)
-        .setContent(Contents.asJson(
-          Map.of("value", Map.of("error", "no such element", "message", "oh noes!")))));
+        expected,
+        new HttpResponse()
+            .setStatus(HTTP_NOT_FOUND)
+            .setContent(
+                Contents.asJson(
+                    Map.of("value", Map.of("error", "no such element", "message", "oh noes!")))));
 
     SearchContext context = new ShadowRoot(driver, shadowId);
 
     assertThatExceptionOfType(NoSuchElementException.class)
-      .isThrownBy(() -> context.findElement(By.cssSelector("#cheese")));
+        .isThrownBy(() -> context.findElement(By.cssSelector("#cheese")));
   }
 
   @Test
-  public void shouldBeAbleToGetShadowRootFromExecuteScript() {
+  void shouldBeAbleToGetShadowRootFromExecuteScript() {
     String shadowId = UUID.randomUUID().toString();
 
     HttpRequest execute = new HttpRequest(POST, String.format("/session/%s/execute/sync", id));
 
     cannedResponses.put(
-      execute,
-      new HttpResponse()
-        .setContent(Contents.asJson(
-          singletonMap("value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId)))));
+        execute,
+        new HttpResponse()
+            .setContent(
+                Contents.asJson(
+                    singletonMap(
+                        "value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId)))));
 
-    HttpRequest shadow = new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
+    HttpRequest shadow =
+        new HttpRequest(GET, String.format("/session/%s/element/%s/shadow", id, elementId));
     cannedResponses.put(
-      shadow,
-      new HttpResponse()
-        .setContent(Contents.asJson(
-          singletonMap("value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId))))
-    );
+        shadow,
+        new HttpResponse()
+            .setContent(
+                Contents.asJson(
+                    singletonMap(
+                        "value", singletonMap("shadow-6066-11e4-a52e-4f735466cecf", shadowId)))));
 
     ShadowRoot shadowContext = (ShadowRoot) element.getShadowRoot();
-    ShadowRoot executeContext = (ShadowRoot)((JavascriptExecutor)driver).executeScript("return Arguments[0].shadowRoot");
-    assertThat(shadowContext.getId()).isEqualTo(executeContext.getId());
+    ShadowRoot executeContext =
+        (ShadowRoot) ((JavascriptExecutor) driver).executeScript("return Arguments[0].shadowRoot");
+    assertThat(shadowContext).isEqualTo(executeContext);
   }
 }

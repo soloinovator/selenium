@@ -24,8 +24,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.Test;
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
@@ -35,19 +38,15 @@ import org.openqa.selenium.support.CacheLookup;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.How;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.List;
-
 @Tag("UnitTests")
-public class DefaultElementLocatorTest {
+class DefaultElementLocatorTest {
 
   protected ElementLocator newLocator(WebDriver driver, Field field) {
     return new DefaultElementLocator(driver, field);
   }
 
   @Test
-  public void shouldDelegateToDriverInstanceToFindElement() throws Exception {
+  void shouldDelegateToDriverInstanceToFindElement() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
@@ -62,7 +61,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldDelegateToDriverInstanceToFindElementList() throws Exception {
+  void shouldDelegateToDriverInstanceToFindElementList() throws Exception {
     Field f = Page.class.getDeclaredField("list");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("list");
@@ -79,7 +78,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void cachedElementShouldBeCached() throws Exception {
+  void cachedElementShouldBeCached() throws Exception {
     Field f = Page.class.getDeclaredField("cached");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("cached");
@@ -95,7 +94,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void cachedElementListShouldBeCached() throws Exception {
+  void cachedElementListShouldBeCached() throws Exception {
     Field f = Page.class.getDeclaredField("cachedList");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("cachedList");
@@ -113,7 +112,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldNotCacheNormalElement() throws Exception {
+  void shouldNotCacheNormalElement() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
@@ -129,7 +128,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldNotCacheNormalElementList() throws Exception {
+  void shouldNotCacheNormalElementList() throws Exception {
     Field f = Page.class.getDeclaredField("list");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("list");
@@ -147,7 +146,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldUseFindByAnnotationsWherePossible() throws Exception {
+  void shouldUseFindByAnnotationsWherePossible() throws Exception {
     Field f = Page.class.getDeclaredField("byId");
     final WebDriver driver = mock(WebDriver.class);
     final By by = By.id("foo");
@@ -160,7 +159,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldUseFindAllByAnnotationsWherePossible() throws Exception {
+  void shouldUseFindAllByAnnotationsWherePossible() throws Exception {
     Field f = Page.class.getDeclaredField("listById");
     final WebDriver driver = mock(WebDriver.class);
     final By by = By.id("foo");
@@ -175,7 +174,7 @@ public class DefaultElementLocatorTest {
   }
 
   @Test
-  public void shouldNotMaskNoSuchElementExceptionIfThrown() throws Exception {
+  void shouldNotMaskNoSuchElementExceptionIfThrown() throws Exception {
     Field f = Page.class.getDeclaredField("byId");
     final WebDriver driver = mock(WebDriver.class);
     final By by = By.id("foo");
@@ -184,25 +183,25 @@ public class DefaultElementLocatorTest {
 
     ElementLocator locator = newLocator(driver, f);
 
-    assertThatExceptionOfType(NoSuchElementException.class)
-        .isThrownBy(locator::findElement);
+    assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(locator::findElement);
   }
 
   @Test
-  public void shouldWorkWithCustomAnnotations() {
+  void shouldWorkWithCustomAnnotations() {
     final WebDriver driver = mock(WebDriver.class);
 
-    AbstractAnnotations npeAnnotations = new AbstractAnnotations() {
-      @Override
-      public boolean isLookupCached() {
-        return false;
-      }
+    AbstractAnnotations npeAnnotations =
+        new AbstractAnnotations() {
+          @Override
+          public boolean isLookupCached() {
+            return false;
+          }
 
-      @Override
-      public By buildBy() {
-        throw new NullPointerException();
-      }
-    };
+          @Override
+          public By buildBy() {
+            throw new NullPointerException();
+          }
+        };
 
     assertThatExceptionOfType(NullPointerException.class)
         .isThrownBy(() -> new DefaultElementLocator(driver, npeAnnotations));

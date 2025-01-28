@@ -18,27 +18,31 @@
 package org.openqa.selenium.devtools;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
 
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.devtools.events.ConsoleEvent;
-import org.openqa.selenium.environment.webserver.Page;
-import org.openqa.selenium.testing.Ignore;
-
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.devtools.events.ConsoleEvent;
+import org.openqa.selenium.devtools.idealized.runtime.model.RemoteObject;
+import org.openqa.selenium.environment.webserver.Page;
+import org.openqa.selenium.testing.Ignore;
 
-public class ConsoleEventsTest extends DevToolsTestBase {
+class ConsoleEventsTest extends DevToolsTestBase {
 
   @Test
-  @Ignore(gitHubActions = true)
-  public void canWatchConsoleEvents() throws InterruptedException, ExecutionException, TimeoutException {
-    String page = appServer.create(
-      new Page()
-        .withBody("<div id='button' onclick='helloWorld()'>click me</div>")
-        .withScripts("function helloWorld() { console.log('Hello, world!') }"));
+  @Ignore(value = FIREFOX, reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1819965")
+  public void canWatchConsoleEvents()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    String page =
+        appServer.create(
+            new Page()
+                .withBody("<div id='button' onclick='helloWorld()'>click me</div>")
+                .withScripts("function helloWorld() { console.log('Hello, world!') }"));
     driver.get(page);
 
     CompletableFuture<ConsoleEvent> future = new CompletableFuture<>();
@@ -50,4 +54,25 @@ public class ConsoleEventsTest extends DevToolsTestBase {
     assertThat(event.getMessages()).containsExactly("Hello, world!");
   }
 
+  @Test
+  @Ignore(value = FIREFOX, reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1819965")
+  public void canWatchConsoleEventsWithArgs()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    String page =
+        appServer.create(
+            new Page()
+                .withBody("<div id='button' onclick='helloWorld()'>click me</div>")
+                .withScripts("function helloWorld() { console.log(\"array\", [1, 2, 3]) }"));
+    driver.get(page);
+
+    CompletableFuture<ConsoleEvent> future = new CompletableFuture<>();
+    devTools.getDomains().events().addConsoleListener(future::complete);
+    driver.findElement(By.id("button")).click();
+    ConsoleEvent event = future.get(5, TimeUnit.SECONDS);
+
+    assertThat(event.getType()).isEqualTo("log");
+    List<Object> args = event.getArgs();
+    // Ensure args returned by CDP protocol are maintained
+    assertThat(args).isNotInstanceOf((RemoteObject.class));
+  }
 }

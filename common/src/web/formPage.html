@@ -65,9 +65,25 @@ There should be a form here:
 			<option id="multi_false_2" value="select_2">select_2</option>
 		</select>
 
+    <select name="single_disabled">
+      <option id="sinlge_disabled_1" value="enabled">Enabled</option>
+      <option id="sinlge_disabled_2" value="disabled" disabled="disabled">Disabled</option>
+    </select>
+
+    <select name="multi_disabled" multiple="true">
+      <option id="multi_disabled_1" value="enabled">Enabled</option>
+      <option id="multi_disabled_2" value="disabled" disabled="disabled">Disabled</option>
+    </select>
+
     <select id="invisi_select" style="opacity:0;">
-      <option selected value="apples">Apples</option>
+        <option selected value="apples">Apples</option>
+        <option value="oranges">Oranges</option>
+      </select>
+
+    <select id="invisible_multi_select" multiple>
+      <option selected="selected" value="apples" style="opacity: 0;">Apples</option>
       <option value="oranges">Oranges</option>
+      <option selected="selected" value="lemons">Lemons</option>
     </select>
 
     <select name="select-default">

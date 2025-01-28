@@ -17,22 +17,34 @@
 # specific language governing permissions and limitations
 # under the License.
 
-require 'selenium/webdriver/chrome/options'
+require 'selenium/webdriver/chromium/options'
 
 module Selenium
   module WebDriver
     module Edge
-      class Options < Selenium::WebDriver::Chrome::Options
+      class Options < Chromium::Options
         KEY = 'ms:edgeOptions'
         BROWSER = 'MicrosoftEdge'
 
-        protected
+        #
+        # Changes the browser name enable webview2
+        # see: https://learn.microsoft.com/en-us/microsoft-edge/webview2/how-to/webdriver
+        # Automation of WebView2 apps with Microsoft Edge WebDriver
+        #
+        # @example Enable webview2
+        #   options = Selenium::WebDriver::Edge::Options.new
+        #   options.webview2!
+        #
+
+        def webview2!
+          @options[:browser_name] = 'webview2'
+        end
+
+        private
 
         def enable_logging(browser_options)
           browser_options['ms:loggingPrefs'] = @logging_prefs
         end
-
-        private
 
         def binary_path
           Edge.path

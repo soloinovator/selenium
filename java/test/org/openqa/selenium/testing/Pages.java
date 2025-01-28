@@ -54,6 +54,7 @@ public class Pages {
   public String mapVisibilityPage;
   public String metaRedirectPage;
   public String missedJsReferencePage;
+  public String modernModalPage;
   public String mouseInteractionPage;
   public String mouseOverPage;
   public String mouseTrackerPage;
@@ -66,6 +67,7 @@ public class Pages {
   public String richTextPage;
   public String selectableItemsPage;
   public String selectPage;
+  public String shadowRootPage;
   public String simpleTestPage;
   public String simpleXmlDocument;
   public String sleepingPage;
@@ -118,6 +120,7 @@ public class Pages {
     mapVisibilityPage = appServer.whereIs("map_visibility.html");
     metaRedirectPage = appServer.whereIs("meta-redirect.html");
     missedJsReferencePage = appServer.whereIs("missedJsReference.html");
+    modernModalPage = appServer.whereIs("modal_dialogs/modern_modal.html");
     mouseInteractionPage = appServer.whereIs("mouse_interaction.html");
     mouseOverPage = appServer.whereIs("mouseOver.html");
     mouseTrackerPage = appServer.whereIs("mousePositionTracker.html");
@@ -132,6 +135,7 @@ public class Pages {
     selectPage = appServer.whereIs("selectPage.html");
     simpleTestPage = appServer.whereIs("simpleTest.html");
     simpleXmlDocument = appServer.whereIs("simple.xml");
+    shadowRootPage = appServer.whereIs("shadowRootPage.html");
     sleepingPage = appServer.whereIs("sleep");
     slowIframes = appServer.whereIs("slow_loading_iframes.html");
     slowLoadingAlertPage = appServer.whereIs("slowLoadingAlert.html");

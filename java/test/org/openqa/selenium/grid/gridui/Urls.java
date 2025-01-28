@@ -17,12 +17,11 @@
 
 package org.openqa.selenium.grid.gridui;
 
-import org.openqa.selenium.grid.server.Server;
-
 import java.net.MalformedURLException;
 import java.net.URL;
+import org.openqa.selenium.grid.server.Server;
 
-public class Urls {
+class Urls {
 
   private Urls() {
     // Utility class
@@ -54,5 +53,4 @@ public class Urls {
       throw new RuntimeException(e);
     }
   }
-
 }

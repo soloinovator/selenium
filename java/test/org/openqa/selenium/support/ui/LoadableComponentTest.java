@@ -20,18 +20,18 @@ package org.openqa.selenium.support.ui;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class LoadableComponentTest {
+class LoadableComponentTest {
   @Test
-  public void testShouldDoNothingIfComponentIsAlreadyLoaded() {
+  void testShouldDoNothingIfComponentIsAlreadyLoaded() {
     new DetonatingComponent().get();
   }
 
   @Test
-  public void testShouldCauseTheLoadMethodToBeCalledIfTheComponentIsNotAlreadyLoaded() {
+  void testShouldCauseTheLoadMethodToBeCalledIfTheComponentIsNotAlreadyLoaded() {
     LoadsOk ok = new LoadsOk(true);
 
     ok.get();
@@ -40,12 +40,10 @@ public class LoadableComponentTest {
   }
 
   @Test
-  public void testShouldThrowAnErrorIfCallingLoadDoesNotCauseTheComponentToLoad() {
+  void testShouldThrowAnErrorIfCallingLoadDoesNotCauseTheComponentToLoad() {
     LoadsOk ok = new LoadsOk(false);
 
-    assertThatExceptionOfType(Error.class)
-        .isThrownBy(ok::get)
-        .withMessage("Expected failure");
+    assertThatExceptionOfType(Error.class).isThrownBy(ok::get).withMessage("Expected failure");
   }
 
   private static class DetonatingComponent extends LoadableComponent<DetonatingComponent> {

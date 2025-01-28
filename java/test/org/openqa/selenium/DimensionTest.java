@@ -19,23 +19,21 @@ package org.openqa.selenium;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-/**
- * Test WebDriver's Dimensions class.
- */
+/** Test WebDriver's Dimensions class. */
 @Tag("UnitTests")
-public class DimensionTest {
+class DimensionTest {
   @Test
-  public void testSimpleAssignment() {
+  void testSimpleAssignment() {
     Dimension d1 = new Dimension(100, 200);
     assertThat(d1.getHeight()).isEqualTo(200);
     assertThat(d1.getWidth()).isEqualTo(100);
   }
 
   @Test
-  public void testEquality() {
+  void testEquality() {
     Dimension d1 = new Dimension(100, 200);
     Dimension d2 = new Dimension(200, 200);
 
@@ -48,5 +46,4 @@ public class DimensionTest {
     assertThat(d1copy).isEqualTo(d1);
     assertThat(d1copy.hashCode()).isEqualTo(d1.hashCode());
   }
-
 }

@@ -19,20 +19,18 @@ package org.openqa.selenium;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.openqa.selenium.WaitingConditions.newWindowIsOpened;
 import static org.openqa.selenium.WaitingConditions.windowHandleCountToBe;
 import static org.openqa.selenium.WaitingConditions.windowHandleCountToBeGreaterThan;
 import static org.openqa.selenium.support.ui.ExpectedConditions.alertIsPresent;
-import static org.openqa.selenium.testing.TestUtilities.getEffectivePlatform;
 import static org.openqa.selenium.testing.TestUtilities.isInternetExplorer;
+import static org.openqa.selenium.testing.drivers.Browser.CHROME;
 import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
 import static org.openqa.selenium.testing.drivers.Browser.IE;
-import static org.openqa.selenium.testing.drivers.Browser.LEGACY_OPERA;
-import static org.openqa.selenium.testing.drivers.Browser.OPERA;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,12 +40,8 @@ import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NoDriverAfterTest;
 import org.openqa.selenium.testing.NotYetImplemented;
 import org.openqa.selenium.testing.SwitchToTopAfterTest;
-import org.openqa.selenium.testing.drivers.Browser;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
-public class WindowSwitchingTest extends JupiterTestBase {
+class WindowSwitchingTest extends JupiterTestBase {
 
   private String mainWindow;
 
@@ -59,8 +53,9 @@ public class WindowSwitchingTest extends JupiterTestBase {
   @AfterEach
   public void closeAllWindowsExceptForTheMainOne() {
     try {
-      driver.getWindowHandles().stream().filter(handle -> ! mainWindow.equals(handle))
-        .forEach(handle -> driver.switchTo().window(handle).close());
+      driver.getWindowHandles().stream()
+          .filter(handle -> !mainWindow.equals(handle))
+          .forEach(handle -> driver.switchTo().window(handle).close());
     } catch (Exception ignore) {
       System.err.println("Ignoring: " + ignore.getMessage());
     }
@@ -74,10 +69,7 @@ public class WindowSwitchingTest extends JupiterTestBase {
   @SwitchToTopAfterTest
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  public void testShouldSwitchFocusToANewWindowWhenItIsOpenedAndNotStopFutureOperations() {
-    assumeFalse(Browser.detect() == Browser.LEGACY_OPERA &&
-                getEffectivePlatform(driver).is(Platform.WINDOWS));
-
+  void testShouldSwitchFocusToANewWindowWhenItIsOpenedAndNotStopFutureOperations() {
     driver.get(pages.xhtmlTestPage);
     Set<String> currentWindowHandles = driver.getWindowHandles();
 
@@ -98,10 +90,10 @@ public class WindowSwitchingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldThrowNoSuchWindowException() {
+  void testShouldThrowNoSuchWindowException() {
     driver.get(pages.xhtmlTestPage);
     assertThatExceptionOfType(NoSuchWindowException.class)
-      .isThrownBy(() -> driver.switchTo().window("invalid name"));
+        .isThrownBy(() -> driver.switchTo().window("invalid name"));
   }
 
   @NoDriverAfterTest(failedOnly = true)
@@ -123,7 +115,7 @@ public class WindowSwitchingTest extends JupiterTestBase {
 
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  public void testShouldThrowNoSuchWindowExceptionOnAnyOperationIfAWindowIsClosed() {
+  void testShouldThrowNoSuchWindowExceptionOnAnyOperationIfAWindowIsClosed() {
     driver.get(pages.xhtmlTestPage);
     Set<String> currentWindowHandles = driver.getWindowHandles();
 
@@ -137,12 +129,12 @@ public class WindowSwitchingTest extends JupiterTestBase {
     assertThatExceptionOfType(NoSuchWindowException.class).isThrownBy(driver::getTitle);
 
     assertThatExceptionOfType(NoSuchWindowException.class)
-      .isThrownBy(() -> driver.findElement(By.tagName("body")));
+        .isThrownBy(() -> driver.findElement(By.tagName("body")));
   }
 
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  public void testShouldThrowNoSuchWindowExceptionOnAnyElementOperationIfAWindowIsClosed() {
+  void testShouldThrowNoSuchWindowExceptionOnAnyElementOperationIfAWindowIsClosed() {
     driver.get(pages.xhtmlTestPage);
     Set<String> currentWindowHandles = driver.getWindowHandles();
 
@@ -160,6 +152,7 @@ public class WindowSwitchingTest extends JupiterTestBase {
   @NoDriverAfterTest
   @Test
   @Ignore(IE)
+  @Ignore(value = CHROME, reason = "https://bugs.chromium.org/p/chromedriver/issues/detail?id=4468")
   public void testShouldBeAbleToIterateOverAllOpenWindows() {
     driver.get(pages.xhtmlTestPage);
     String original = driver.getWindowHandle();
@@ -172,19 +165,21 @@ public class WindowSwitchingTest extends JupiterTestBase {
     Set<String> allWindowHandles = driver.getWindowHandles();
 
     // There should be three windows. We should also see each of the window titles at least once.
-    Set<String> allWindowTitles = allWindowHandles.stream().map(handle -> {
-      driver.switchTo().window(handle);
-      return driver.getTitle();
-    }).collect(Collectors.toSet());
+    Set<String> allWindowTitles =
+        allWindowHandles.stream()
+            .map(
+                handle -> {
+                  driver.switchTo().window(handle);
+                  return driver.getTitle();
+                })
+            .collect(Collectors.toSet());
 
     assertThat(allWindowHandles).hasSize(3);
     assertThat(allWindowTitles).hasSize(3);
   }
 
   @Test
-  public void testClickingOnAButtonThatClosesAnOpenWindowDoesNotCauseTheBrowserToHang() {
-    assumeFalse(Browser.detect() == Browser.LEGACY_OPERA &&
-                getEffectivePlatform(driver).is(Platform.WINDOWS));
+  void testClickingOnAButtonThatClosesAnOpenWindowDoesNotCauseTheBrowserToHang() {
     boolean isIE = isInternetExplorer(driver);
 
     driver.get(pages.xhtmlTestPage);
@@ -209,9 +204,6 @@ public class WindowSwitchingTest extends JupiterTestBase {
   @Test
   @Ignore(SAFARI)
   public void testCanCallGetWindowHandlesAfterClosingAWindow() {
-    assumeFalse(Browser.detect() == Browser.LEGACY_OPERA &&
-                getEffectivePlatform(driver).is(Platform.WINDOWS));
-
     driver.get(pages.xhtmlTestPage);
 
     Set<String> currentWindowHandles = driver.getWindowHandles();
@@ -237,18 +229,18 @@ public class WindowSwitchingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testCanObtainAWindowHandle() {
+  void testCanObtainAWindowHandle() {
     driver.get(pages.xhtmlTestPage);
     assertThat(driver.getWindowHandle()).isNotNull();
   }
 
   @Test
-  public void testFailingToSwitchToAWindowLeavesTheCurrentWindowAsIs() {
+  void testFailingToSwitchToAWindowLeavesTheCurrentWindowAsIs() {
     driver.get(pages.xhtmlTestPage);
     String current = driver.getWindowHandle();
 
     assertThatExceptionOfType(NoSuchWindowException.class)
-      .isThrownBy(() -> driver.switchTo().window("i will never exist"));
+        .isThrownBy(() -> driver.switchTo().window("i will never exist"));
 
     String newHandle = driver.getWindowHandle();
     assertThat(newHandle).isEqualTo(current);
@@ -256,7 +248,7 @@ public class WindowSwitchingTest extends JupiterTestBase {
 
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  public void testCanCloseWindowWhenMultipleWindowsAreOpen() {
+  void testCanCloseWindowWhenMultipleWindowsAreOpen() {
     driver.get(pages.xhtmlTestPage);
     String mainHandle = driver.getWindowHandle();
 
@@ -271,17 +263,20 @@ public class WindowSwitchingTest extends JupiterTestBase {
     // There should be two windows. We should also see each of the window titles at least once.
     assertThat(allWindowHandles).hasSize(2);
 
-    allWindowHandles.stream().filter(anObject -> ! mainHandle.equals(anObject)).forEach(handle -> {
-      driver.switchTo().window(handle);
-      driver.close();
-    });
+    allWindowHandles.stream()
+        .filter(anObject -> !mainHandle.equals(anObject))
+        .forEach(
+            handle -> {
+              driver.switchTo().window(handle);
+              driver.close();
+            });
 
     assertThat(driver.getWindowHandles()).hasSize(1);
   }
 
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  public void testCanCloseWindowAndSwitchBackToMainWindow() {
+  void testCanCloseWindowAndSwitchBackToMainWindow() {
     driver.get(pages.xhtmlTestPage);
 
     Set<String> currentWindowHandles = driver.getWindowHandles();
@@ -296,10 +291,13 @@ public class WindowSwitchingTest extends JupiterTestBase {
     // There should be two windows. We should also see each of the window titles at least once.
     assertThat(allWindowHandles).hasSize(2);
 
-    allWindowHandles.stream().filter(anObject -> ! mainHandle.equals(anObject)).forEach(handle -> {
-      driver.switchTo().window(handle);
-      driver.close();
-    });
+    allWindowHandles.stream()
+        .filter(anObject -> !mainHandle.equals(anObject))
+        .forEach(
+            handle -> {
+              driver.switchTo().window(handle);
+              driver.close();
+            });
 
     driver.switchTo().window(mainHandle);
 
@@ -311,7 +309,7 @@ public class WindowSwitchingTest extends JupiterTestBase {
 
   @NoDriverAfterTest
   @Test
-  public void testClosingOnlyWindowShouldNotCauseTheBrowserToHang() {
+  void testClosingOnlyWindowShouldNotCauseTheBrowserToHang() {
     driver.get(pages.xhtmlTestPage);
     driver.close();
   }
@@ -339,9 +337,6 @@ public class WindowSwitchingTest extends JupiterTestBase {
 
   @NoDriverAfterTest(failedOnly = true)
   @Test
-  @NotYetImplemented(HTMLUNIT)
-  @NotYetImplemented(OPERA)
-  @Ignore(LEGACY_OPERA)
   public void canOpenANewWindow() {
     driver.get(pages.xhtmlTestPage);
 

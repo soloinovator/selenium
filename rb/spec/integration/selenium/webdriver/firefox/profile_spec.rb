@@ -22,33 +22,25 @@ require_relative '../spec_helper'
 module Selenium
   module WebDriver
     module Firefox
-      describe Profile, exclusive: {browser: :firefox} do
-        let(:profile) { Profile.new }
-
-        def read_generated_prefs(from = nil)
-          prof = from || profile
-          dir = prof.layout_on_disk
-
-          File.read(File.join(dir, 'user.js'))
-        end
+      describe Profile, exclusive: [{bidi: false, reason: 'Not yet implemented with BiDi'}, {browser: :firefox}] do
+        let(:profile) { described_class.new }
 
         before do
-          quit_driver
-          sleep 2
           profile['browser.startup.homepage'] = url_for('simpleTest.html')
           profile['browser.startup.page'] = 1
         end
 
-        it 'should instantiate the browser with the correct profile' do
-          create_driver!(capabilities: Options.new(profile: profile)) do |driver|
+        it 'instantiates the browser with the correct profile' do
+          reset_driver!(profile: profile) do |driver|
             expect { wait(5).until { driver.find_element(id: 'oneline') } }.not_to raise_error
           end
         end
 
-        it 'should be able to use the same profile more than once' do
-          create_driver!(capabilities: Options.new(profile: profile)) do |driver1|
+        it 'is able to use the same profile more than once',
+           exclude: {driver: :remote, rbe: true, reason: 'Cannot start 2+ drivers at once.'} do
+          reset_driver!(profile: profile) do |driver1|
             expect { wait(5).until { driver1.find_element(id: 'oneline') } }.not_to raise_error
-            create_driver!(capabilities: Options.new(profile: profile)) do |driver2|
+            reset_driver!(profile: profile) do |driver2|
               expect { wait(5).until { driver2.find_element(id: 'oneline') } }.not_to raise_error
             end
           end

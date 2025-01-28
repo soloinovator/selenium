@@ -17,23 +17,22 @@
 
 package org.openqa.selenium.firefox;
 
-import static org.openqa.selenium.firefox.FirefoxDriver.Capability.MARIONETTE;
 import static org.openqa.selenium.remote.Browser.FIREFOX;
 import static org.openqa.selenium.remote.CapabilityType.BROWSER_NAME;
 
 import com.google.auto.service.AutoService;
-
+import java.util.Optional;
+import java.util.logging.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebDriverInfo;
-
-import java.util.Optional;
+import org.openqa.selenium.remote.service.DriverFinder;
 
 @AutoService(WebDriverInfo.class)
 public class GeckoDriverInfo implements WebDriverInfo {
+  private static final Logger LOG = Logger.getLogger(GeckoDriverInfo.class.getName());
 
   @Override
   public String getDisplayName() {
@@ -47,18 +46,11 @@ public class GeckoDriverInfo implements WebDriverInfo {
 
   @Override
   public boolean isSupporting(Capabilities capabilities) {
-    if (capabilities.is(MARIONETTE)) {
-      return false;
-    }
-
     if (FIREFOX.is(capabilities)) {
       return true;
     }
 
-    return capabilities.asMap().keySet().stream()
-      .map(key -> key.startsWith("moz:"))
-      .reduce(Boolean::logicalOr)
-      .orElse(false);
+    return capabilities.asMap().keySet().stream().anyMatch(key -> key.startsWith("moz:"));
   }
 
   @Override
@@ -67,13 +59,20 @@ public class GeckoDriverInfo implements WebDriverInfo {
   }
 
   @Override
+  public boolean isSupportingBiDi() {
+    return true;
+  }
+
+  @Override
   public boolean isAvailable() {
-    try {
-      GeckoDriverService.createDefaultService();
-      return true;
-    } catch (IllegalStateException | WebDriverException e) {
-      return false;
-    }
+    return new DriverFinder(GeckoDriverService.createDefaultService(), getCanonicalCapabilities())
+        .isAvailable();
+  }
+
+  @Override
+  public boolean isPresent() {
+    return new DriverFinder(GeckoDriverService.createDefaultService(), getCanonicalCapabilities())
+        .isPresent();
   }
 
   @Override
@@ -85,10 +84,6 @@ public class GeckoDriverInfo implements WebDriverInfo {
   public Optional<WebDriver> createDriver(Capabilities capabilities)
       throws SessionNotCreatedException {
     if (!isAvailable()) {
-      return Optional.empty();
-    }
-
-    if (capabilities.is(MARIONETTE)) {
       return Optional.empty();
     }
 

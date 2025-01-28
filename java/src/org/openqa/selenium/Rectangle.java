@@ -17,12 +17,18 @@
 
 package org.openqa.selenium;
 
+import java.util.Map;
+import java.util.Objects;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+@NullMarked
 public class Rectangle {
 
-  public int x;
-  public int y;
-  public int height;
-  public int width;
+  public final int x;
+  public final int y;
+  public final int height;
+  public final int width;
 
   public Rectangle(int x, int y, int height, int width) {
     this.x = x;
@@ -46,44 +52,12 @@ public class Rectangle {
     return y;
   }
 
-  /**
-   * @deprecated Rectangle objects are supposed to be immutable, all setters will be removed soon
-   */
-  @Deprecated
-  public void setX(int x) {
-    this.x = x;
-  }
-
-  /**
-   * @deprecated Rectangle objects are supposed to be immutable, all setters will be removed soon
-   */
-  @Deprecated
-  public void setY(int y) {
-    this.y = y;
-  }
-
   public int getHeight() {
     return height;
   }
 
-  /**
-   * @deprecated Rectangle objects are supposed to be immutable, all setters will be removed soon
-   */
-  @Deprecated
-  public void setHeight(int height) {
-    this.height = height;
-  }
-
   public int getWidth() {
     return width;
-  }
-
-  /**
-   * @deprecated Rectangle objects are supposed to be immutable, all setters will be removed soon
-   */
-  @Deprecated
-  public void setWidth(int width) {
-    this.width = width;
   }
 
   public Point getPoint() {
@@ -94,8 +68,12 @@ public class Rectangle {
     return new Dimension(width, height);
   }
 
+  private Map<String, Object> toJson() {
+    return Map.of("width", width, "height", height, "x", x, "y", y);
+  }
+
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (this == o) {
       return true;
     }
@@ -105,17 +83,14 @@ public class Rectangle {
 
     Rectangle rectangle = (Rectangle) o;
 
-    if (! getPoint().equals(rectangle.getPoint())) {
-      return false;
-    }
-    return getDimension().equals(rectangle.getDimension());
-
+    return x == rectangle.x
+        && y == rectangle.y
+        && height == rectangle.height
+        && width == rectangle.width;
   }
 
   @Override
   public int hashCode() {
-    int result = getPoint().hashCode();
-    result = 31 * result + getDimension().hashCode();
-    return result;
+    return Objects.hash(x, y, height, width);
   }
 }

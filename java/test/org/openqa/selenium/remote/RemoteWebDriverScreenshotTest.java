@@ -17,40 +17,18 @@
 
 package org.openqa.selenium.remote;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.openqa.selenium.OutputType.BASE64;
+
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.openqa.selenium.OutputType.BASE64;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
-
-@Ignore(HTMLUNIT)
-public class RemoteWebDriverScreenshotTest extends JupiterTestBase {
+class RemoteWebDriverScreenshotTest extends JupiterTestBase {
 
   @Test
-  @Ignore
-  public void testShouldBeAbleToGrabASnapshotOnException() {
-    if (!(driver instanceof RemoteWebDriver)) {
-      System.out.println("Skipping test: driver is not a remote webdriver");
-      return;
-    }
-
-    driver.get(pages.simpleTestPage);
-
-    assertThatExceptionOfType(NoSuchElementException.class)
-        .isThrownBy(() -> driver.findElement(By.id("doesnayexist")))
-        .satisfies(e -> assertThat(
-            ((ScreenshotException) e.getCause()).getBase64EncodedScreenshot().length()).isGreaterThan(0));
-  }
-
-  @Test
-  public void testCanAugmentWebDriverInstanceIfNecessary() {
+  void testCanAugmentWebDriverInstanceIfNecessary() {
     if (!(driver instanceof RemoteWebDriver)) {
       System.out.println("Skipping test: driver is not a remote webdriver");
       return;
@@ -60,7 +38,6 @@ public class RemoteWebDriverScreenshotTest extends JupiterTestBase {
     WebDriver toUse = new Augmenter().augment(driver);
     String screenshot = ((TakesScreenshot) toUse).getScreenshotAs(BASE64);
 
-    assertThat(screenshot.length()).isGreaterThan(0);
+    assertThat(screenshot.length()).isPositive();
   }
-
 }

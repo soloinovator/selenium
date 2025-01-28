@@ -17,9 +17,25 @@
 
 package org.openqa.selenium.grid.node;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.when;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
+import static org.openqa.selenium.remote.http.HttpMethod.POST;
 
 import com.google.common.collect.ImmutableMap;
-
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -35,7 +51,6 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.events.local.GuavaEventBus;
 import org.openqa.selenium.grid.data.Session;
 import org.openqa.selenium.grid.node.local.LocalNode;
-import org.openqa.selenium.grid.node.locators.ById;
 import org.openqa.selenium.grid.security.Secret;
 import org.openqa.selenium.grid.testing.TestSessionFactory;
 import org.openqa.selenium.grid.web.Values;
@@ -52,26 +67,7 @@ import org.openqa.selenium.remote.locators.CustomLocator;
 import org.openqa.selenium.remote.tracing.DefaultTestTracer;
 import org.openqa.selenium.remote.tracing.Tracer;
 
-import java.net.URI;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.when;
-import static org.openqa.selenium.json.Json.MAP_TYPE;
-import static org.openqa.selenium.remote.http.HttpMethod.POST;
-
-public class CustomLocatorHandlerTest {
+class CustomLocatorHandlerTest {
 
   private final Secret registrationSecret = new Secret("cheese");
   private LocalNode.Builder nodeBuilder;
@@ -81,44 +77,49 @@ public class CustomLocatorHandlerTest {
   public void partiallyBuildNode() {
     Tracer tracer = DefaultTestTracer.createTracer();
     nodeUri = URI.create("http://localhost:1234");
-    nodeBuilder = LocalNode.builder(
-      tracer,
-      new GuavaEventBus(),
-      nodeUri,
-      URI.create("http://localhost:4567"),
-      registrationSecret);
+    nodeBuilder =
+        LocalNode.builder(
+            tracer,
+            new GuavaEventBus(),
+            nodeUri,
+            URI.create("http://localhost:4567"),
+            registrationSecret);
   }
 
   @Test
-  public void shouldRequireInputToHaveAUsingParameter() {
+  void shouldRequireInputToHaveAUsingParameter() {
     Node node = nodeBuilder.build();
 
     HttpHandler handler = new CustomLocatorHandler(node, registrationSecret, emptySet());
 
-    HttpResponse res = handler.execute(
-      new HttpRequest(POST, "/session/1234/element")
-        .setContent(Contents.asJson(singletonMap("value", "1234"))));
+    HttpResponse res =
+        handler.execute(
+            new HttpRequest(POST, "/session/1234/element")
+                .setContent(Contents.asJson(singletonMap("value", "1234"))));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_BAD_REQUEST);
-    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> Values.get(res, MAP_TYPE));
+    assertThatExceptionOfType(InvalidArgumentException.class)
+        .isThrownBy(() -> Values.get(res, MAP_TYPE));
   }
 
   @Test
-  public void shouldRequireInputToHaveAValueParameter() {
+  void shouldRequireInputToHaveAValueParameter() {
     Node node = nodeBuilder.build();
 
     HttpHandler handler = new CustomLocatorHandler(node, registrationSecret, emptySet());
 
-    HttpResponse res = handler.execute(
-      new HttpRequest(POST, "/session/1234/element")
-        .setContent(Contents.asJson(singletonMap("using", "magic"))));
+    HttpResponse res =
+        handler.execute(
+            new HttpRequest(POST, "/session/1234/element")
+                .setContent(Contents.asJson(singletonMap("using", "magic"))));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_BAD_REQUEST);
-    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> Values.get(res, MAP_TYPE));
+    assertThatExceptionOfType(InvalidArgumentException.class)
+        .isThrownBy(() -> Values.get(res, MAP_TYPE));
   }
 
   @Test
-  public void shouldNotRejectRequestWithAnUnknownLocatorMechanism() {
+  void shouldNotRejectRequestWithAnUnknownLocatorMechanism() {
     Node node = nodeBuilder.build();
 
     HttpHandler handler = new CustomLocatorHandler(node, registrationSecret, emptySet());
@@ -127,152 +128,158 @@ public class CustomLocatorHandlerTest {
     // CustomLocatorHandler successfully but stopped at the Node because
     // the actually does not exist.
     assertThatExceptionOfType(NoSuchSessionException.class)
-      .isThrownBy(() -> handler.execute(
-        new HttpRequest(POST, "/session/1234/element")
-          .setContent(Contents.asJson(ImmutableMap.of(
-            "using", "cheese",
-            "value", "tasty")))));
+        .isThrownBy(
+            () ->
+                handler.execute(
+                    new HttpRequest(POST, "/session/1234/element")
+                        .setContent(
+                            Contents.asJson(
+                                ImmutableMap.of(
+                                    "using", "cheese",
+                                    "value", "tasty")))));
   }
 
   @Test
-  public void shouldCallTheGivenLocatorForALocator() {
+  void shouldCallTheGivenLocatorForALocator() {
     Capabilities caps = new ImmutableCapabilities("browserName", "cheesefox");
-    Node node = nodeBuilder.add(
-      caps,
-      new TestSessionFactory((id, c) -> new Session(id, nodeUri, caps, c, Instant.now())))
-      .build();
+    Node node =
+        nodeBuilder
+            .add(
+                caps,
+                new TestSessionFactory((id, c) -> new Session(id, nodeUri, caps, c, Instant.now())))
+            .build();
 
-    HttpHandler handler = new CustomLocatorHandler(
-      node,
-      registrationSecret,
-      singleton(new CustomLocator() {
-        @Override
-        public String getLocatorName() {
-          return "cheese";
-        }
+    HttpHandler handler =
+        new CustomLocatorHandler(
+            node,
+            registrationSecret,
+            singleton(
+                new CustomLocator() {
+                  @Override
+                  public String getLocatorName() {
+                    return "cheese";
+                  }
 
-        @Override
-        public By createBy(Object usingParameter) {
-          return new By() {
-            @Override
-            public List<WebElement> findElements(SearchContext context) {
-              return emptyList();
-            }
-          };
-        }
-      }));
+                  @Override
+                  public By createBy(Object usingParameter) {
+                    return new By() {
+                      @Override
+                      public List<WebElement> findElements(SearchContext context) {
+                        return emptyList();
+                      }
+                    };
+                  }
+                }));
 
-    HttpResponse res = handler.with(new ErrorFilter()).execute(
-      new HttpRequest(POST, "/session/1234/element")
-        .setContent(Contents.asJson(ImmutableMap.of(
-          "using", "cheese",
-          "value", "tasty"))));
+    HttpResponse res =
+        handler
+            .with(new ErrorFilter())
+            .execute(
+                new HttpRequest(POST, "/session/1234/element")
+                    .setContent(
+                        Contents.asJson(
+                            ImmutableMap.of(
+                                "using", "cheese",
+                                "value", "tasty"))));
 
-    assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> Values.get(res, WebElement.class));
+    assertThatExceptionOfType(NoSuchElementException.class)
+        .isThrownBy(() -> Values.get(res, WebElement.class));
   }
 
   @Test
-  public void shouldBeAbleToUseNodeAsWebDriver() {
+  void shouldBeAbleToUseNodeAsWebDriver() {
     String elementId = UUID.randomUUID().toString();
 
     Node node = Mockito.mock(Node.class);
     when(node.executeWebDriverCommand(argThat(matchesUri("/session/{sessionId}/elements"))))
-      .thenReturn(
-        new HttpResponse()
-          .addHeader("Content-Type", Json.JSON_UTF_8)
-          .setContent(Contents.asJson(singletonMap(
-            "value", singletonList(singletonMap(Dialect.W3C.getEncodedElementKey(), elementId))))));
+        .thenReturn(
+            new HttpResponse()
+                .addHeader("Content-Type", Json.JSON_UTF_8)
+                .setContent(
+                    Contents.asJson(
+                        singletonMap(
+                            "value",
+                            singletonList(
+                                singletonMap(Dialect.W3C.getEncodedElementKey(), elementId))))));
 
-    HttpHandler handler = new CustomLocatorHandler(
-      node,
-      registrationSecret,
-      singleton(new CustomLocator() {
-        @Override
-        public String getLocatorName() {
-          return "cheese";
-        }
+    HttpHandler handler =
+        new CustomLocatorHandler(
+            node,
+            registrationSecret,
+            singleton(
+                new CustomLocator() {
+                  @Override
+                  public String getLocatorName() {
+                    return "cheese";
+                  }
 
-        @Override
-        public By createBy(Object usingParameter) {
-          return By.id("brie");
-        }
-      }));
+                  @Override
+                  public By createBy(Object usingParameter) {
+                    return By.id("brie");
+                  }
+                }));
 
-    HttpResponse res = handler.execute(
-      new HttpRequest(POST, "/session/1234/elements")
-        .setContent(Contents.asJson(ImmutableMap.of(
-          "using", "cheese",
-          "value", "tasty"))));
+    HttpResponse res =
+        handler.execute(
+            new HttpRequest(POST, "/session/1234/elements")
+                .setContent(
+                    Contents.asJson(
+                        ImmutableMap.of(
+                            "using", "cheese",
+                            "value", "tasty"))));
 
-    List<Map<String, Object>> elements = Values.get(res, new TypeToken<List<Map<String, Object>>>(){}.getType());
+    List<Map<String, Object>> elements =
+        Values.get(res, new TypeToken<List<Map<String, Object>>>() {}.getType());
     assertThat(elements).hasSize(1);
     Object seenId = elements.get(0).get(Dialect.W3C.getEncodedElementKey());
     assertThat(seenId).isEqualTo(elementId);
   }
 
   @Test
-  public void shouldBeAbleToRootASearchWithinAnElement() {
+  void shouldBeAbleToRootASearchWithinAnElement() {
     String elementId = UUID.randomUUID().toString();
 
     Node node = Mockito.mock(Node.class);
-    when(node.executeWebDriverCommand(argThat(matchesUri("/session/{sessionId}/element/{elementId}/element"))))
-      .thenReturn(
-        new HttpResponse()
-          .addHeader("Content-Type", Json.JSON_UTF_8)
-          .setContent(Contents.asJson(singletonMap(
-            "value", singletonList(singletonMap(Dialect.W3C.getEncodedElementKey(), elementId))))));
+    when(node.executeWebDriverCommand(
+            argThat(matchesUri("/session/{sessionId}/element/{elementId}/elements"))))
+        .thenReturn(
+            new HttpResponse()
+                .addHeader("Content-Type", Json.JSON_UTF_8)
+                .setContent(
+                    Contents.asJson(
+                        singletonMap(
+                            "value",
+                            singletonList(
+                                singletonMap(Dialect.W3C.getEncodedElementKey(), elementId))))));
 
-    HttpHandler handler = new CustomLocatorHandler(
-      node,
-      registrationSecret,
-      singleton(new CustomLocator() {
-        @Override
-        public String getLocatorName() {
-          return "cheese";
-        }
+    HttpHandler handler =
+        new CustomLocatorHandler(
+            node,
+            registrationSecret,
+            singleton(
+                new CustomLocator() {
+                  @Override
+                  public String getLocatorName() {
+                    return "cheese";
+                  }
 
-        @Override
-        public By createBy(Object usingParameter) {
-          return By.id("brie");
-        }
-      }));
+                  @Override
+                  public By createBy(Object usingParameter) {
+                    return By.id("brie");
+                  }
+                }));
 
-    HttpResponse res = handler.execute(
-      new HttpRequest(POST, "/session/1234/element/234345/elements")
-        .setContent(Contents.asJson(ImmutableMap.of(
-          "using", "cheese",
-          "value", "tasty"))));
+    HttpResponse res =
+        handler.execute(
+            new HttpRequest(POST, "/session/1234/element/234345/elements")
+                .setContent(
+                    Contents.asJson(
+                        ImmutableMap.of(
+                            "using", "cheese",
+                            "value", "tasty"))));
 
-    List<Map<String, Object>> elements = Values.get(res, new TypeToken<List<Map<String, Object>>>(){}.getType());
-    assertThat(elements).hasSize(1);
-    Object seenId = elements.get(0).get(Dialect.W3C.getEncodedElementKey());
-    assertThat(seenId).isEqualTo(elementId);
-  }
-
-  @Test
-  public void shouldFallbackToUseById() {
-    String elementId = UUID.randomUUID().toString();
-
-    Node node = Mockito.mock(Node.class);
-    when(node.executeWebDriverCommand(argThat(matchesUri("/session/{sessionId}/elements"))))
-      .thenReturn(
-        new HttpResponse()
-          .addHeader("Content-Type", Json.JSON_UTF_8)
-          .setContent(Contents.asJson(singletonMap(
-            "value", singletonList(singletonMap(Dialect.W3C.getEncodedElementKey(), elementId))))));
-
-    HttpHandler handler = new CustomLocatorHandler(
-      node,
-      registrationSecret,
-      singleton(new ById()));
-
-    HttpResponse res = handler.execute(
-      new HttpRequest(POST, "/session/1234/elements")
-        .setContent(Contents.asJson(ImmutableMap.of(
-          "using", "id",
-          "value", "tasty"))));
-
-    List<Map<String, Object>> elements = Values.get(res, new TypeToken<List<Map<String, Object>>>(){}.getType());
+    List<Map<String, Object>> elements =
+        Values.get(res, new TypeToken<List<Map<String, Object>>>() {}.getType());
     assertThat(elements).hasSize(1);
     Object seenId = elements.get(0).get(Dialect.W3C.getEncodedElementKey());
     assertThat(seenId).isEqualTo(elementId);

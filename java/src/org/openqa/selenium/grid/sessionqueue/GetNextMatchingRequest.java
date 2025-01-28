@@ -17,9 +17,20 @@
 
 package org.openqa.selenium.grid.sessionqueue;
 
+import static java.util.Collections.singletonMap;
+import static org.openqa.selenium.remote.tracing.HttpTracing.newSpanAsChildOf;
+import static org.openqa.selenium.remote.tracing.Tags.HTTP_REQUEST;
+import static org.openqa.selenium.remote.tracing.Tags.HTTP_RESPONSE;
+
+import java.io.UncheckedIOException;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.grid.data.SessionRequest;
 import org.openqa.selenium.internal.Require;
+import org.openqa.selenium.json.Json;
 import org.openqa.selenium.json.TypeToken;
 import org.openqa.selenium.remote.http.Contents;
 import org.openqa.selenium.remote.http.HttpHandler;
@@ -28,18 +39,9 @@ import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.tracing.Span;
 import org.openqa.selenium.remote.tracing.Tracer;
 
-import java.io.UncheckedIOException;
-import java.lang.reflect.Type;
-import java.util.Optional;
-import java.util.Set;
-
-import static java.util.Collections.singletonMap;
-import static org.openqa.selenium.remote.tracing.HttpTracing.newSpanAsChildOf;
-import static org.openqa.selenium.remote.tracing.Tags.HTTP_REQUEST;
-import static org.openqa.selenium.remote.tracing.Tags.HTTP_RESPONSE;
-
 class GetNextMatchingRequest implements HttpHandler {
-  private static final Type SET_OF_CAPABILITIES = new TypeToken<Set<Capabilities>>() {}.getType();
+  private static final Type MAP_OF_CAPABILITIES = new TypeToken<Map<String, Long>>() {}.getType();
+  private static final Json JSON = new Json();
 
   private final Tracer tracer;
   private final NewSessionQueue queue;
@@ -53,11 +55,20 @@ class GetNextMatchingRequest implements HttpHandler {
   public HttpResponse execute(HttpRequest req) throws UncheckedIOException {
     try (Span span = newSpanAsChildOf(tracer, req, "sessionqueue.getrequest")) {
       HTTP_REQUEST.accept(span, req);
-      Set<Capabilities> stereotypes = Contents.fromJson(req, SET_OF_CAPABILITIES);
+      Map<String, Long> stereotypesJson = Contents.fromJson(req, MAP_OF_CAPABILITIES);
 
-      Optional<SessionRequest> maybeRequest = queue.getNextAvailable(stereotypes);
+      Map<Capabilities, Long> stereotypes = new HashMap<>();
 
-      HttpResponse response =  new HttpResponse().setContent(Contents.asJson(singletonMap("value", maybeRequest.orElse(null))));
+      stereotypesJson.forEach(
+          (k, v) -> {
+            Capabilities caps = JSON.toType(k, Capabilities.class);
+            stereotypes.put(caps, v);
+          });
+
+      List<SessionRequest> sessionRequestList = queue.getNextAvailable(stereotypes);
+
+      HttpResponse response =
+          new HttpResponse().setContent(Contents.asJson(singletonMap("value", sessionRequestList)));
 
       HTTP_RESPONSE.accept(span, response);
 

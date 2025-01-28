@@ -17,15 +17,36 @@
 
 package org.openqa.selenium.remote.internal;
 
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
+import static org.openqa.selenium.net.Urls.fromUri;
+import static org.openqa.selenium.remote.http.Contents.string;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
+import java.net.URI;
+import java.net.URL;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.BuildInfo;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.environment.webserver.AppServer;
 import org.openqa.selenium.environment.webserver.NettyAppServer;
 import org.openqa.selenium.json.Json;
@@ -36,30 +57,14 @@ import org.openqa.selenium.remote.http.HttpHandler;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import java.net.URI;
-import java.net.URL;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.StreamSupport;
-
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.openqa.selenium.json.Json.MAP_TYPE;
-import static org.openqa.selenium.net.Urls.fromUri;
-import static org.openqa.selenium.remote.http.Contents.string;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-
-abstract public class HttpClientTestBase {
+public abstract class HttpClientTestBase {
 
   protected abstract HttpClient.Factory createFactory();
 
-  static HttpHandler delegate;
+  static volatile HttpHandler delegate;
   static AppServer server;
+
+  private static final Logger LOG = Logger.getLogger(HttpClientTestBase.class.getName());
 
   @BeforeAll
   public static void setUp() {
@@ -73,7 +78,7 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void responseShouldCaptureASingleHeader() {
+  void responseShouldCaptureASingleHeader() {
     HashMultimap<String, String> headers = HashMultimap.create();
     headers.put("Cake", "Delicious");
 
@@ -84,29 +89,28 @@ abstract public class HttpClientTestBase {
   }
 
   /**
-   * The HTTP Spec that it should be
-   * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2">safe to combine them
-   * </a>, but things like the <a href="https://www.ietf.org/rfc/rfc2109.txt">cookie spec</a> make
-   * this hard (notably when a legal value may contain a comma).
+   * The HTTP Spec that it should be <a
+   * href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2">safe to combine them </a>,
+   * but things like the <a href="https://www.ietf.org/rfc/rfc2109.txt">cookie spec</a> make this
+   * hard (notably when a legal value may contain a comma).
    */
   @Test
-  public void responseShouldKeepMultipleHeadersSeparate() {
+  void responseShouldKeepMultipleHeadersSeparate() {
     HashMultimap<String, String> headers = HashMultimap.create();
     headers.put("Cheese", "Cheddar");
     headers.put("Cheese", "Brie, Gouda");
 
     HttpResponse response = getResponseWithHeaders(headers);
 
-    List<String> values = StreamSupport
-      .stream(response.getHeaders("Cheese").spliterator(), false)
-      .collect(toList());
+    List<String> values =
+        StreamSupport.stream(response.getHeaders("Cheese").spliterator(), false).collect(toList());
 
     assertThat(values).contains("Cheddar");
     assertThat(values).contains("Brie, Gouda");
   }
 
   @Test
-  public void shouldAddUrlParameters() {
+  void shouldAddUrlParameters() {
     HttpRequest request = new HttpRequest(GET, "/query");
     String value = request.getQueryParameter("cheese");
     assertThat(value).isNull();
@@ -117,7 +121,7 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void shouldSendSimpleQueryParameters() {
+  void shouldSendSimpleQueryParameters() {
     HttpRequest request = new HttpRequest(GET, "/query");
     request.addQueryParameter("cheese", "cheddar");
 
@@ -128,7 +132,7 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void shouldEncodeParameterNamesAndValues() {
+  void shouldEncodeParameterNamesAndValues() {
     HttpRequest request = new HttpRequest(GET, "/query");
     request.addQueryParameter("cheese type", "tasty cheese");
 
@@ -139,7 +143,7 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void canAddMoreThanOneQueryParameter() {
+  void canAddMoreThanOneQueryParameter() {
     HttpRequest request = new HttpRequest(GET, "/query");
     request.addQueryParameter("cheese", "cheddar");
     request.addQueryParameter("cheese", "gouda");
@@ -153,7 +157,7 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void shouldAllowUrlsWithSchemesToBeUsed() throws Exception {
+  void shouldAllowUrlsWithSchemesToBeUsed() throws Exception {
     delegate = req -> new HttpResponse().setContent(Contents.utf8String("Hello, World!"));
 
     // This is a terrible choice of URL
@@ -170,69 +174,190 @@ abstract public class HttpClientTestBase {
   }
 
   @Test
-  public void shouldIncludeAUserAgentHeader() {
-    HttpResponse response = executeWithinServer(
-      new HttpRequest(GET, "/foo"),
-      req -> new HttpResponse().setContent(Contents.utf8String(req.getHeader("user-agent"))));
+  void shouldIncludeAUserAgentHeader() {
+    HttpResponse response =
+        executeWithinServer(
+            new HttpRequest(GET, "/foo"),
+            req -> new HttpResponse().setContent(Contents.utf8String(req.getHeader("user-agent"))));
 
     String label = new BuildInfo().getReleaseLabel();
     Platform platform = Platform.getCurrent();
     Platform family = platform.family() == null ? platform : platform.family();
 
-    assertThat(string(response)).isEqualTo(String.format(
-      "selenium/%s (java %s)",
-      label,
-      family.toString().toLowerCase()));
+    assertThat(string(response))
+        .isEqualTo(String.format("selenium/%s (java %s)", label, family.toString().toLowerCase()));
   }
 
   @Test
-  public void shouldAllowConfigurationOfRequestTimeout() {
+  void shouldAllowConfigurationOfRequestTimeout() {
     assertThatExceptionOfType(TimeoutException.class)
-      .isThrownBy(() -> executeWithinServer(
-        new HttpRequest(GET, "/foo"),
+        .isThrownBy(
+            () ->
+                executeWithinServer(
+                    new HttpRequest(GET, "/foo"),
+                    req -> {
+                      try {
+                        Thread.sleep(1000);
+                      } catch (InterruptedException e) {
+                        LOG.severe("Error during execution: " + e.getMessage());
+                      }
+                      return new HttpResponse()
+                          .setContent(Contents.utf8String(req.getHeader("user-agent")));
+                    },
+                    ClientConfig.defaultConfig().readTimeout(Duration.ofMillis(500))));
+  }
+
+  @Test
+  public void shouldAllowConfigurationFromSystemProperties() {
+    delegate =
         req -> {
           try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
           } catch (InterruptedException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
-          return new HttpResponse().setContent(Contents.utf8String(req.getHeader("user-agent")));
-        },
-        ClientConfig.defaultConfig().readTimeout(Duration.ofMillis(500))));
+          return new HttpResponse().setContent(Contents.utf8String("Connection timed out"));
+        };
+    try {
+      System.setProperty("webdriver.httpclient.connectionTimeout", "1");
+      System.setProperty("webdriver.httpclient.readTimeout", "2");
+      System.setProperty("webdriver.httpclient.version", "HTTP_1_1");
+      ClientConfig clientConfig = ClientConfig.defaultConfig();
+      assertThat(clientConfig.connectionTimeout()).isEqualTo(Duration.ofSeconds(1));
+      assertThat(clientConfig.readTimeout()).isEqualTo(Duration.ofSeconds(2));
+      assertThat(clientConfig.version()).isEqualTo("HTTP_1_1");
+      HttpClient client =
+          createFactory().createClient(clientConfig.baseUri(URI.create(server.whereIs("/"))));
+      HttpRequest request = new HttpRequest(GET, "/delayed");
+      assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> client.execute(request));
+    } finally {
+      System.clearProperty("webdriver.httpclient.connectionTimeout");
+      System.clearProperty("webdriver.httpclient.readTimeout");
+      System.clearProperty("webdriver.httpclient.version");
+    }
+  }
+
+  private ClientConfig prepareShouldStopTest(
+      CountDownLatch executing, CountDownLatch interrupted, int timeout) {
+    CountDownLatch unlock = new CountDownLatch(1);
+
+    delegate =
+        req -> {
+          try {
+            unlock.await(20, TimeUnit.SECONDS);
+          } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(ex);
+          }
+
+          return new HttpResponse();
+        };
+
+    return ClientConfig.defaultConfig()
+        .withFilter(
+            (handler) ->
+                (request) -> {
+                  try {
+                    executing.countDown();
+                    return handler.execute(request);
+                  } catch (WebDriverException ex) {
+                    if (ex.getCause() instanceof InterruptedException) {
+                      interrupted.countDown();
+                    }
+
+                    throw ex;
+                  } finally {
+                    unlock.countDown();
+                  }
+                })
+        .readTimeout(Duration.ofMillis(timeout));
+  }
+
+  @Test
+  public void shouldStopRequestAfterTimeout() throws InterruptedException {
+    CountDownLatch executing = new CountDownLatch(1);
+    CountDownLatch interrupted = new CountDownLatch(1);
+    ClientConfig clientConfig = prepareShouldStopTest(executing, interrupted, 400);
+
+    try (HttpClient client =
+        createFactory().createClient(clientConfig.baseUri(URI.create(server.whereIs("/"))))) {
+      HttpRequest request = new HttpRequest(GET, "/delayed");
+
+      assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> client.execute(request));
+      assertThat(interrupted.await(800, TimeUnit.MILLISECONDS)).isTrue();
+    }
+  }
+
+  @Test
+  public void shouldStopAsyncRequestAfterTimeout() throws InterruptedException {
+    CountDownLatch executing = new CountDownLatch(1);
+    CountDownLatch interrupted = new CountDownLatch(1);
+    ClientConfig clientConfig = prepareShouldStopTest(executing, interrupted, 400);
+
+    try (HttpClient client =
+        createFactory().createClient(clientConfig.baseUri(URI.create(server.whereIs("/"))))) {
+      HttpRequest request = new HttpRequest(GET, "/delayed");
+      // does intentionally not read the future
+      client.executeAsync(request);
+      assertThat(interrupted.await(800, TimeUnit.MILLISECONDS)).isTrue();
+    }
+  }
+
+  @Test
+  public void shouldStopRequestOnCancel() throws InterruptedException {
+    CountDownLatch executing = new CountDownLatch(1);
+    CountDownLatch interrupted = new CountDownLatch(1);
+    CountDownLatch unlock = new CountDownLatch(1);
+    ClientConfig clientConfig = prepareShouldStopTest(executing, interrupted, 4000);
+
+    try (HttpClient client =
+        createFactory().createClient(clientConfig.baseUri(URI.create(server.whereIs("/"))))) {
+      HttpRequest request = new HttpRequest(GET, "/delayed");
+
+      Future<?> future = client.executeAsync(request);
+
+      assertThat(executing.await(800, TimeUnit.MILLISECONDS)).isTrue();
+      assertThat(future.cancel(true)).isTrue();
+      assertThat(interrupted.await(800, TimeUnit.MILLISECONDS)).isTrue();
+      unlock.countDown();
+    }
   }
 
   private HttpResponse getResponseWithHeaders(final Multimap<String, String> headers) {
     return executeWithinServer(
-      new HttpRequest(GET, "/foo"),
-      req -> {
-        HttpResponse resp = new HttpResponse();
-        headers.forEach(resp::addHeader);
-        return resp;
-      });
+        new HttpRequest(GET, "/foo"),
+        req -> {
+          HttpResponse resp = new HttpResponse();
+          headers.forEach(resp::addHeader);
+          return resp;
+        });
   }
 
   private HttpResponse getQueryParameterResponse(HttpRequest request) {
     return executeWithinServer(
-      request,
-      req -> {
-        Map<String, Iterable<String>> params = new TreeMap<>();
-        req.getQueryParameterNames()
-          .forEach(name -> params.put(name, req.getQueryParameters(name)));
+        request,
+        req -> {
+          Map<String, Iterable<String>> params = new TreeMap<>();
+          req.getQueryParameterNames()
+              .forEach(name -> params.put(name, req.getQueryParameters(name)));
 
-        return new HttpResponse().setContent(Contents.asJson(params));
-      });
+          return new HttpResponse().setContent(Contents.asJson(params));
+        });
   }
 
   private HttpResponse executeWithinServer(HttpRequest request, HttpHandler handler) {
     delegate = handler;
-    try (HttpClient client = createFactory().createClient(fromUri(URI.create(server.whereIs("/"))))) {
+    try (HttpClient client =
+        createFactory().createClient(fromUri(URI.create(server.whereIs("/"))))) {
       return client.execute(request);
     }
   }
 
-  private HttpResponse executeWithinServer(HttpRequest request, HttpHandler handler, ClientConfig config) {
+  private HttpResponse executeWithinServer(
+      HttpRequest request, HttpHandler handler, ClientConfig config) {
     delegate = handler;
-    HttpClient client = createFactory().createClient(config.baseUri(URI.create(server.whereIs("/"))));
+    HttpClient client =
+        createFactory().createClient(config.baseUri(URI.create(server.whereIs("/"))));
     return client.execute(request);
   }
 }

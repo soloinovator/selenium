@@ -17,9 +17,10 @@
 
 'use strict'
 
-const assert = require('assert')
-const chrome = require('../../chrome')
+const assert = require('node:assert')
+const chrome = require('selenium-webdriver/chrome')
 const test = require('../../lib/test')
+const { getBinaryPaths } = require('selenium-webdriver/common/driverFinder')
 
 test.suite(
   function (_env) {
@@ -33,11 +34,14 @@ test.suite(
 
       it('can be started on a custom path', function () {
         service = new chrome.ServiceBuilder().setPath('/foo/bar/baz').build()
+        if (!service.getExecutable()) {
+          service.setExecutable(getBinaryPaths(new chrome.Options()).driverPath)
+        }
         return service.start().then(function (url) {
           assert.ok(url.endsWith('/foo/bar/baz'), 'unexpected url: ' + url)
         })
       })
     })
   },
-  { browsers: ['chrome'] }
+  { browsers: ['chrome'] },
 )

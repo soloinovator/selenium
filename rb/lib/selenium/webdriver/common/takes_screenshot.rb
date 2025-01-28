@@ -32,8 +32,8 @@ module Selenium
       def save_screenshot(png_path, full_page: false)
         extension = File.extname(png_path).downcase
         if extension != '.png'
-          WebDriver.logger.warn "name used for saved screenshot does not match file type. " \
-                                "It should end with .png extension",
+          WebDriver.logger.warn 'name used for saved screenshot does not match file type. ' \
+                                'It should end with .png extension',
                                 id: :screenshot
         end
         File.open(png_path, 'wb') { |f| f << screenshot_as(:png, full_page: full_page) }
@@ -49,6 +49,10 @@ module Selenium
       # @api public
 
       def screenshot_as(format, full_page: false)
+        if full_page && !respond_to?(:save_full_page_screenshot)
+          raise Error::UnsupportedOperationError, "Full Page Screenshots are not supported for #{inspect}"
+        end
+
         case format
         when :base64
           full_page ? full_screenshot : screenshot
@@ -57,10 +61,7 @@ module Selenium
         else
           raise Error::UnsupportedOperationError, "unsupported format: #{format.inspect}"
         end
-      rescue NameError
-        raise Error::UnsupportedOperationError, "Full Page Screenshots are not supported for #{inspect}"
       end
-
     end # TakesScreenshot
   end # WebDriver
 end # Selenium

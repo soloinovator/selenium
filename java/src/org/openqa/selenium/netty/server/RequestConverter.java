@@ -17,16 +17,15 @@
 
 package org.openqa.selenium.netty.server;
 
-import com.google.common.io.ByteStreams;
+import static io.netty.handler.codec.http.HttpMethod.DELETE;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.HEAD;
+import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
+import static io.netty.handler.codec.http.HttpMethod.POST;
 
-import org.openqa.selenium.internal.Debug;
-import org.openqa.selenium.remote.http.HttpMethod;
-import org.openqa.selenium.remote.http.HttpRequest;
-import org.openqa.selenium.remote.http.HttpResponse;
-import org.openqa.selenium.remote.tracing.AttributeKey;
-
+import com.google.common.io.ByteSource;
+import com.google.common.io.FileBackedOutputStream;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -38,117 +37,128 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.ReferenceCountUtil;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.Logger;
-
-import static io.netty.handler.codec.http.HttpMethod.DELETE;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.HEAD;
-import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
-import static io.netty.handler.codec.http.HttpMethod.POST;
-import static org.openqa.selenium.remote.http.Contents.memoize;
+import org.openqa.selenium.internal.Debug;
+import org.openqa.selenium.remote.http.Contents;
+import org.openqa.selenium.remote.http.HttpMethod;
+import org.openqa.selenium.remote.http.HttpRequest;
+import org.openqa.selenium.remote.http.HttpResponse;
+import org.openqa.selenium.remote.tracing.AttributeKey;
 
 class RequestConverter extends SimpleChannelInboundHandler<HttpObject> {
 
   private static final Logger LOG = Logger.getLogger(RequestConverter.class.getName());
-  private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
-  private static final ExecutorService SHUTDOWN_EXECUTOR = Executors.newSingleThreadExecutor();
   private static final List<io.netty.handler.codec.http.HttpMethod> SUPPORTED_METHODS =
-    Arrays.asList(DELETE, GET, POST, OPTIONS);
-  private volatile PipedOutputStream out;
+      Arrays.asList(DELETE, GET, POST, OPTIONS);
+  private volatile FileBackedOutputStream buffer;
+  private volatile int length;
+  private volatile HttpRequest request;
 
   @Override
-  protected void channelRead0(
-    ChannelHandlerContext ctx,
-    HttpObject msg) throws Exception {
-    LOG.fine("Incoming message: " + msg);
+  protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    LOG.log(Debug.getDebugLogLevel(), "Incoming message: {0}", msg);
 
     if (msg instanceof io.netty.handler.codec.http.HttpRequest) {
-      LOG.log(Debug.getDebugLogLevel(), "Start of http request: " + msg);
+      LOG.log(Debug.getDebugLogLevel(), "Start of http request: {0}", msg);
 
       io.netty.handler.codec.http.HttpRequest nettyRequest =
-        (io.netty.handler.codec.http.HttpRequest) msg;
+          (io.netty.handler.codec.http.HttpRequest) msg;
 
-      if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-        ctx.write(new HttpResponse().setStatus(100));
-        return;
-      }
-
-      if (nettyRequest.headers().contains("Sec-WebSocket-Version") &&
-        "upgrade".equals(nettyRequest.headers().get("Connection"))) {
+      if (nettyRequest.headers().contains("Sec-WebSocket-Version")
+          && "upgrade".equalsIgnoreCase(nettyRequest.headers().get("Connection"))) {
         // Pass this on to later in the pipeline.
         ReferenceCountUtil.retain(msg);
         ctx.fireChannelRead(msg);
         return;
       }
 
-      HttpRequest req = createRequest(ctx, nettyRequest);
-      if (req == null) {
+      request = createRequest(ctx, nettyRequest);
+      if (request == null) {
         return;
       }
 
-      req.setAttribute(AttributeKey.HTTP_SCHEME.getKey(),
-        nettyRequest.protocolVersion().protocolName());
-      req.setAttribute(AttributeKey.HTTP_FLAVOR.getKey(),
-        nettyRequest.protocolVersion().majorVersion());
+      if (HttpUtil.is100ContinueExpected(nettyRequest)) {
+        ctx.write(new HttpResponse().setStatus(100));
+        return;
+      }
 
-      out = new PipedOutputStream();
-      InputStream in = new PipedInputStream(out);
+      request.setAttribute(
+          AttributeKey.HTTP_SCHEME.getKey(), nettyRequest.protocolVersion().protocolName());
+      request.setAttribute(
+          AttributeKey.HTTP_FLAVOR.getKey(), nettyRequest.protocolVersion().majorVersion());
 
-      req.setContent(memoize(() -> in));
-      ctx.fireChannelRead(req);
+      buffer = null;
+      length = -1;
     }
 
-    if (msg instanceof HttpContent) {
+    if (request != null && msg instanceof HttpContent) {
       ByteBuf buf = ((HttpContent) msg).content().retain();
-      EXECUTOR.submit(() -> {
-        try (InputStream inputStream = new ByteBufInputStream(buf)) {
-          ByteStreams.copy(inputStream, out);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
+      int nBytes = buf.readableBytes();
+
+      if (nBytes > 0) {
+        if (buffer == null) {
+          buffer = new FileBackedOutputStream(3 * 1024 * 1024, true);
+          length = 0;
+        }
+
+        try {
+          buf.readBytes(buffer, nBytes);
+          length += nBytes;
         } finally {
           buf.release();
         }
-      });
-    }
+      }
 
-    if (msg instanceof LastHttpContent) {
-      LOG.fine("Closing input pipe.");
-      EXECUTOR.submit(() -> {
-        try {
-          out.close();
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
+      if (msg instanceof LastHttpContent) {
+        LOG.log(Debug.getDebugLogLevel(), "End of http request: {0}", msg);
+
+        if (buffer != null) {
+          ByteSource source = buffer.asByteSource();
+          int len = length;
+
+          request.setContent(
+              new Contents.Supplier() {
+                @Override
+                public InputStream get() {
+                  try {
+                    return source.openBufferedStream();
+                  } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                  }
+                }
+
+                @Override
+                public int length() {
+                  return len;
+                }
+
+                @Override
+                public void close() throws IOException {
+                  buffer.reset();
+                }
+              });
+        } else {
+          request.setContent(Contents.empty());
         }
-      });
+
+        ctx.fireChannelRead(request);
+      }
     }
   }
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    LOG.fine("Closing input pipe, channel became inactive.");
-    SHUTDOWN_EXECUTOR.submit(() -> {
-      try {
-        out.close();
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    });
+    LOG.log(Debug.getDebugLogLevel(), "Channel became inactive.");
     super.channelInactive(ctx);
   }
 
   private HttpRequest createRequest(
-    ChannelHandlerContext ctx,
-    io.netty.handler.codec.http.HttpRequest nettyRequest) {
+      ChannelHandlerContext ctx, io.netty.handler.codec.http.HttpRequest nettyRequest) {
 
     // Attempt to map the netty method
     HttpMethod method;
@@ -159,12 +169,13 @@ class RequestConverter extends SimpleChannelInboundHandler<HttpObject> {
         method = HttpMethod.valueOf(nettyRequest.method().name());
       } catch (IllegalArgumentException e) {
         ctx.writeAndFlush(
-          new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED));
+            new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED));
         return null;
       }
     } else {
       ctx.writeAndFlush(
-        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED));
+          new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED));
       return null;
     }
 
@@ -172,22 +183,21 @@ class RequestConverter extends SimpleChannelInboundHandler<HttpObject> {
     try {
       QueryStringDecoder decoder = new QueryStringDecoder(nettyRequest.uri());
 
-      HttpRequest req = new HttpRequest(
-        method,
-        decoder.path());
+      HttpRequest req = new HttpRequest(method, decoder.path());
 
-      decoder.parameters()
-        .forEach((key, values) -> values.forEach(value -> req.addQueryParameter(key, value)));
+      decoder
+          .parameters()
+          .forEach((key, values) -> values.forEach(value -> req.addQueryParameter(key, value)));
 
       nettyRequest.headers().entries().stream()
-        .filter(entry -> entry.getKey() != null)
-        .forEach(entry -> req.addHeader(entry.getKey(), entry.getValue()));
+          .filter(entry -> entry.getKey() != null)
+          .forEach(entry -> req.addHeader(entry.getKey(), entry.getValue()));
       return req;
     } catch (Exception ignore) {
       ctx.writeAndFlush(
-        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
-      LOG.log(Debug.getDebugLogLevel(), "Not possible to decode parameters. {0}",
-              nettyRequest.uri());
+          new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
+      LOG.log(
+          Debug.getDebugLogLevel(), "Not possible to decode parameters. {0}", nettyRequest.uri());
       return null;
     }
   }

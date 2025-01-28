@@ -1,13 +1,33 @@
+// <copyright file="DriverTestFixture.cs" company="Selenium Committers">
+// Licensed to the Software Freedom Conservancy (SFC) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
+
 using NUnit.Framework;
 using OpenQA.Selenium.Environment;
 using System;
-using OpenQA.Selenium.Remote;
+using static NUnit.Framework.Interfaces.ResultState;
 
 namespace OpenQA.Selenium
 {
     public abstract class DriverTestFixture
     {
         public string alertsPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("alerts.html");
+        public string blankPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("blank.html");
         public string macbethPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("macbeth.html");
         public string macbethTitle = "Macbeth: Entire Play";
 
@@ -24,6 +44,8 @@ namespace OpenQA.Selenium
         public string formsTitle = "We Leave From Here";
 
         public string javascriptPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("javascriptPage.html");
+
+        public string loginPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("login.html");
 
         public string clickEventPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("clickEventPage.html");
 
@@ -69,6 +91,7 @@ namespace OpenQA.Selenium
         public string mapVisibilityPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("map_visibility.html");
         public string mouseTrackerPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("mousePositionTracker.html");
         public string mouseOverPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("mouseOver.html");
+        public string mouseInteractionPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("mouse_interaction.html");
         public string readOnlyPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("readOnlyPage.html");
         public string clicksPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("clicks.html");
         public string booleanAttributes = EnvironmentManager.Instance.UrlBuilder.WhereIs("booleanAttributes.html");
@@ -83,6 +106,8 @@ namespace OpenQA.Selenium
         public string shadowRootPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("shadowRootPage.html");
         public string scrollFrameOutOfViewport = EnvironmentManager.Instance.UrlBuilder.WhereIs("scrolling_tests/frame_with_nested_scrolling_frame_out_of_view.html");
         public string scrollFrameInViewport = EnvironmentManager.Instance.UrlBuilder.WhereIs("scrolling_tests/frame_with_nested_scrolling_frame.html");
+
+        public string printPage = EnvironmentManager.Instance.UrlBuilder.WhereIs("printPage.html");
 
         protected IWebDriver driver;
 
@@ -112,10 +137,13 @@ namespace OpenQA.Selenium
             driver = EnvironmentManager.Instance.GetCurrentDriver();
         }
 
-        [OneTimeTearDown]
-        public void TearDown()
+        [TearDown]
+        public void ResetOnError()
         {
-            // EnvironmentManager.Instance.CloseCurrentDriver();
+            if (TestContext.CurrentContext.Result.Outcome == Error)
+            {
+                driver = EnvironmentManager.Instance.CreateFreshDriver();
+            }
         }
 
         /*

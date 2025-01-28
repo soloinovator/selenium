@@ -17,9 +17,23 @@
 
 package org.openqa.selenium.chrome;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.openqa.selenium.testing.drivers.Browser.CHROME;
+
+import com.google.common.util.concurrent.Uninterruptibles;
+import java.time.Duration;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chromium.ChromiumNetworkConditions;
@@ -27,30 +41,21 @@ import org.openqa.selenium.chromium.HasCasting;
 import org.openqa.selenium.chromium.HasCdp;
 import org.openqa.selenium.chromium.HasNetworkConditions;
 import org.openqa.selenium.chromium.HasPermissions;
+import org.openqa.selenium.net.PortProber;
 import org.openqa.selenium.remote.RemoteWebDriverBuilder;
 import org.openqa.selenium.remote.http.ClientConfig;
 import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NoDriverBeforeTest;
-import org.openqa.selenium.testing.drivers.WebDriverBuilder;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
-import static org.assertj.core.api.Assumptions.assumeThat;
-
-public class ChromeDriverFunctionalTest extends JupiterTestBase {
-
-  private final String CLIPBOARD_READ = "clipboard-read";
-  private final String CLIPBOARD_WRITE = "clipboard-write";
+class ChromeDriverFunctionalTest extends JupiterTestBase {
 
   @Test
   @NoDriverBeforeTest
   public void builderGeneratesDefaultChromeOptions() {
+    // This test won't pass if we want to use Chrome in a non-standard location
+    Assumptions.assumeThat(System.getProperty("webdriver.chrome.binary")).isNull();
+
     localDriver = ChromeDriver.builder().build();
     Capabilities capabilities = ((ChromeDriver) localDriver).getCapabilities();
 
@@ -61,28 +66,49 @@ public class ChromeDriverFunctionalTest extends JupiterTestBase {
   @Test
   @NoDriverBeforeTest
   public void builderOverridesDefaultChromeOptions() {
-    ChromeOptions options = new ChromeOptions();
+    ChromeOptions options = (ChromeOptions) CHROME.getCapabilities();
     options.setImplicitWaitTimeout(Duration.ofMillis(1));
     localDriver = ChromeDriver.builder().oneOf(options).build();
-    assertThat(localDriver.manage().timeouts().getImplicitWaitTimeout()).isEqualTo(Duration.ofMillis(1));
+    assertThat(localDriver.manage().timeouts().getImplicitWaitTimeout())
+        .isEqualTo(Duration.ofMillis(1));
   }
 
   @Test
-  public void builderWithClientConfigThrowsException() {
+  @NoDriverBeforeTest
+  public void driverOverridesDefaultClientConfig() {
+    assertThatThrownBy(
+            () -> {
+              ClientConfig clientConfig =
+                  ClientConfig.defaultConfig().readTimeout(Duration.ofSeconds(0));
+              localDriver =
+                  new ChromeDriver(
+                      ChromeDriverService.createDefaultService(),
+                      (ChromeOptions) CHROME.getCapabilities(),
+                      clientConfig);
+            })
+        .isInstanceOf(SessionNotCreatedException.class);
+  }
+
+  @Test
+  void builderWithClientConfigThrowsException() {
     ClientConfig clientConfig = ClientConfig.defaultConfig().readTimeout(Duration.ofMinutes(1));
-    RemoteWebDriverBuilder builder = ChromeDriver.builder().config(clientConfig);
+    RemoteWebDriverBuilder builder =
+        ChromeDriver.builder().oneOf(CHROME.getCapabilities()).config(clientConfig);
 
     assertThatExceptionOfType(IllegalArgumentException.class)
-      .isThrownBy(builder::build)
-      .withMessage("ClientConfig instances do not work for Local Drivers");
+        .isThrownBy(builder::build)
+        .withMessage("ClientConfig instances do not work for Local Drivers");
   }
 
   @Test
-  public void canSetPermission() {
+  @Ignore(value = CHROME, reason = "https://bugs.chromium.org/p/chromedriver/issues/detail?id=4350")
+  void canSetPermission() {
     HasPermissions permissions = (HasPermissions) driver;
 
     driver.get(pages.clicksPage);
+    String CLIPBOARD_READ = "clipboard-read";
     assumeThat(checkPermission(driver, CLIPBOARD_READ)).isEqualTo("prompt");
+    String CLIPBOARD_WRITE = "clipboard-write";
     assumeThat(checkPermission(driver, CLIPBOARD_WRITE)).isEqualTo("granted");
 
     permissions.setPermission(CLIPBOARD_READ, "denied");
@@ -92,48 +118,32 @@ public class ChromeDriverFunctionalTest extends JupiterTestBase {
     assertThat(checkPermission(driver, CLIPBOARD_WRITE)).isEqualTo("prompt");
   }
 
-  @Test
-  @NoDriverBeforeTest
-  public void canSetPermissionHeadless() {
-    ChromeOptions options = new ChromeOptions();
-    options.setHeadless(true);
-
-    localDriver = new WebDriverBuilder().get(options);
-    HasPermissions permissions = (HasPermissions) localDriver;
-
-    localDriver.get(pages.clicksPage);
-    assertThat(checkPermission(localDriver, CLIPBOARD_READ)).isEqualTo("prompt");
-    assertThat(checkPermission(localDriver, CLIPBOARD_WRITE)).isEqualTo("prompt");
-
-    permissions.setPermission(CLIPBOARD_READ, "granted");
-    permissions.setPermission(CLIPBOARD_WRITE, "granted");
-
-    assertThat(checkPermission(localDriver, CLIPBOARD_READ)).isEqualTo("granted");
-    assertThat(checkPermission(localDriver, CLIPBOARD_WRITE)).isEqualTo("granted");
-  }
-
-  public String checkPermission(WebDriver driver, String permission){
+  public String checkPermission(WebDriver driver, String permission) {
     @SuppressWarnings("unchecked")
-    Map<String, Object> result = (Map<String, Object>) ((JavascriptExecutor) driver).executeAsyncScript(
-      "callback = arguments[arguments.length - 1];"
-      + "callback(navigator.permissions.query({"
-      + "name: arguments[0]"
-      + "}));", permission);
+    Map<String, Object> result =
+        (Map<String, Object>)
+            ((JavascriptExecutor) driver)
+                .executeAsyncScript(
+                    "callback = arguments[arguments.length - 1];"
+                        + "callback(navigator.permissions.query({"
+                        + "name: arguments[0]"
+                        + "}));",
+                    permission);
     return result.get("state").toString();
   }
 
   @Test
   @Ignore(gitHubActions = true)
-  public void canCast() throws InterruptedException {
+  void canCast() {
     HasCasting caster = (HasCasting) driver;
 
     // Does not get list the first time it is called
     caster.getCastSinks();
-    Thread.sleep(1500);
+    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(1500));
     List<Map<String, String>> castSinks = caster.getCastSinks();
 
     // Can not call these commands if there are no sinks available
-    if (castSinks.size() > 0) {
+    if (!castSinks.isEmpty()) {
       String deviceName = castSinks.get(0).get("name");
 
       caster.startTabMirroring(deviceName);
@@ -143,16 +153,16 @@ public class ChromeDriverFunctionalTest extends JupiterTestBase {
 
   @Test
   @Ignore(gitHubActions = true)
-  public void canCastOnDesktop() throws InterruptedException {
+  public void canCastOnDesktop() {
     HasCasting caster = (HasCasting) driver;
 
     // Does not get list the first time it is called
     caster.getCastSinks();
-    Thread.sleep(1500);
+    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(1500));
     List<Map<String, String>> castSinks = caster.getCastSinks();
 
     // Can not call these commands if there are no sinks available
-    if (castSinks.size() > 0) {
+    if (!castSinks.isEmpty()) {
       String deviceName = castSinks.get(0).get("name");
 
       caster.startDesktopMirroring(deviceName);
@@ -161,34 +171,53 @@ public class ChromeDriverFunctionalTest extends JupiterTestBase {
   }
 
   @Test
-  public void canManageNetworkConditions() {
+  void canManageNetworkConditions() {
     HasNetworkConditions conditions = (HasNetworkConditions) driver;
 
     ChromiumNetworkConditions networkConditions = new ChromiumNetworkConditions();
     networkConditions.setLatency(Duration.ofMillis(200));
 
-      conditions.setNetworkConditions(networkConditions);
-      assertThat(conditions.getNetworkConditions().getLatency()).isEqualTo(Duration.ofMillis(200));
+    conditions.setNetworkConditions(networkConditions);
+    assertThat(conditions.getNetworkConditions().getLatency()).isEqualTo(Duration.ofMillis(200));
 
     conditions.deleteNetworkConditions();
 
-      try {
-        conditions.getNetworkConditions();
-        fail("If Network Conditions were deleted, should not be able to get Network Conditions");
-      } catch (WebDriverException e) {
-        if (!e.getMessage().contains("network conditions must be set before it can be retrieved")) {
-          throw e;
-        }
+    try {
+      conditions.getNetworkConditions();
+      fail("If Network Conditions were deleted, should not be able to get Network Conditions");
+    } catch (WebDriverException e) {
+      if (!e.getMessage().contains("network conditions must be set before it can be retrieved")) {
+        throw e;
       }
+    }
   }
 
   @Test
-  public void canExecuteCdpCommands() {
+  void canExecuteCdpCommands() {
     HasCdp cdp = (HasCdp) driver;
 
     Map<String, Object> parameters = Map.of("url", pages.simpleTestPage);
     cdp.executeCdpCommand("Page.navigate", parameters);
 
     assertThat(driver.getTitle()).isEqualTo("Hello WebDriver");
+  }
+
+  @Test
+  @NoDriverBeforeTest
+  void shouldLaunchSuccessfullyWithArabicDate() {
+    try {
+      Locale arabicLocale = new Locale("ar", "EG");
+      Locale.setDefault(arabicLocale);
+
+      int port = PortProber.findFreePort();
+      ChromeDriverService.Builder builder = new ChromeDriverService.Builder();
+      builder.usingPort(port);
+      builder.build();
+
+    } catch (Exception e) {
+      throw e;
+    } finally {
+      Locale.setDefault(Locale.US);
+    }
   }
 }

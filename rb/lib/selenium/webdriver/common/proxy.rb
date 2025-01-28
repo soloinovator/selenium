@@ -49,7 +49,7 @@ module Selenium
         proxy = new
 
         ALLOWED.each do |k, v|
-          proxy.send("#{k}=", data[v]) if data.key?(v)
+          proxy.send(:"#{k}=", data[v]) if data.key?(v)
         end
 
         proxy
@@ -60,7 +60,7 @@ module Selenium
 
         opts.each do |k, v|
           if ALLOWED.key?(k)
-            send("#{k}=", v)
+            send(:"#{k}=", v)
           else
             not_allowed << k
           end
@@ -74,7 +74,7 @@ module Selenium
       def ==(other)
         other.is_a?(self.class) && as_json == other.as_json
       end
-      alias_method :eql?, :==
+      alias eql? ==
 
       def ftp=(value)
         self.type = :manual
@@ -152,7 +152,7 @@ module Selenium
           'socksUsername' => socks_username,
           'socksPassword' => socks_password,
           'socksVersion' => socks_version
-        }.delete_if { |_k, v| v.nil? }
+        }.compact
 
         json_result if json_result.length > 1
       end

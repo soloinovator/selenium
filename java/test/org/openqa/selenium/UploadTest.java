@@ -24,9 +24,15 @@ import static org.openqa.selenium.Platform.ANDROID;
 import static org.openqa.selenium.WaitingConditions.elementTextToEqual;
 import static org.openqa.selenium.support.ui.ExpectedConditions.not;
 import static org.openqa.selenium.support.ui.ExpectedConditions.visibilityOf;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.remote.CapabilityType;
@@ -39,19 +45,8 @@ import org.openqa.selenium.testing.NotYetImplemented;
 import org.openqa.selenium.testing.SwitchToTopAfterTest;
 import org.openqa.selenium.testing.TestUtilities;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-/**
- * Demonstrates how to use WebDriver with a file input element.
- */
-public class UploadTest extends JupiterTestBase {
+/** Demonstrates how to use WebDriver with a file input element. */
+class UploadTest extends JupiterTestBase {
 
   private static final String LOREM_IPSUM_TEXT = "lorem ipsum dolor sit amet";
   private static final String FILE_HTML = "<div>" + LOREM_IPSUM_TEXT + "</div>";
@@ -67,14 +62,15 @@ public class UploadTest extends JupiterTestBase {
   @Test
   @NotYetImplemented(value = SAFARI, reason = "Returns wrong text of the frame body")
   public void testFileUploading() {
-    assumeFalse(TestUtilities.getEffectivePlatform(driver).is(ANDROID),
-      "This test as written assumes a file on local disk is accessible to the browser. "
-        + "That is not true for browsers on mobile platforms.");
+    assumeFalse(
+        TestUtilities.getEffectivePlatform(driver).is(ANDROID),
+        "This test as written assumes a file on local disk is accessible to the browser. "
+            + "That is not true for browsers on mobile platforms.");
     driver.get(pages.uploadPage);
     driver.findElement(By.id("upload")).sendKeys(testFile.getAbsolutePath());
     driver.findElement(By.id("go")).click();
 
-    // Uploading files across a network may take a while, even if they're really small
+    // Uploading files across a network may take a while, even if they're tiny
     WebElement label = driver.findElement(By.id("upload_label"));
     wait.until(not(visibilityOf(label)));
 
@@ -89,19 +85,21 @@ public class UploadTest extends JupiterTestBase {
   @NotYetImplemented(value = SAFARI, reason = "Returns wrong text of the frame body")
   public void testMultipleFileUploading() {
     List<String> multiContent = Arrays.asList(LOREM_IPSUM_TEXT, LOREM_IPSUM_TEXT, LOREM_IPSUM_TEXT);
-    String fileNames = multiContent.stream()
-      .map(text -> "<div>" + text + "</div>")
-      .map(this::createTmpFile)
-      .map(File::getAbsolutePath)
-      .collect(Collectors.joining("\n"));
-    assumeFalse(TestUtilities.getEffectivePlatform(driver).is(ANDROID),
-      "This test as written assumes a file on local disk is accessible to the browser. "
-        + "That is not true for browsers on mobile platforms.");
+    String fileNames =
+        multiContent.stream()
+            .map(text -> "<div>" + text + "</div>")
+            .map(this::createTmpFile)
+            .map(File::getAbsolutePath)
+            .collect(Collectors.joining("\n"));
+    assumeFalse(
+        TestUtilities.getEffectivePlatform(driver).is(ANDROID),
+        "This test as written assumes a file on local disk is accessible to the browser. "
+            + "That is not true for browsers on mobile platforms.");
     driver.get(pages.uploadPage);
     driver.findElement(By.id("upload")).sendKeys(fileNames);
     driver.findElement(By.id("go")).click();
 
-    // Uploading files across a network may take a while, even if they're really small
+    // Uploading files across a network may take a while, even if they're tiny
     WebElement label = driver.findElement(By.id("upload_label"));
     wait.until(not(visibilityOf(label)));
 
@@ -112,16 +110,15 @@ public class UploadTest extends JupiterTestBase {
   }
 
   @Test
-  public void testCleanFileInput() {
+  void testCleanFileInput() {
     driver.get(pages.uploadPage);
     WebElement element = driver.findElement(By.id("upload"));
     element.sendKeys(testFile.getAbsolutePath());
     element.clear();
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  @Ignore(HTMLUNIT)
   public void testClickFileInput() {
     driver.get(pages.uploadPage);
     WebElement element = driver.findElement(By.id("upload"));
@@ -135,7 +132,7 @@ public class UploadTest extends JupiterTestBase {
     driver.findElement(By.id("upload")).sendKeys(testFile.getAbsolutePath());
     driver.findElement(By.id("go")).click();
 
-    // Uploading files across a network may take a while, even if they're really small
+    // Uploading files across a network may take a while, even if they're tiny
     WebElement label = driver.findElement(By.id("upload_label"));
     wait.until(not(visibilityOf(label)));
 
@@ -147,14 +144,13 @@ public class UploadTest extends JupiterTestBase {
 
   @Test
   @Ignore(value = SAFARI, reason = "Hangs forever in sendKeys")
-  @Ignore(HTMLUNIT)
   @NeedsFreshDriver
   public void testUploadingWithInvisibleFileInput() {
     driver.get(appServer.whereIs("upload_invisible.html"));
     driver.findElement(By.id("upload")).sendKeys(testFile.getAbsolutePath());
     driver.findElement(By.id("go")).click();
 
-    // Uploading files across a network may take a while, even if they're really small
+    // Uploading files across a network may take a while, even if they're tiny
     WebElement label = driver.findElement(By.id("upload_label"));
     wait.until(not(visibilityOf(label)));
 
@@ -165,7 +161,6 @@ public class UploadTest extends JupiterTestBase {
   }
 
   @Test
-  @Ignore(HTMLUNIT)
   @NoDriverBeforeTest
   @NoDriverAfterTest
   public void testUploadingWithInvisibleFileInputWhenStrictFileInteractabilityIsOn() {
@@ -175,15 +170,15 @@ public class UploadTest extends JupiterTestBase {
     WebElement input = driver.findElement(By.id("upload"));
     System.out.println(input.isDisplayed());
 
-    assertThatExceptionOfType(ElementNotInteractableException.class).isThrownBy(
-      () -> input.sendKeys(testFile.getAbsolutePath()));
+    assertThatExceptionOfType(ElementNotInteractableException.class)
+        .isThrownBy(() -> input.sendKeys(testFile.getAbsolutePath()));
   }
 
   private File createTmpFile(String content) {
     try {
       File f = File.createTempFile("webdriver", "tmp");
       f.deleteOnExit();
-      Files.write(f.toPath(), content.getBytes(StandardCharsets.UTF_8));
+      Files.writeString(f.toPath(), content);
       return f;
     } catch (IOException e) {
       throw new UncheckedIOException(e);

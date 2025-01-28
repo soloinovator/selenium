@@ -28,7 +28,7 @@ import org.openqa.selenium.print.PrintOptions;
 import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 
-public class PrintPageTest extends JupiterTestBase {
+class PrintPageTest extends JupiterTestBase {
   private static final String MAGIC_STRING = "JVBER";
   private PrintsPage printer;
 
@@ -74,5 +74,4 @@ public class PrintPageTest extends JupiterTestBase {
     Pdf pdf = printer.print(printOptions);
     assertThat(pdf.getContent().contains(MAGIC_STRING)).isTrue();
   }
-
 }

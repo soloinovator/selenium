@@ -17,9 +17,12 @@
 
 package org.openqa.selenium.devtools;
 
+import static org.openqa.selenium.remote.http.Contents.utf8String;
+
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.devtools.DevTools;
-import org.openqa.selenium.devtools.HasDevTools;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.remote.http.Filter;
 import org.openqa.selenium.remote.http.HttpHandler;
@@ -29,20 +32,16 @@ import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.http.Routable;
 import org.openqa.selenium.remote.http.Route;
 
-import java.util.Map;
-import java.util.Optional;
-
-import static org.openqa.selenium.remote.http.Contents.utf8String;
-
 /**
- * Provides a mechanism for stubbing out responses to requests in drivers which
- * implement {@link HasDevTools}. Usage is done by specifying a {@link Route},
- * which will be checked for every request to see if that request should be
- * handled or not. Note that the URLs given to the {@code Route} will be fully
- * qualified.
+ * Provides a mechanism for stubbing out responses to requests in drivers which implement {@link
+ * HasDevTools}. Usage is done by specifying a {@link Route}, which will be checked for every
+ * request to see if that request should be handled or not. Note that the URLs given to the {@code
+ * Route} will be fully qualified.
+ *
+ * <p>Example usage:
+ *
  * <p>
- * Example usage:
- * <p>
+ *
  * <pre><code>
  *   Route route = Route.matching(req -&gt; GET == req.getMethod() &amp;&amp; req.getUri().endsWith("/example"))
  *     .to(() -&gt; req -&gt; new HttpResponse().setContent(Contents.utf8String("Hello, World!")));
@@ -51,19 +50,20 @@ import static org.openqa.selenium.remote.http.Contents.utf8String;
  *     // Your code here.
  *   }
  * </code></pre>
- * <p>
- * It is also possible to intercept and modify responses that the browser will
- * receive. Do this by calling {@link #NetworkInterceptor(WebDriver, Filter)}.
+ *
+ * <p>It is also possible to intercept and modify responses that the browser will receive. Do this
+ * by calling {@link #NetworkInterceptor(WebDriver, Filter)}.
  */
 public class NetworkInterceptor implements AutoCloseable {
 
   /**
-   * Return this from a {@link Routable} in order to have the browser
-   * continue the request unmodified.
+   * Return this from a {@link Routable} in order to have the browser continue the request
+   * unmodified.
    */
-  public static final HttpResponse PROCEED_WITH_REQUEST = new HttpResponse()
-    .addHeader("Selenium-Interceptor", "Continue")
-    .setContent(utf8String("Original request should proceed"));
+  public static final HttpResponse PROCEED_WITH_REQUEST =
+      new HttpResponse()
+          .addHeader("Selenium-Interceptor", "Continue")
+          .setContent(utf8String("Original request should proceed"));
 
   private final DevTools tools;
 
@@ -73,13 +73,15 @@ public class NetworkInterceptor implements AutoCloseable {
 
   public NetworkInterceptor(WebDriver driver, Routable routable) {
     this(
-      driver,
-      (Filter) next -> req -> {
-        if (routable.matches(req)) {
-          return routable.execute(req);
-        }
-        return next.execute(req);
-      });
+        driver,
+        (Filter)
+            next ->
+                req -> {
+                  if (routable.matches(req)) {
+                    return routable.execute(req);
+                  }
+                  return next.execute(req);
+                });
   }
 
   public NetworkInterceptor(WebDriver driver, Filter filter) {
@@ -104,7 +106,7 @@ public class NetworkInterceptor implements AutoCloseable {
   protected HttpMethod convertFromCdpHttpMethod(String method) {
     Require.nonNull("HTTP Method", method);
     try {
-      return HttpMethod.valueOf(method.toUpperCase());
+      return HttpMethod.valueOf(method.toUpperCase(Locale.ENGLISH));
     } catch (IllegalArgumentException e) {
       // Spam in a reasonable value
       return HttpMethod.GET;
@@ -112,15 +114,11 @@ public class NetworkInterceptor implements AutoCloseable {
   }
 
   protected HttpRequest createHttpRequest(
-    String cdpMethod,
-    String url,
-    Map<String, Object> headers,
-    Optional<String> postData) {
+      String cdpMethod, String url, Map<String, Object> headers, Optional<String> postData) {
     HttpRequest req = new HttpRequest(convertFromCdpHttpMethod(cdpMethod), url);
     headers.forEach((key, value) -> req.addHeader(key, String.valueOf(value)));
     postData.ifPresent(data -> req.setContent(utf8String(data)));
 
     return req;
   }
-
 }

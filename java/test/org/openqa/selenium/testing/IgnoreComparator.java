@@ -17,19 +17,21 @@
 
 package org.openqa.selenium.testing;
 
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.openqa.selenium.testing.drivers.Browser;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
-public class IgnoreComparator {
+class IgnoreComparator {
   private final Set<Browser> ignored = new HashSet<>();
+
+  private static final Logger LOG = Logger.getLogger(IgnoreComparator.class.getName());
 
   // TODO(simon): reduce visibility
   public void addDriver(Browser driverToIgnore) {
@@ -37,17 +39,19 @@ public class IgnoreComparator {
   }
 
   public boolean shouldIgnore(IgnoreList ignoreList) {
-    return ignoreList != null && ignoreList.value().length > 0 &&
-           shouldIgnore(Stream.of(ignoreList.value()));
+    return ignoreList != null
+        && ignoreList.value().length > 0
+        && shouldIgnore(Stream.of(ignoreList.value()));
   }
 
   public boolean shouldIgnore(Ignore ignore) {
     return ignore != null && shouldIgnore(Stream.of(ignore));
   }
 
-  private boolean shouldIgnore(Stream<Ignore> ignoreList) {
+  public boolean shouldIgnore(Stream<Ignore> ignoreList) {
     return ignoreList.anyMatch(
-      driver -> (ignored.contains(driver.value()) || driver.value() == Browser.ALL)
+        driver ->
+            (ignored.contains(driver.value()) || driver.value() == Browser.ALL)
                 && ((!driver.travis() || TestUtilities.isOnTravis())
                     || (!driver.gitHubActions() || TestUtilities.isOnGitHubActions()))
                 && isOpen(driver.issue()));
@@ -79,7 +83,7 @@ public class IgnoreComparator {
       Issue issue = service.getIssue(owner, repo, issueId);
       return "open".equals(issue.getState());
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.severe("Error during execution: " + e.getMessage());
     }
     return true;
   }

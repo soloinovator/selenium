@@ -17,11 +17,27 @@
 
 package org.openqa.selenium.grid.router;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.io.StringReader;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.grid.config.MapConfig;
 import org.openqa.selenium.grid.config.MemoizedConfig;
 import org.openqa.selenium.grid.config.TomlConfig;
@@ -36,23 +52,10 @@ import org.openqa.selenium.testing.Safely;
 import org.openqa.selenium.testing.TearDownFixture;
 import org.openqa.selenium.testing.drivers.Browser;
 
-import java.io.StringReader;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.assertj.core.api.Assertions.assertThat;
-
-public class StressTest {
+class StressTest {
 
   private final ExecutorService executor =
-    Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+      Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
   private final List<TearDownFixture> tearDowns = new LinkedList<>();
   private Server<?> server;
   private Browser browser;
@@ -62,26 +65,38 @@ public class StressTest {
   public void setupServers() {
     browser = Objects.requireNonNull(Browser.detect());
 
-    Deployment deployment = DeploymentTypes.DISTRIBUTED.start(
-      browser.getCapabilities(),
-      new TomlConfig(new StringReader(
-        "[node]\n" +
-        "driver-implementation = " + browser.displayName())));
+    Deployment deployment =
+        DeploymentTypes.DISTRIBUTED.start(
+            browser.getCapabilities(),
+            new TomlConfig(
+                new StringReader(
+                    "[node]\n"
+                        + "driver-implementation = "
+                        + String.format("\"%s\"", browser.displayName())
+                        + "\n"
+                        + "session-timeout = 11"
+                        + "\n"
+                        + "override-max-sessions = true"
+                        + "\n"
+                        + "max-sessions = "
+                        + Runtime.getRuntime().availableProcessors() * 2
+                        + "\n"
+                        + "enable-managed-downloads = true")));
     tearDowns.add(deployment);
 
     server = deployment.getServer();
 
-    appServer = new NettyServer(
-      new BaseServerOptions(new MemoizedConfig(new MapConfig(Map.of()))),
-      req -> {
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-        return new HttpResponse()
-          .setContent(Contents.string("<h1>Cheese</h1>", UTF_8));
-      });
+    appServer =
+        new NettyServer(
+            new BaseServerOptions(new MemoizedConfig(new MapConfig(Map.of()))),
+            req -> {
+              try {
+                Thread.sleep(2000);
+              } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              return new HttpResponse().setContent(Contents.string("<h1>Cheese</h1>", UTF_8));
+            });
 
     tearDowns.add(() -> appServer.stop());
     appServer.start();
@@ -94,33 +109,87 @@ public class StressTest {
   }
 
   @Test
-  public void multipleSimultaneousSessions() throws Exception {
+  void multipleSimultaneousSessions() throws Exception {
     assertThat(server.isStarted()).isTrue();
 
     CompletableFuture<?>[] futures = new CompletableFuture<?>[10];
     for (int i = 0; i < futures.length; i++) {
       CompletableFuture<Object> future = new CompletableFuture<>();
-      futures[i] = future;
+      futures[i] =
+          CompletableFuture.runAsync(
+              () -> {
+                WebDriver driver =
+                    RemoteWebDriver.builder()
+                        .oneOf(
+                            browser
+                                .getCapabilities()
+                                .merge(
+                                    new MutableCapabilities(Map.of("se:downloadsEnabled", true))))
+                        .address(server.getUrl())
+                        .build();
 
-      executor.submit(() -> {
-        try {
-          WebDriver driver = RemoteWebDriver.builder()
-            .oneOf(browser.getCapabilities())
-            .address(server.getUrl())
-            .build();
+                driver.get(appServer.getUrl().toString());
+                driver.findElement(By.tagName("body"));
 
-          driver.get(appServer.getUrl().toString());
-          driver.findElement(By.tagName("body"));
-
-          // And now quit
-          driver.quit();
-          future.complete(true);
-        } catch (Exception e) {
-          future.completeExceptionally(e);
-        }
-      });
+                // And now quit
+                driver.quit();
+              },
+              executor);
     }
 
     CompletableFuture.allOf(futures).get(4, MINUTES);
+  }
+
+  @Test
+  void multipleSimultaneousSessionsTimedOut() throws Exception {
+    assertThat(server.isStarted()).isTrue();
+
+    CompletableFuture<?>[] futures = new CompletableFuture<?>[10];
+    for (int i = 0; i < futures.length; i++) {
+      futures[i] =
+          CompletableFuture.runAsync(
+              () -> {
+                WebDriver driver =
+                    RemoteWebDriver.builder()
+                        .oneOf(browser.getCapabilities())
+                        .address(server.getUrl())
+                        .build();
+                driver.get(appServer.getUrl().toString());
+                try {
+                  Thread.sleep(11000);
+                } catch (InterruptedException ex) {
+                  Thread.currentThread().interrupt();
+                  throw new RuntimeException(ex);
+                }
+                // note: As soon as the session cleanup of the node is performed, the grid is unable
+                // to route the request. All commands to a session in this state will fail with:
+                // "Unable to find session with ID:"
+                NoSuchSessionException exception =
+                    assertThrows(NoSuchSessionException.class, driver::getTitle);
+                assertThat(exception.getMessage())
+                    .matches(
+                        (msg) ->
+                            // the session timed out, the cleanup is pending
+                            msg.startsWith("Cannot find session with id:")
+                                // the session timed out, the cleanup is done
+                                || msg.startsWith("Unable to find session with ID:"),
+                        "Cannot find session … / Unable to find session …");
+                WebDriverException webDriverException =
+                    assertThrows(
+                        WebDriverException.class,
+                        () -> ((RemoteWebDriver) driver).getDownloadableFiles());
+                assertThat(webDriverException.getMessage())
+                    .matches(
+                        (msg) ->
+                            // the session timed out, the cleanup is pending
+                            msg.startsWith("Cannot find downloads file system for session id:")
+                                // the session timed out, the cleanup is done
+                                || msg.startsWith("Unable to find session with ID:"),
+                        "Cannot find downloads … / Unable to find session …");
+              },
+              executor);
+    }
+
+    CompletableFuture.allOf(futures).get(5, MINUTES);
   }
 }

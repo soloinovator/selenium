@@ -17,6 +17,12 @@
 
 package org.openqa.selenium.grid.web;
 
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.openqa.selenium.json.Json.JSON_UTF_8;
+import static org.openqa.selenium.remote.http.HttpMethod.POST;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
@@ -25,67 +31,64 @@ import org.openqa.selenium.remote.http.HttpHandler;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.openqa.selenium.json.Json.JSON_UTF_8;
-import static org.openqa.selenium.remote.http.HttpMethod.POST;
+class EnsureSpecCompliantHeadersTest {
 
-public class EnsureSpecCompliantHeadersTest {
-
-  private final HttpHandler alwaysOk = req -> new HttpResponse()
-    .setContent(Contents.utf8String("Cheese"));
+  private final HttpHandler alwaysOk =
+      req -> new HttpResponse().setContent(Contents.utf8String("Cheese"));
 
   @Test
-  public void shouldBlockRequestsWithNoContentType() {
-    HttpResponse res = new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
-      .apply(alwaysOk)
-      .execute(new HttpRequest(POST, "/session"));
+  void shouldBlockRequestsWithNoContentType() {
+    HttpResponse res =
+        new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
+            .apply(alwaysOk)
+            .execute(new HttpRequest(POST, "/session"));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_INTERNAL_ERROR);
   }
 
   @Test
-  public void shouldAllowRequestsWithNoContentTypeWhenSkipCheckOnMatches() {
-    HttpResponse res = new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of("/gouda"))
-      .apply(alwaysOk)
-      .execute(new HttpRequest(POST, "/gouda"));
+  void shouldAllowRequestsWithNoContentTypeWhenSkipCheckOnMatches() {
+    HttpResponse res =
+        new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of("/gouda"))
+            .apply(alwaysOk)
+            .execute(new HttpRequest(POST, "/gouda"));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_OK);
   }
 
   @Test
-  public void requestsWithAnOriginHeaderShouldBeBlocked() {
-    HttpResponse res = new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
-      .apply(alwaysOk)
-      .execute(
-        new HttpRequest(POST, "/session")
-          .addHeader("Content-Type", JSON_UTF_8)
-          .addHeader("Origin", "example.com"));
+  void requestsWithAnOriginHeaderShouldBeBlocked() {
+    HttpResponse res =
+        new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
+            .apply(alwaysOk)
+            .execute(
+                new HttpRequest(POST, "/session")
+                    .addHeader("Content-Type", JSON_UTF_8)
+                    .addHeader("Origin", "example.com"));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_INTERNAL_ERROR);
   }
 
   @Test
-  public void requestsWithAnAllowedOriginHeaderShouldBeAllowed() {
-    HttpResponse res = new EnsureSpecCompliantHeaders(ImmutableList.of("example.com"), ImmutableSet.of())
-      .apply(alwaysOk)
-      .execute(
-        new HttpRequest(POST, "/session")
-          .addHeader("Content-Type", JSON_UTF_8)
-          .addHeader("Origin", "example.com"));
+  void requestsWithAnAllowedOriginHeaderShouldBeAllowed() {
+    HttpResponse res =
+        new EnsureSpecCompliantHeaders(ImmutableList.of("example.com"), ImmutableSet.of())
+            .apply(alwaysOk)
+            .execute(
+                new HttpRequest(POST, "/session")
+                    .addHeader("Content-Type", JSON_UTF_8)
+                    .addHeader("Origin", "example.com"));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_OK);
     assertThat(Contents.string(res)).isEqualTo("Cheese");
   }
 
   @Test
-  public void shouldAllowRequestsWithNoOriginHeader() {
-    HttpResponse res = new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
-      .apply(alwaysOk)
-      .execute(
-        new HttpRequest(POST, "/session")
-          .addHeader("Content-Type", JSON_UTF_8));
+  void shouldAllowRequestsWithNoOriginHeader() {
+    HttpResponse res =
+        new EnsureSpecCompliantHeaders(ImmutableList.of(), ImmutableSet.of())
+            .apply(alwaysOk)
+            .execute(new HttpRequest(POST, "/session").addHeader("Content-Type", JSON_UTF_8));
 
     assertThat(res.getStatus()).isEqualTo(HTTP_OK);
     assertThat(Contents.string(res)).isEqualTo("Cheese");

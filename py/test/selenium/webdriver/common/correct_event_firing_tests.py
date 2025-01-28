@@ -76,8 +76,8 @@ def test_mouse_events_should_bubble_up_to_containing_elements(driver, pages):
 @pytest.mark.xfail_safari
 def test_should_emit_on_change_events_when_selecting_elements(driver, pages):
     pages.load("javascriptPage.html")
-    select = driver.find_element(By.ID, 'selector')
-    options = select.find_elements(By.TAG_NAME, 'option')
+    select = driver.find_element(By.ID, "selector")
+    options = select.find_elements(By.TAG_NAME, "option")
     initialTextValue = driver.find_element(By.ID, "result").text
 
     select.click()
@@ -110,21 +110,21 @@ def test_clearing_an_element_should_cause_the_on_change_handler_to_fire(driver, 
     result = driver.find_element(By.ID, "result")
     assert result.text == "Cleared"
 
-# TODO Currently Failing and needs fixing
-# def test_sending_keys_to_another_element_should_cause_the_blur_event_to_fire(driver, pages):
-#    pages.load("javascriptPage.html")
-#    element = driver.find_element(By.ID, "theworks")
-#    element.send_keys("foo")
-#    element2 = driver.find_element(By.ID, "changeable")
-#    element2.send_keys("bar")
-#    _assertEventFired(driver, "blur")
 
-# TODO Currently Failing and needs fixing
-# def test_sending_keys_to_an_element_should_cause_the_focus_event_to_fire(driver, pages):
-#    pages.load("javascriptPage.html")
-#    element = driver.find_element(By.ID, "theworks")
-#    element.send_keys("foo")
-#    _assertEventFired(driver, "focus")
+def test_sending_keys_to_another_element_should_cause_the_blur_event_to_fire(driver, pages):
+    pages.load("javascriptPage.html")
+    element = driver.find_element(By.ID, "theworks")
+    element.send_keys("foo")
+    element2 = driver.find_element(By.ID, "changeable")
+    element2.send_keys("bar")
+    _assert_event_fired(driver, "blur")
+
+
+def test_sending_keys_to_an_element_should_cause_the_focus_event_to_fire(driver, pages):
+    pages.load("javascriptPage.html")
+    element = driver.find_element(By.ID, "theworks")
+    element.send_keys("foo")
+    _assert_event_fired(driver, "focus")
 
 
 def _click_on_element_which_records_events(driver):

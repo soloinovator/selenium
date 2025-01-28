@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.openqa.selenium.testing.drivers.Browser.CHROME;
 import static org.openqa.selenium.testing.drivers.Browser.EDGE;
-import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
+import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +31,7 @@ import org.openqa.selenium.environment.GlobalTestEnvironment;
 import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 
-public class TextPagesTest extends JupiterTestBase {
+class TextPagesTest extends JupiterTestBase {
 
   private String textPage;
 
@@ -41,7 +41,7 @@ public class TextPagesTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToLoadASimplePageOfText() {
+  void testShouldBeAbleToLoadASimplePageOfText() {
     driver.get(textPage);
     String source = driver.getPageSource();
     assertThat(source).contains("Test");

@@ -1,19 +1,20 @@
-// <copyright file="Target.cs" company="WebDriver Committers">
+// <copyright file="Target.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
 using System;
@@ -33,6 +34,11 @@ namespace OpenQA.Selenium.DevTools
         public event EventHandler<TargetDetachedEventArgs> TargetDetached;
 
         /// <summary>
+        /// Occurs when a target is attached.
+        /// </summary>
+        public event EventHandler<TargetAttachedEventArgs> TargetAttached;
+
+        /// <summary>
         /// Asynchronously gets the targets available for this session.
         /// </summary>
         /// <returns>
@@ -40,7 +46,7 @@ namespace OpenQA.Selenium.DevTools
         /// contains the list of <see cref="TargetInfo"/> objects describing the
         /// targets available for this session.
         /// </returns>
-        public abstract Task<ReadOnlyCollection<TargetInfo>> GetTargets();
+        public abstract Task<ReadOnlyCollection<TargetInfo>> GetTargets(Object settings = null);
 
         /// <summary>
         /// Asynchronously attaches to a target.
@@ -68,6 +74,10 @@ namespace OpenQA.Selenium.DevTools
         /// <returns>A task that represents the asynchronous operation.</returns>
         public abstract Task SetAutoAttach();
 
+        internal abstract ICommand CreateSetAutoAttachCommand(bool waitForDebuggerOnStart);
+
+        internal abstract ICommand CreateDiscoverTargetsCommand();
+
         /// <summary>
         /// Raises the TargetDetached event.
         /// </summary>
@@ -77,6 +87,18 @@ namespace OpenQA.Selenium.DevTools
             if (this.TargetDetached != null)
             {
                 this.TargetDetached(this, e);
+            }
+        }
+
+        /// <summary>
+        /// Raises the TargetAttached event.
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnTargetAttached(TargetAttachedEventArgs e)
+        {
+            if (this.TargetAttached != null)
+            {
+                this.TargetAttached(this, e);
             }
         }
     }

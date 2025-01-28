@@ -21,52 +21,52 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 
-import java.util.List;
-import java.util.Optional;
-
-public class ConfigTest {
+class ConfigTest {
 
   @Test
-  public void ensureFirstConfigValueIsChosen() {
-    Config config = new CompoundConfig(
-        new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "foo"))),
-        new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "bar"))));
+  void ensureFirstConfigValueIsChosen() {
+    Config config =
+        new CompoundConfig(
+            new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "foo"))),
+            new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "bar"))));
 
     assertEquals("foo", config.get("section", "option").get());
   }
 
   @Test
-  public void shouldReturnEmptyIfConfigValueIsMissing() {
+  void shouldReturnEmptyIfConfigValueIsMissing() {
     Config config = new MapConfig(ImmutableMap.of());
 
     assertFalse(config.get("section", "option").isPresent());
   }
 
   @Test
-  public void shouldReadSystemProperties() {
-    Config config = new CompoundConfig(
-        new MapConfig(ImmutableMap.of()),
-        new ConcatenatingConfig("", '.', System.getProperties()));
+  void shouldReadSystemProperties() {
+    Config config =
+        new CompoundConfig(
+            new MapConfig(ImmutableMap.of()),
+            new ConcatenatingConfig("", '.', System.getProperties()));
 
     assertEquals(System.getProperty("user.home"), config.get("user", "home").get());
   }
 
   @Test
-  public void shouldReturnAllMatchingOptions() {
-    Config config = new CompoundConfig(
-        new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "foo"))),
-        new MapConfig(ImmutableMap.of("section", ImmutableMap.of("cake", "fish"))),
-        new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "bar"))));
+  void shouldReturnAllMatchingOptions() {
+    Config config =
+        new CompoundConfig(
+            new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "foo"))),
+            new MapConfig(ImmutableMap.of("section", ImmutableMap.of("cake", "fish"))),
+            new MapConfig(ImmutableMap.of("section", ImmutableMap.of("option", "bar"))));
 
     assertEquals(Optional.empty(), config.getAll("cheese", "brie"));
     assertEquals(Optional.of(ImmutableList.of("fish")), config.getAll("section", "cake"));
@@ -74,7 +74,7 @@ public class ConfigTest {
   }
 
   @Test
-  public void shouldAllowMultipleValues() {
+  void shouldAllowMultipleValues() {
     class Settable {
       @Parameter(
           names = {"-D"},
@@ -85,9 +85,7 @@ public class ConfigTest {
 
     Settable settable = new Settable();
 
-    JCommander commander = JCommander.newBuilder()
-        .addObject(settable)
-        .build();
+    JCommander commander = JCommander.newBuilder().addObject(settable).build();
 
     commander.parse("-D", "peas", "-D", "cheese", "-D", "sausages", "--boo");
 
@@ -97,11 +95,12 @@ public class ConfigTest {
   }
 
   @Test
-  public void compoundConfigsCanProperlyInstantiateClassesReferringToOptionsInOtherConfigs() {
-    Config config = new CompoundConfig(
-      new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("taste", "delicious"))),
-      new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("name", "cheddar"))),
-      new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("scent", "smelly"))));
+  void compoundConfigsCanProperlyInstantiateClassesReferringToOptionsInOtherConfigs() {
+    Config config =
+        new CompoundConfig(
+            new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("taste", "delicious"))),
+            new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("name", "cheddar"))),
+            new MapConfig(ImmutableMap.of("cheese", ImmutableMap.of("scent", "smelly"))));
 
     String name = config.getClass("foo", "bar", String.class, ReadsConfig.class.getName());
 
@@ -109,15 +108,13 @@ public class ConfigTest {
   }
 
   @Test
-  public void shouldBeAbleToGetAClassWithDefaultConstructor() {
-    Config config = new MapConfig(
-      ImmutableMap.of("foo", ImmutableMap.of("caps", ImmutableCapabilities.class.getName())));
+  void shouldBeAbleToGetAClassWithDefaultConstructor() {
+    Config config =
+        new MapConfig(
+            ImmutableMap.of("foo", ImmutableMap.of("caps", ImmutableCapabilities.class.getName())));
 
-    Capabilities caps = config.getClass(
-      "foo",
-      "caps",
-      Capabilities.class,
-      ImmutableCapabilities.class.getName());
+    Capabilities caps =
+        config.getClass("foo", "caps", Capabilities.class, ImmutableCapabilities.class.getName());
 
     assertThat(caps).isInstanceOf(ImmutableCapabilities.class);
   }

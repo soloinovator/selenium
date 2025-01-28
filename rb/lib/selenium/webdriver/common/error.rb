@@ -20,7 +20,6 @@
 module Selenium
   module WebDriver
     module Error
-
       #
       # Returns exception from its string representation.
       # @param [String, nil] error
@@ -30,12 +29,33 @@ module Selenium
         return if error.nil?
 
         klass_name = error.split.map(&:capitalize).join.sub(/Error$/, '')
-        const_get("#{klass_name}Error", false)
+        const_get(:"#{klass_name}Error", false)
       rescue NameError
         WebDriverError
       end
 
-      class WebDriverError < StandardError; end
+      SUPPORT_MSG = 'For documentation on this error, please visit:'
+      ERROR_URL = 'https://www.selenium.dev/documentation/webdriver/troubleshooting/errors'
+
+      URLS = {
+        NoSuchElementError: "#{ERROR_URL}#no-such-element-exception",
+        StaleElementReferenceError: "#{ERROR_URL}#stale-element-reference-exception",
+        InvalidSelectorError: "#{ERROR_URL}#invalid-selector-exception",
+        NoSuchDriverError: "#{ERROR_URL}/driver_location"
+      }.freeze
+
+      class WebDriverError < StandardError
+        def initialize(msg = '')
+          # Remove this conditional when all the error pages have been documented
+          super(URLS[class_name] ? "#{msg}; #{SUPPORT_MSG} #{URLS[class_name]}" : msg)
+        end
+
+        # steep:ignore:start
+        def class_name
+          self.class.name.split('::')&.last&.to_sym
+        end
+        # steep:ignore:end
+      end
 
       #
       # An element could not be located on the page using the given search parameters.
@@ -214,6 +234,11 @@ module Selenium
 
       class UnsupportedOperationError < WebDriverError; end
 
+      #
+      # Indicates that driver was not specified and could not be located.
+      #
+
+      class NoSuchDriverError < WebDriverError; end
     end # Error
   end # WebDriver
 end # Selenium

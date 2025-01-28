@@ -30,6 +30,7 @@ def close_windows(driver):
     main_windows_handle = driver.current_window_handle
     yield
     from urllib import request as url_request
+
     URLError = url_request.URLError
 
     try:
@@ -129,6 +130,7 @@ def test_should_throw_no_such_window_exception_on_any_element_operation_if_awind
         element.text
 
 
+@pytest.mark.xfail_safari
 def test_clicking_on_abutton_that_closes_an_open_window_does_not_cause_the_browser_to_hang(driver, pages):
     pages.load("xhtmlTest.html")
     current = driver.current_window_handle

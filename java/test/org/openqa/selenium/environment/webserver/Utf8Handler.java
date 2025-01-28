@@ -17,19 +17,16 @@
 
 package org.openqa.selenium.environment.webserver;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.openqa.selenium.remote.http.Contents;
 import org.openqa.selenium.remote.http.HttpHandler;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-public class Utf8Handler implements HttpHandler {
+class Utf8Handler implements HttpHandler {
 
   private final Path webSrc;
   private final String stripPrefix;
@@ -42,7 +39,6 @@ public class Utf8Handler implements HttpHandler {
   @Override
   public HttpResponse execute(HttpRequest req) throws UncheckedIOException {
 
-
     try {
       String fileName = req.getUri();
       if (fileName.startsWith(stripPrefix)) {
@@ -52,8 +48,8 @@ public class Utf8Handler implements HttpHandler {
       Path target = webSrc.resolve(fileName);
 
       return new HttpResponse()
-        .setHeader("Content-Type", "text/html; charset=UTF-8")
-        .setContent(Contents.utf8String(new String(Files.readAllBytes(target), UTF_8)));
+          .setHeader("Content-Type", "text/html; charset=UTF-8")
+          .setContent(Contents.utf8String(Files.readString(target)));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

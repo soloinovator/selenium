@@ -1,26 +1,24 @@
-// <copyright file="V85Log.cs" company="WebDriver Committers">
+// <copyright file="V85Log.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using OpenQA.Selenium.DevTools.V85.Log;
+using System.Threading.Tasks;
 
 namespace OpenQA.Selenium.DevTools.V85
 {
@@ -32,7 +30,7 @@ namespace OpenQA.Selenium.DevTools.V85
         private LogAdapter adapter;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="V86Log"/> class.
+        /// Initializes a new instance of the <see cref="V85Log"/> class.
         /// </summary>
         /// <param name="adapter">The adapter for the Log domain.</param>
         public V85Log(LogAdapter adapter)
@@ -47,7 +45,7 @@ namespace OpenQA.Selenium.DevTools.V85
         /// <returns>A task that represents the asynchronous operation.</returns>
         public override async Task Enable()
         {
-            await adapter.Enable();
+            await adapter.Enable().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -56,7 +54,7 @@ namespace OpenQA.Selenium.DevTools.V85
         /// <returns>A task that represents the asynchronous operation.</returns>
         public override async Task Disable()
         {
-            await adapter.Disable();
+            await adapter.Disable().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -65,15 +63,16 @@ namespace OpenQA.Selenium.DevTools.V85
         /// <returns>A task that represents the asynchronous operation.</returns>
         public override async Task Clear()
         {
-            await adapter.Clear();
+            await adapter.Clear().ConfigureAwait(false);
         }
 
         private void OnAdapterEntryAdded(object sender, Log.EntryAddedEventArgs e)
         {
-            EntryAddedEventArgs propagated = new EntryAddedEventArgs();
-            propagated.Entry = new LogEntry();
-            propagated.Entry.Kind = e.Entry.Source.ToString();
-            propagated.Entry.Message = e.Entry.Text;
+            var entry = new LogEntry(
+                kind: e.Entry.Source.ToString(),
+                message: e.Entry.Text
+            );
+            EntryAddedEventArgs propagated = new EntryAddedEventArgs(entry);
             this.OnEntryAdded(propagated);
         }
     }

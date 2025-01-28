@@ -18,7 +18,9 @@
 package org.openqa.selenium;
 
 import java.util.List;
+import org.jspecify.annotations.NullMarked;
 
+@NullMarked
 public interface SearchContext {
   /**
    * Find all elements within the current context using the given mechanism.
@@ -28,7 +30,6 @@ public interface SearchContext {
    * @see org.openqa.selenium.By
    */
   List<WebElement> findElements(By by);
-
 
   /**
    * Find the first {@link WebElement} using the given method.

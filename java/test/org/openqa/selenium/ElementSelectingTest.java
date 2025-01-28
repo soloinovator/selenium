@@ -23,48 +23,48 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.testing.JupiterTestBase;
 
-public class ElementSelectingTest extends JupiterTestBase {
+class ElementSelectingTest extends JupiterTestBase {
   private static final boolean UNSELECTED = false;
   private static final boolean SELECTED = true;
 
   @Test
-  public void testShouldBeAbleToSelectAnEnabledUnselectedCheckbox() {
+  void testShouldBeAbleToSelectAnEnabledUnselectedCheckbox() {
     driver.get(pages.formPage);
     assertCanSelect(enabledUnselectedCheckbox());
   }
 
   @Test
-  public void testShouldBeAbleToSelectAnEnabledUnselectedRadioButton() {
+  void testShouldBeAbleToSelectAnEnabledUnselectedRadioButton() {
     driver.get(pages.formPage);
     assertCanSelect(enabledUnselectedRadioButton());
   }
 
   @Test
-  public void testShouldNotBeAbleToSelectADisabledCheckbox() {
+  void testShouldNotBeAbleToSelectADisabledCheckbox() {
     driver.get(pages.formPage);
     assertCannotSelect(disabledUnselectedCheckbox());
   }
 
   @Test
-  public void testShouldNotBeAbleToSelectADisabledCheckboxDisabledWithRandomString() {
+  void testShouldNotBeAbleToSelectADisabledCheckboxDisabledWithRandomString() {
     driver.get(pages.formPage);
     assertCannotSelect(randomlyDisabledSelectedCheckbox());
   }
 
   @Test
-  public void testShouldNotBeAbleToSelectADisabledRadioButton() {
+  void testShouldNotBeAbleToSelectADisabledRadioButton() {
     driver.get(pages.formPage);
     assertCannotSelect(disabledUnselectedRadioButton());
   }
 
   @Test
-  public void testShouldNotBeAbleToSelectADisabledRadioButtonDisabledWithRandomString() {
+  void testShouldNotBeAbleToSelectADisabledRadioButtonDisabledWithRandomString() {
     driver.get(pages.formPage);
     assertCannotSelect(randomlyDisabledUnselectedRadioButton());
   }
 
   @Test
-  public void testSelectingRadioButtonShouldUnselectItsSibling() {
+  void testSelectingRadioButtonShouldUnselectItsSibling() {
     driver.get(pages.formPage);
 
     WebElement originallySelected = enabledSelectedRadioButton();
@@ -79,19 +79,19 @@ public class ElementSelectingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToToggleAnEnabledUnselectedCheckbox() {
+  void testShouldBeAbleToToggleAnEnabledUnselectedCheckbox() {
     driver.get(pages.formPage);
     assertCanToggle(enabledUnselectedCheckbox());
   }
 
   @Test
-  public void testShouldBeAbleToToggleAnEnabledSelectedCheckbox() {
+  void testShouldBeAbleToToggleAnEnabledSelectedCheckbox() {
     driver.get(pages.formPage);
     assertCanToggle(enabledSelectedCheckbox());
   }
 
   @Test
-  public void testClickingOnASelectedRadioButtonShouldLeaveItSelected() {
+  void testClickingOnASelectedRadioButtonShouldLeaveItSelected() {
     driver.get(pages.formPage);
 
     WebElement button = enabledSelectedRadioButton();
@@ -103,13 +103,13 @@ public class ElementSelectingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToToggleEnabledMultiSelectOption() {
+  void testShouldBeAbleToToggleEnabledMultiSelectOption() {
     driver.get(pages.formPage);
     assertCanToggle(selectedMultipleSelectOption());
   }
 
   @Test
-  public void testShouldBeAbleToToggleSelectableCheckboxByClickingOnIt() {
+  void testShouldBeAbleToToggleSelectableCheckboxByClickingOnIt() {
     driver.get(pages.formPage);
 
     WebElement checkbox = enabledUnselectedCheckbox();
@@ -123,7 +123,7 @@ public class ElementSelectingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToSelectSelectableRadioButtonByClickingOnIt() {
+  void testShouldBeAbleToSelectSelectableRadioButtonByClickingOnIt() {
     driver.get(pages.formPage);
 
     WebElement radioButton = enabledUnselectedRadioButton();
@@ -137,29 +137,28 @@ public class ElementSelectingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testClickingDisabledSelectedCheckboxShouldBeNoop() {
+  void testClickingDisabledSelectedCheckboxShouldBeNoop() {
     driver.get(pages.formPage);
     assertClickingPreservesCurrentlySelectedStatus(randomlyDisabledSelectedCheckbox());
   }
 
   @Test
-  public void testClickingDisabledUnselectedCheckboxShouldBeNoop() {
+  void testClickingDisabledUnselectedCheckboxShouldBeNoop() {
     driver.get(pages.formPage);
     assertClickingPreservesCurrentlySelectedStatus(disabledUnselectedCheckbox());
   }
 
   @Test
-  public void testClickingDisabledSelectedRadioButtonShouldBeNoop() {
+  void testClickingDisabledSelectedRadioButtonShouldBeNoop() {
     driver.get(pages.formPage);
     assertClickingPreservesCurrentlySelectedStatus(disabledSelectedRadioButton());
   }
 
   @Test
-  public void testClickingDisabledUnselectedRadioButtonShouldBeNoop() {
+  void testClickingDisabledUnselectedRadioButtonShouldBeNoop() {
     driver.get(pages.formPage);
     assertClickingPreservesCurrentlySelectedStatus(disabledUnselectedRadioButton());
   }
-
 
   private void assertNotSelected(WebElement element) {
     assertSelected(element, UNSELECTED);
@@ -172,8 +171,9 @@ public class ElementSelectingTest extends JupiterTestBase {
   private void assertSelected(WebElement element, boolean isSelected) {
     wait.until(ExpectedConditions.elementSelectionStateToBe(element, isSelected));
     assertThat(element.isSelected())
-        .describedAs("Expected element %s to be %s",
-                     describe(element), selectedToString(isSelected), selectedToString(!isSelected))
+        .describedAs(
+            "Expected element %s to be %s",
+            describe(element), selectedToString(isSelected), selectedToString(!isSelected))
         .isEqualTo(isSelected);
   }
 
@@ -217,15 +217,15 @@ public class ElementSelectingTest extends JupiterTestBase {
     element.click();
     boolean isNowSelected = element.isSelected();
     assertThat(isNowSelected)
-        .describedAs("Expected element %s to have been toggled to %s",
-                     describe(element), selectedToString(!originalState))
+        .describedAs(
+            "Expected element %s to have been toggled to %s",
+            describe(element), selectedToString(!originalState))
         .isEqualTo(!(originalState));
     assertSelected(element, !originalState);
   }
 
   // TODO: Test disabled multi-selects
   // TODO: Test selecting options
-
 
   private WebElement enabledUnselectedCheckbox() {
     return driver.findElement(By.id("checky"));

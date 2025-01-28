@@ -21,7 +21,6 @@ module Selenium
   module WebDriver
     module Safari
       module Features
-
         # https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/WebDriverEndpointDoc/Commands/Commands.html
         SAFARI_COMMANDS = {
           get_permissions: [:get, 'session/:session_id/apple/permissions'],
@@ -29,8 +28,12 @@ module Selenium
           attach_debugger: [:post, 'session/:session_id/apple/attach_debugger']
         }.freeze
 
+        def command_list
+          SAFARI_COMMANDS.merge(self.class::COMMANDS)
+        end
+
         def commands(command)
-          SAFARI_COMMANDS[command] || self.class::COMMANDS[command]
+          command_list[command]
         end
 
         def permissions
@@ -44,7 +47,6 @@ module Selenium
         def attach_debugger
           execute :attach_debugger, {}, {}
         end
-
       end # Bridge
     end # Safari
   end # WebDriver

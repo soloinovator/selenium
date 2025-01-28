@@ -22,14 +22,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.NullMarked;
 
 /**
- * A sequence of action objects for a given {@link InputSource} for use with the W3C
- * <a href="https://www.w3.org/TR/webdriver/#actions">Action commands</a>. In the spec, an action
- * is composed of a list of sequences, one per {@link InputSource}. Each of these is composed of
- * {@link Interaction}s, with the first item in each sequence being executed at the same time, then
- * the second, and so on, until all interactions in all sequences have been executed.
+ * A sequence of action objects for a given {@link InputSource} for use with the W3C <a
+ * href="https://www.w3.org/TR/webdriver/#actions">Action commands</a>. In the spec, an action is
+ * composed of a list of sequences, one per {@link InputSource}. Each of these is composed of {@link
+ * Interaction}s, with the first item in each sequence being executed at the same time, then the
+ * second, and so on, until all interactions in all sequences have been executed.
  */
+@NullMarked
 public class Sequence implements Encodable {
 
   private final List<Encodable> actions = new LinkedList<>();
@@ -49,15 +51,14 @@ public class Sequence implements Encodable {
 
   public Sequence addAction(Interaction action) {
     if (!action.isValidFor(device.getInputType())) {
-      throw new IllegalArgumentException(String.format(
-          "Interaction (%s) is for wrong kind of input device: %s ",
-          action.getClass(),
-          device));
+      throw new IllegalArgumentException(
+          String.format(
+              "Interaction (%s) is for wrong kind of input device: %s ",
+              action.getClass(), device));
     }
     if (!(action instanceof Encodable)) {
       throw new IllegalArgumentException("Interaction must implement Encodable: " + action);
     }
-
 
     actions.add((Encodable) action);
 

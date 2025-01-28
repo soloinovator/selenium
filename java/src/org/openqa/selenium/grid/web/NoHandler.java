@@ -20,21 +20,18 @@ package org.openqa.selenium.grid.web;
 import static com.google.common.net.MediaType.JSON_UTF_8;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.openqa.selenium.remote.ErrorCodes.UNKNOWN_COMMAND;
 import static org.openqa.selenium.remote.http.Contents.bytes;
 
 import com.google.common.collect.ImmutableMap;
-
+import java.io.UncheckedIOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.http.HttpHandler;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
-
-import java.io.UncheckedIOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 public class NoHandler implements HttpHandler {
 
@@ -49,23 +46,22 @@ public class NoHandler implements HttpHandler {
     // We're not using ImmutableMap for the outer map because it disallows null values.
     Map<String, Object> responseMap = new HashMap<>();
     responseMap.put("sessionId", null);
-    responseMap.put("status", UNKNOWN_COMMAND);
-    responseMap.put("value", ImmutableMap.of(
-      "error", "unknown command",
-      "message", String.format(
-        "Unable to find command matching %s to %s",
-        req.getMethod(),
-        req.getUri()),
-      "stacktrace", ""));
+    responseMap.put(
+        "value",
+        ImmutableMap.of(
+            "error", "unknown command",
+            "message",
+                String.format(
+                    "Unable to find command matching %s to %s", req.getMethod(), req.getUri()),
+            "stacktrace", ""));
     responseMap = Collections.unmodifiableMap(responseMap);
 
     byte[] payload = json.toJson(responseMap).getBytes(UTF_8);
 
     return new HttpResponse()
-      .setStatus(HTTP_NOT_FOUND)
-      .setHeader("Content-Type", JSON_UTF_8.toString())
-      .setHeader("Content-Length", String.valueOf(payload.length))
-
-      .setContent(bytes(payload));
+        .setStatus(HTTP_NOT_FOUND)
+        .setHeader("Content-Type", JSON_UTF_8.toString())
+        .setHeader("Content-Length", String.valueOf(payload.length))
+        .setContent(bytes(payload));
   }
 }

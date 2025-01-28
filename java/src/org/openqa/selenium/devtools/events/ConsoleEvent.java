@@ -17,25 +17,25 @@
 
 package org.openqa.selenium.devtools.events;
 
-import com.google.common.collect.ImmutableList;
-
-import org.openqa.selenium.devtools.idealized.runtime.model.RemoteObject;
-
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.openqa.selenium.devtools.idealized.runtime.model.RemoteObject;
 
 public class ConsoleEvent {
 
   private final String type;
   private final Instant timestamp;
+  private final List<Object> modifiedArgs;
   private final List<Object> args;
 
-  public ConsoleEvent(String type, Instant timestamp, Object... args) {
+  public ConsoleEvent(String type, Instant timestamp, List<Object> modifiedArgs, Object... args) {
     this.type = type;
     this.timestamp = timestamp;
-    this.args = ImmutableList.copyOf(args);
+    this.modifiedArgs = modifiedArgs;
+    this.args = List.of(args);
   }
 
   public String getType() {
@@ -51,21 +51,18 @@ public class ConsoleEvent {
   }
 
   public List<String> getMessages() {
-    return args.stream()
-      .map(List.class::cast)
-      .map(lst -> lst.get(0))
-      .map(RemoteObject.class::cast)
-      .map(RemoteObject::getValue)
-      .map(Object::toString)
-      .collect(Collectors.toList());
+    return modifiedArgs.stream()
+        .map(RemoteObject.class::cast)
+        .map(RemoteObject::getValue)
+        .filter(Objects::nonNull)
+        .map(Object::toString)
+        .collect(Collectors.toList());
   }
 
   @Override
   public String toString() {
     return String.format(
-      "%s [%s] %s",
-      timestamp,
-      type,
-      Stream.of(args).map(String::valueOf).collect(Collectors.joining(", ")));
+        "%s [%s] %s",
+        timestamp, type, Stream.of(args).map(String::valueOf).collect(Collectors.joining(", ")));
   }
 }

@@ -20,14 +20,12 @@
 module Selenium
   module WebDriver
     module Remote
-
       #
       # Specification of the desired and/or actual capabilities of the browser that the
       # server is being asked to create.
       #
 
       class Capabilities
-
         KNOWN = [
           :browser_name,
           :browser_version,
@@ -50,65 +48,16 @@ module Selenium
             @capabilities[key]
           end
 
-          define_method "#{key}=" do |value|
+          define_method :"#{key}=" do |value|
             @capabilities[key] = value
           end
         end
-
-        #
-        # Backward compatibility
-        #
-
-        alias_method :version, :browser_version
-        alias_method :version=, :browser_version=
-        alias_method :platform, :platform_name
-        alias_method :platform=, :platform_name=
 
         #
         # Convenience methods for the common choices.
         #
 
         class << self
-          def chrome(opts = {})
-            new({
-              browser_name: 'chrome'
-            }.merge(opts))
-          end
-
-          def edge(opts = {})
-            new({
-              browser_name: 'MicrosoftEdge'
-            }.merge(opts))
-          end
-          alias_method :microsoftedge, :edge
-
-          def firefox(opts = {})
-            new({
-              browser_name: 'firefox'
-            }.merge(opts))
-          end
-          alias_method :ff, :firefox
-
-          def safari(opts = {})
-            new({
-              browser_name: Selenium::WebDriver::Safari.technology_preview? ? "Safari Technology Preview" : 'safari'
-            }.merge(opts))
-          end
-
-          def htmlunit(opts = {})
-            new({
-              browser_name: 'htmlunit'
-            }.merge(opts))
-          end
-
-          def internet_explorer(opts = {})
-            new({
-              browser_name: 'internet explorer',
-              platform_name: :windows
-            }.merge(opts))
-          end
-          alias_method :ie, :internet_explorer
-
           def always_match(capabilities)
             new(always_match: capabilities)
           end
@@ -134,7 +83,8 @@ module Selenium
 
             # Remote Server Specific
             if data.key?('webdriver.remote.sessionid')
-              caps[:remote_session_id] = data.delete('webdriver.remote.sessionid')
+              caps[:remote_session_id] =
+                data.delete('webdriver.remote.sessionid')
             end
 
             KNOWN.each do |cap|
@@ -149,7 +99,7 @@ module Selenium
           end
 
           def camel_case(str_or_sym)
-            str_or_sym.to_s.gsub(/_([a-z])/) { Regexp.last_match(1).upcase }
+            str_or_sym.to_s.gsub(/_([a-z])/) { Regexp.last_match(1)&.upcase }
           end
 
           private
@@ -269,7 +219,7 @@ module Selenium
           as_json == other.as_json
         end
 
-        alias_method :eql?, :==
+        alias eql? ==
 
         protected
 

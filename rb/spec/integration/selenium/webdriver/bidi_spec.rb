@@ -21,11 +21,46 @@ require_relative 'spec_helper'
 
 module Selenium
   module WebDriver
-    describe BiDi, exclusive: {browser: %i[firefox_nightly]} do
+    describe BiDi, exclusive: {bidi: true, reason: 'only executed when bidi is enabled'},
+                   only: {browser: %i[chrome edge firefox]} do
+      after { |example| reset_driver!(example: example) }
+
+      it 'errors when bidi not enabled' do
+        reset_driver!(web_socket_url: false) do |driver|
+          expect { driver.bidi }.to raise_error(WebDriver::Error::WebDriverError)
+        end
+      end
+
       it 'gets session status' do
         status = driver.bidi.session.status
-        expect(status.ready).to be_false
-        expect(status.message).to eq('Session already started')
+        expect(status).to respond_to(:ready)
+        expect(status.message).not_to be_empty
+      end
+
+      it 'does not close BiDi session if at least one window is opened' do
+        status = driver.bidi.session.status
+        expect(status.ready).to be false
+        expect(status.message).to be_a String
+
+        driver.switch_to.new_window(:window)
+        driver.switch_to.new_window(:tab)
+        driver.switch_to.new_window(:tab)
+
+        driver.close
+
+        status_after_closing = driver.bidi.session.status
+        expect(status_after_closing.ready).to be false
+        expect(status_after_closing.message).to be_a String
+      end
+
+      it 'closes BiDi session if last window is closed' do
+        status = driver.bidi.session.status
+        expect(status.ready).to be false
+        expect(status.message).to be_a String
+
+        driver.close
+
+        expect { driver.bidi.session.status }.to raise_error(IOError)
       end
     end
   end

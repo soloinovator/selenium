@@ -17,17 +17,16 @@
 
 package org.openqa.selenium.net;
 
-import org.openqa.selenium.internal.Require;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
+import org.openqa.selenium.internal.Require;
 
 public class Urls {
 
@@ -43,11 +42,7 @@ public class Urls {
    * @see URLEncoder#encode(java.lang.String, java.lang.String)
    */
   public static String urlEncode(String value) {
-    try {
-      return URLEncoder.encode(value, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      throw new UncheckedIOException(e);
-    }
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 
   public static URL fromUri(URI uri) {
@@ -59,16 +54,15 @@ public class Urls {
   }
 
   /**
-   * Convert a string, which may just be a hostname, into a valid {@link URI}.
-   * If no scheme is given, it is set to {@code http} by default.
-   * <p>
-   * We prefer to use {@code URI} instead of {@code URL} since the latter
-   * requires a scheme handler to be registered for types, so strings like
-   * {@code docker://localhost:1234} would not generally be a valid {@link URL}
-   * but would be a correct {@link URI}.
-   * <p>
-   * A known limitation is that URI fragments are not handled. In the
-   * expected use cases for this method, that is not a problem.
+   * Convert a string, which may just be a hostname, into a valid {@link URI}. If no scheme is
+   * given, it is set to {@code http} by default.
+   *
+   * <p>We prefer to use {@code URI} instead of {@code URL} since the latter requires a scheme
+   * handler to be registered for types, so strings like {@code docker://localhost:1234} would not
+   * generally be a valid {@link URL} but would be a correct {@link URI}.
+   *
+   * <p>A known limitation is that URI fragments are not handled. In the expected use cases for this
+   * method, that is not a problem.
    */
   public static URI from(String rawUri) {
     Require.nonNull("URL to convert", rawUri);
@@ -113,11 +107,7 @@ public class Urls {
     String path = slashIndex == -1 ? null : rawHost.substring(slashIndex);
 
     try {
-      return new URI(
-        "http",
-        host,
-        path,
-        null);
+      return new URI("http", host, path, null);
     } catch (URISyntaxException e) {
       throw new UncheckedIOException(new IOException(e));
     }

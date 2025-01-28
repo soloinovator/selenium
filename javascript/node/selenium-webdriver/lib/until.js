@@ -43,9 +43,9 @@
 
 const by = require('./by')
 const error = require('./error')
-const webdriver = require('./webdriver'),
-  Condition = webdriver.Condition,
-  WebElementCondition = webdriver.WebElementCondition
+const webdriver = require('./webdriver')
+const Condition = webdriver.Condition
+const WebElementCondition = webdriver.WebElementCondition
 
 /**
  * Creates a condition that will wait until the input driver is able to switch
@@ -67,7 +67,7 @@ const webdriver = require('./webdriver'),
  *     The frame identifier.
  * @return {!Condition<boolean>} A new condition.
  */
-exports.ableToSwitchToFrame = function ableToSwitchToFrame(frame) {
+function ableToSwitchToFrame(frame) {
   let condition
   if (typeof frame === 'number' || frame instanceof webdriver.WebElement) {
     condition = (driver) => attemptToSwitchFrames(driver, frame)
@@ -96,7 +96,7 @@ exports.ableToSwitchToFrame = function ableToSwitchToFrame(frame) {
           if (!(e instanceof error.NoSuchFrameError)) {
             throw e
           }
-        }
+        },
       )
   }
 }
@@ -107,7 +107,7 @@ exports.ableToSwitchToFrame = function ableToSwitchToFrame(frame) {
  *
  * @return {!Condition<!./webdriver.Alert>} The new condition.
  */
-exports.alertIsPresent = function alertIsPresent() {
+function alertIsPresent() {
   return new Condition('for alert to be present', function (driver) {
     return driver
       .switchTo()
@@ -119,8 +119,7 @@ exports.alertIsPresent = function alertIsPresent() {
             // XXX: Workaround for GeckoDriver error `TypeError: can't convert null
             // to object`. For more details, see
             // https://github.com/SeleniumHQ/selenium/pull/2137
-            (e instanceof error.WebDriverError &&
-              e.message === `can't convert null to object`)
+            (e instanceof error.WebDriverError && e.message === `can't convert null to object`)
           )
         ) {
           throw e
@@ -136,10 +135,8 @@ exports.alertIsPresent = function alertIsPresent() {
  * @param {string} title The expected page title.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.titleIs = function titleIs(title) {
-  return new Condition('for title to be ' + JSON.stringify(title), function (
-    driver
-  ) {
+function titleIs(title) {
+  return new Condition('for title to be ' + JSON.stringify(title), function (driver) {
     return driver.getTitle().then(function (t) {
       return t === title
     })
@@ -154,15 +151,12 @@ exports.titleIs = function titleIs(title) {
  *     title.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.titleContains = function titleContains(substr) {
-  return new Condition(
-    'for title to contain ' + JSON.stringify(substr),
-    function (driver) {
-      return driver.getTitle().then(function (title) {
-        return title.indexOf(substr) !== -1
-      })
-    }
-  )
+function titleContains(substr) {
+  return new Condition('for title to contain ' + JSON.stringify(substr), function (driver) {
+    return driver.getTitle().then(function (title) {
+      return title.indexOf(substr) !== -1
+    })
+  })
 }
 
 /**
@@ -172,7 +166,7 @@ exports.titleContains = function titleContains(substr) {
  * @param {!RegExp} regex The regular expression to test against.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.titleMatches = function titleMatches(regex) {
+function titleMatches(regex) {
   return new Condition('for title to match ' + regex, function (driver) {
     return driver.getTitle().then(function (title) {
       return regex.test(title)
@@ -187,10 +181,8 @@ exports.titleMatches = function titleMatches(regex) {
  * @param {string} url The expected page url.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.urlIs = function urlIs(url) {
-  return new Condition('for URL to be ' + JSON.stringify(url), function (
-    driver
-  ) {
+function urlIs(url) {
+  return new Condition('for URL to be ' + JSON.stringify(url), function (driver) {
     return driver.getCurrentUrl().then(function (u) {
       return u === url
     })
@@ -205,15 +197,12 @@ exports.urlIs = function urlIs(url) {
  *     URL.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.urlContains = function urlContains(substrUrl) {
-  return new Condition(
-    'for URL to contain ' + JSON.stringify(substrUrl),
-    function (driver) {
-      return driver.getCurrentUrl().then(function (url) {
-        return url && url.indexOf(substrUrl) !== -1
-      })
-    }
-  )
+function urlContains(substrUrl) {
+  return new Condition('for URL to contain ' + JSON.stringify(substrUrl), function (driver) {
+    return driver.getCurrentUrl().then(function (url) {
+      return url && url.includes(substrUrl)
+    })
+  })
 }
 
 /**
@@ -223,7 +212,7 @@ exports.urlContains = function urlContains(substrUrl) {
  * @param {!RegExp} regex The regular expression to test against.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.urlMatches = function urlMatches(regex) {
+function urlMatches(regex) {
   return new Condition('for URL to match ' + regex, function (driver) {
     return driver.getCurrentUrl().then(function (url) {
       return regex.test(url)
@@ -238,18 +227,14 @@ exports.urlMatches = function urlMatches(regex) {
  * @param {!(By|Function)} locator The locator to use.
  * @return {!WebElementCondition} The new condition.
  */
-exports.elementLocated = function elementLocated(locator) {
+function elementLocated(locator) {
   locator = by.checkedLocator(locator)
-  let locatorStr =
-    typeof locator === 'function' ? 'by function()' : locator + ''
-  return new WebElementCondition(
-    'for element to be located ' + locatorStr,
-    function (driver) {
-      return driver.findElements(locator).then(function (elements) {
-        return elements[0]
-      })
-    }
-  )
+  let locatorStr = typeof locator === 'function' ? 'by function()' : locator + ''
+  return new WebElementCondition('for element to be located ' + locatorStr, function (driver) {
+    return driver.findElements(locator).then(function (elements) {
+      return elements[0]
+    })
+  })
 }
 
 /**
@@ -260,18 +245,14 @@ exports.elementLocated = function elementLocated(locator) {
  * @return {!Condition<!Array<!./webdriver.WebElement>>} The new
  *     condition.
  */
-exports.elementsLocated = function elementsLocated(locator) {
+function elementsLocated(locator) {
   locator = by.checkedLocator(locator)
-  let locatorStr =
-    typeof locator === 'function' ? 'by function()' : locator + ''
-  return new Condition(
-    'for at least one element to be located ' + locatorStr,
-    function (driver) {
-      return driver.findElements(locator).then(function (elements) {
-        return elements.length > 0 ? elements : null
-      })
-    }
-  )
+  let locatorStr = typeof locator === 'function' ? 'by function()' : locator + ''
+  return new Condition('for at least one element to be located ' + locatorStr, function (driver) {
+    return driver.findElements(locator).then(function (elements) {
+      return elements.length > 0 ? elements : null
+    })
+  })
 }
 
 /**
@@ -282,7 +263,7 @@ exports.elementsLocated = function elementsLocated(locator) {
  * @param {!./webdriver.WebElement} element The element that should become stale.
  * @return {!Condition<boolean>} The new condition.
  */
-exports.stalenessOf = function stalenessOf(element) {
+function stalenessOf(element) {
   return new Condition('element to become stale', function () {
     return element.getTagName().then(
       function () {
@@ -293,7 +274,7 @@ exports.stalenessOf = function stalenessOf(element) {
           return true
         }
         throw e
-      }
+      },
     )
   })
 }
@@ -305,7 +286,7 @@ exports.stalenessOf = function stalenessOf(element) {
  * @return {!WebElementCondition} The new condition.
  * @see ./webdriver.WebDriver#isDisplayed
  */
-exports.elementIsVisible = function elementIsVisible(element) {
+function elementIsVisible(element) {
   return new WebElementCondition('until element is visible', function () {
     return element.isDisplayed().then((v) => (v ? element : null))
   })
@@ -319,7 +300,7 @@ exports.elementIsVisible = function elementIsVisible(element) {
  * @return {!WebElementCondition} The new condition.
  * @see ./webdriver.WebDriver#isDisplayed
  */
-exports.elementIsNotVisible = function elementIsNotVisible(element) {
+function elementIsNotVisible(element) {
   return new WebElementCondition('until element is not visible', function () {
     return element.isDisplayed().then((v) => (v ? null : element))
   })
@@ -332,7 +313,7 @@ exports.elementIsNotVisible = function elementIsNotVisible(element) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#isEnabled
  */
-exports.elementIsEnabled = function elementIsEnabled(element) {
+function elementIsEnabled(element) {
   return new WebElementCondition('until element is enabled', function () {
     return element.isEnabled().then((v) => (v ? element : null))
   })
@@ -345,7 +326,7 @@ exports.elementIsEnabled = function elementIsEnabled(element) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#isEnabled
  */
-exports.elementIsDisabled = function elementIsDisabled(element) {
+function elementIsDisabled(element) {
   return new WebElementCondition('until element is disabled', function () {
     return element.isEnabled().then((v) => (v ? null : element))
   })
@@ -357,7 +338,7 @@ exports.elementIsDisabled = function elementIsDisabled(element) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#isSelected
  */
-exports.elementIsSelected = function elementIsSelected(element) {
+function elementIsSelected(element) {
   return new WebElementCondition('until element is selected', function () {
     return element.isSelected().then((v) => (v ? element : null))
   })
@@ -370,7 +351,7 @@ exports.elementIsSelected = function elementIsSelected(element) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#isSelected
  */
-exports.elementIsNotSelected = function elementIsNotSelected(element) {
+function elementIsNotSelected(element) {
   return new WebElementCondition('until element is not selected', function () {
     return element.isSelected().then((v) => (v ? null : element))
   })
@@ -386,7 +367,7 @@ exports.elementIsNotSelected = function elementIsNotSelected(element) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#getText
  */
-exports.elementTextIs = function elementTextIs(element, text) {
+function elementTextIs(element, text) {
   return new WebElementCondition('until element text is', function () {
     return element.getText().then((t) => (t === text ? element : null))
   })
@@ -402,11 +383,9 @@ exports.elementTextIs = function elementTextIs(element, text) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#getText
  */
-exports.elementTextContains = function elementTextContains(element, substr) {
+function elementTextContains(element, substr) {
   return new WebElementCondition('until element text contains', function () {
-    return element
-      .getText()
-      .then((t) => (t.indexOf(substr) != -1 ? element : null))
+    return element.getText().then((t) => (t.indexOf(substr) != -1 ? element : null))
   })
 }
 
@@ -420,8 +399,33 @@ exports.elementTextContains = function elementTextContains(element, substr) {
  * @return {!WebElementCondition} The new condition.
  * @see webdriver.WebDriver#getText
  */
-exports.elementTextMatches = function elementTextMatches(element, regex) {
+function elementTextMatches(element, regex) {
   return new WebElementCondition('until element text matches', function () {
     return element.getText().then((t) => (regex.test(t) ? element : null))
   })
+}
+
+// PUBLIC API
+
+module.exports = {
+  elementTextMatches,
+  elementTextContains,
+  elementTextIs,
+  elementIsNotSelected,
+  elementIsSelected,
+  elementIsDisabled,
+  ableToSwitchToFrame,
+  elementIsEnabled,
+  elementIsNotVisible,
+  elementIsVisible,
+  stalenessOf,
+  elementsLocated,
+  elementLocated,
+  urlMatches,
+  urlContains,
+  urlIs,
+  titleMatches,
+  titleContains,
+  alertIsPresent,
+  titleIs,
 }

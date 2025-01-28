@@ -21,19 +21,9 @@ import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.openqa.selenium.concurrent.ExecutorServices.shutdownGracefully;
 
-import com.google.common.collect.ImmutableMap;
-
-import org.openqa.selenium.Beta;
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.internal.Require;
-import org.openqa.selenium.net.PortProber;
-import org.openqa.selenium.net.UrlChecker;
-import org.openqa.selenium.os.CommandLine;
-import org.openqa.selenium.os.ExecutableFinder;
-
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,6 +31,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -49,103 +40,93 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
+import org.openqa.selenium.Beta;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.ImmutableCapabilities;
+import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.internal.Require;
+import org.openqa.selenium.net.PortProber;
+import org.openqa.selenium.net.UrlChecker;
+import org.openqa.selenium.os.ExternalProcess;
 
 /**
- * Manages the life and death of a native executable driver server.
- *
- * It is expected that the driver server implements the
- * <a href="https://github.com/SeleniumHQ/selenium/wiki/JsonWireProtocol">WebDriver Wire Protocol</a>.
+ * Manages the life and death of a native executable driver server. It is expected that the driver
+ * server implements the <a
+ * href="https://github.com/SeleniumHQ/selenium/wiki/JsonWireProtocol">WebDriver Wire Protocol</a>.
  * In particular, it should implement /status command that is used to check if the server is alive.
- * In addition to this, it is supposed that the driver server implements /shutdown hook that is
- * used to stop the server.
+ * In addition to this, it is supposed that the driver server implements /shutdown hook that is used
+ * to stop the server.
  */
 public class DriverService implements Closeable {
 
+  public static final String LOG_NULL = "/dev/null";
+  public static final String LOG_STDERR = "/dev/stderr";
+  public static final String LOG_STDOUT = "/dev/stdout";
   private static final String NAME = "Driver Service Executor";
   protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(20);
+  private static final Logger LOG = Logger.getLogger(DriverService.class.getName());
 
-  private final ExecutorService executorService = Executors.newFixedThreadPool(2, r -> {
-    Thread thread = new Thread(r);
-    thread.setName(NAME);
-    thread.setDaemon(true);
-    return thread;
-  });
+  private final ExecutorService executorService =
+      Executors.newFixedThreadPool(
+          2,
+          r -> {
+            Thread thread = new Thread(r);
+            thread.setName(NAME);
+            thread.setDaemon(true);
+            return thread;
+          });
 
-
-  /**
-   * The base URL for the managed server.
-   */
+  /** The base URL for the managed server. */
   private final URL url;
 
-  /**
-   * Controls access to {@link #process}.
-   */
+  /** Controls access to {@link #process}. */
+  private String executable;
+
   private final ReentrantLock lock = new ReentrantLock();
-  private final String executable;
   private final Duration timeout;
   private final List<String> args;
   private final Map<String, String> environment;
+
   /**
    * A reference to the current child process. Will be {@code null} whenever this service is not
    * running. Protected by {@link #lock}.
    */
-  protected CommandLine process = null;
+  protected ExternalProcess process = null;
+
   private OutputStream outputStream = System.err;
 
   /**
-  *
-  * @param executable The driver executable.
-  * @param port Which port to start the driver server on.
-  * @param timeout Timeout waiting for driver server to start.
-  * @param args The arguments to the launched server.
-  * @param environment The environment for the launched server.
-  * @throws IOException If an I/O error occurs.
-  */
- protected DriverService(
-     File executable,
-     int port,
-     Duration timeout,
-     List<String> args,
-     Map<String, String> environment) throws IOException {
-   this.executable = executable.getCanonicalPath();
-   this.timeout = timeout;
-   this.args = args;
-   this.environment = environment;
-
-   this.url = getUrl(port);
- }
-
-  /**
-   *
-   * @param exeName Name of the executable file to look for in PATH
-   * @param exeProperty Name of a system property that specifies the path to the executable file
-   * @param exeDocs The link to the driver documentation page
-   * @param exeDownload The link to the driver download page
-   *
-   * @return The driver executable as a {@link File} object
-   * @throws IllegalStateException If the executable not found or cannot be executed
+   * @param executable The driver executable.
+   * @param port Which port to start the driver server on.
+   * @param timeout Timeout waiting for driver server to start.
+   * @param args The arguments to the launched server.
+   * @param environment The environment for the launched server.
+   * @throws IOException If an I/O error occurs.
    */
-  protected static File findExecutable(
-      String exeName,
-      String exeProperty,
-      String exeDocs,
-      String exeDownload) {
-    String defaultPath = new ExecutableFinder().find(exeName);
-    String exePath = System.getProperty(exeProperty, defaultPath);
-    Require.state("The path to the driver executable", exePath).nonNull(
-        "The path to the driver executable must be set by the %s system property;"
-            + " for more information, see %s. "
-            + "The latest version can be downloaded from %s",
-            exeProperty, exeDocs, exeDownload);
+  protected DriverService(
+      File executable,
+      int port,
+      Duration timeout,
+      List<String> args,
+      Map<String, String> environment)
+      throws IOException {
+    if (executable != null) {
+      this.executable = executable.getCanonicalPath();
+    }
+    this.timeout = timeout;
+    this.args = args;
+    this.environment = environment;
 
-    File exe = new File(exePath);
-    checkExecutable(exe);
-    return exe;
+    this.url = getUrl(port);
   }
 
-  protected static void checkExecutable(File exe) {
-    Require.state("The driver executable", exe).isFile();
-    Require.stateCondition(exe.canExecute(), "It must be an executable file: %s", exe);
+  public String getExecutable() {
+    return executable;
+  }
+
+  public void setExecutable(String executable) {
+    this.executable = executable;
   }
 
   protected List<String> getArgs() {
@@ -153,12 +134,28 @@ public class DriverService implements Closeable {
   }
 
   protected Map<String, String> getEnvironment() {
-   return environment;
- }
+    return environment;
+  }
 
   protected URL getUrl(int port) throws IOException {
-   return new URL(String.format("http://localhost:%d", port));
- }
+    return new URL(String.format(Locale.ROOT, "http://localhost:%d", port));
+  }
+
+  protected Capabilities getDefaultDriverOptions() {
+    return new ImmutableCapabilities();
+  }
+
+  protected String getDriverName() {
+    return null;
+  }
+
+  public String getDriverProperty() {
+    return null;
+  }
+
+  protected File getDriverExecutable() {
+    return null;
+  }
 
   /**
    * @return The base URL for the managed driver server.
@@ -175,7 +172,7 @@ public class DriverService implements Closeable {
   public boolean isRunning() {
     lock.lock();
     try {
-      return process != null && process.isRunning();
+      return process != null && process.isAlive();
     } catch (IllegalThreadStateException e) {
       return true;
     } finally {
@@ -196,41 +193,74 @@ public class DriverService implements Closeable {
       if (process != null) {
         return;
       }
-      process = new CommandLine(this.executable, args.toArray(new String[] {}));
-      process.setEnvironmentVariables(environment);
-      process.copyOutputTo(getOutputStream());
-      process.executeAsync();
-
-      CompletableFuture<StartOrDie> serverStarted = CompletableFuture.supplyAsync(() -> {
-        waitUntilAvailable();
-        return StartOrDie.SERVER_STARTED;
-      }, executorService);
-
-      CompletableFuture<StartOrDie> processFinished = CompletableFuture.supplyAsync(() -> {
-        try {
-          process.waitFor(getTimeout().toMillis());
-        } catch (org.openqa.selenium.TimeoutException ex) {
-          return StartOrDie.PROCESS_IS_ACTIVE;
+      if (this.executable == null) {
+        if (getDefaultDriverOptions().getBrowserName().isEmpty()) {
+          throw new WebDriverException("Driver executable is null and browser name is not set.");
         }
-        return StartOrDie.PROCESS_DIED;
-      }, executorService);
+        this.executable = new DriverFinder(this, getDefaultDriverOptions()).getDriverPath();
+      }
+      LOG.fine(String.format("Starting driver at %s with %s", this.executable, this.args));
+
+      ExternalProcess.Builder builder =
+          ExternalProcess.builder().command(this.executable, args).copyOutputTo(getOutputStream());
+
+      environment.forEach(builder::environment);
+      process = builder.start();
+
+      CompletableFuture<StartOrDie> serverStarted =
+          CompletableFuture.supplyAsync(
+              () -> {
+                waitUntilAvailable();
+                return StartOrDie.SERVER_STARTED;
+              },
+              executorService);
+
+      CompletableFuture<StartOrDie> processFinished =
+          CompletableFuture.supplyAsync(
+              () -> {
+                try {
+                  return process.waitFor(getTimeout())
+                      ? StartOrDie.PROCESS_DIED
+                      : StartOrDie.PROCESS_IS_ACTIVE;
+                } catch (InterruptedException ex) {
+                  return null;
+                }
+              },
+              executorService);
 
       try {
-        StartOrDie status = (StartOrDie) CompletableFuture.anyOf(serverStarted, processFinished)
-          .get(getTimeout().toMillis() * 2, TimeUnit.MILLISECONDS);
-        if (status == StartOrDie.SERVER_STARTED) {
-          processFinished.cancel(true);
-        } else {
-          if (status == StartOrDie.PROCESS_DIED) {
-            process = null;
-            throw new WebDriverException("Driver server process died prematurely.");
-          }
+        StartOrDie status =
+            (StartOrDie)
+                CompletableFuture.anyOf(serverStarted, processFinished)
+                    .get(getTimeout().toMillis() * 2, TimeUnit.MILLISECONDS);
+
+        if (status == null) {
+          throw new InterruptedException();
         }
-      } catch (ExecutionException | TimeoutException e) {
+
+        switch (status) {
+          case SERVER_STARTED:
+            processFinished.cancel(true);
+            break;
+          case PROCESS_DIED:
+            int exitValue = process.exitValue();
+            process = null;
+            throw new WebDriverException(
+                "Driver server process died prematurely, exit value: " + exitValue);
+          case PROCESS_IS_ACTIVE:
+            process.shutdown();
+            throw new WebDriverException("Timed out waiting for driver server to bind the port.");
+        }
+      } catch (ExecutionException e) {
+        process.shutdown();
+        throw new WebDriverException("Failed waiting for driver server to start.", e);
+      } catch (TimeoutException e) {
+        process.shutdown();
         throw new WebDriverException("Timed out waiting for driver server to start.", e);
       } catch (InterruptedException e) {
+        process.shutdown();
         Thread.currentThread().interrupt();
-        throw new WebDriverException("Timed out waiting for driver server to start.", e);
+        throw new WebDriverException("Interrupted while waiting for driver server to start.", e);
       }
     } finally {
       lock.unlock();
@@ -271,6 +301,11 @@ public class DriverService implements Closeable {
         try {
           URL killUrl = new URL(url.toString() + "/shutdown");
           new UrlChecker().waitUntilUnavailable(3, SECONDS, killUrl);
+          try {
+            process.waitFor(Duration.ofSeconds(10));
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
         } catch (MalformedURLException e) {
           toThrow = new WebDriverException(e);
         } catch (UrlChecker.TimeoutException e) {
@@ -278,12 +313,12 @@ public class DriverService implements Closeable {
         }
       }
 
-      process.destroy();
+      process.shutdown();
 
       if (getOutputStream() instanceof FileOutputStream) {
         try {
           getOutputStream().close();
-        } catch (IOException e) {
+        } catch (IOException ignore) {
         }
       }
     } finally {
@@ -323,18 +358,19 @@ public class DriverService implements Closeable {
   public abstract static class Builder<DS extends DriverService, B extends Builder<?, ?>> {
 
     private int port = 0;
-    private File exe = null;
+    public File exe = null;
     private Map<String, String> environment = emptyMap();
     private File logFile;
     private Duration timeout;
+    private OutputStream logOutputStream;
 
     /**
-     * Provides a measure of how strongly this {@link DriverService} supports the given
-     * {@code capabilities}. A score of 0 or less indicates that this {@link DriverService} does not
+     * Provides a measure of how strongly this {@link DriverService} supports the given {@code
+     * capabilities}. A score of 0 or less indicates that this {@link DriverService} does not
      * support instances of {@link org.openqa.selenium.WebDriver} that require {@code capabilities}.
      * Typically, the score is generated by summing the number of capabilities that the driver
-     * service directly supports that are unique to the driver service (that is, things like
-     * "{@code proxy}" don't tend to count to the score).
+     * service directly supports that are unique to the driver service (that is, things like "{@code
+     * proxy}" don't tend to count to the score).
      */
     public abstract int score(Capabilities capabilities);
 
@@ -347,14 +383,13 @@ public class DriverService implements Closeable {
     @SuppressWarnings("unchecked")
     public B usingDriverExecutable(File file) {
       Require.nonNull("Driver executable file", file);
-      checkExecutable(file);
       this.exe = file;
       return (B) this;
     }
 
     /**
-     * Sets which port the driver server should be started on. A value of 0 indicates that any
-     * free port may be used.
+     * Sets which port the driver server should be started on. A value of 0 indicates that any free
+     * port may be used.
      *
      * @param port The port to use; must be non-negative.
      * @return A self reference.
@@ -379,17 +414,15 @@ public class DriverService implements Closeable {
     }
 
     /**
-     * Defines the environment for the launched driver server. These
-     * settings will be inherited by every browser session launched by the
-     * server.
+     * Defines the environment for the launched driver server. These settings will be inherited by
+     * every browser session launched by the server.
      *
-     * @param environment A map of the environment variables to launch the
-     *     server with.
+     * @param environment A map of the environment variables to launch the server with.
      * @return A self reference.
      */
     @Beta
     public B withEnvironment(Map<String, String> environment) {
-      this.environment = ImmutableMap.copyOf(environment);
+      this.environment = Map.copyOf(environment);
       return (B) this;
     }
 
@@ -401,6 +434,11 @@ public class DriverService implements Closeable {
      */
     public B withLogFile(File logFile) {
       this.logFile = logFile;
+      return (B) this;
+    }
+
+    public B withLogOutput(OutputStream output) {
+      this.logOutputStream = output;
       return (B) this;
     }
 
@@ -422,9 +460,43 @@ public class DriverService implements Closeable {
       return DEFAULT_TIMEOUT;
     }
 
+    protected OutputStream getLogOutput() {
+      if (logOutputStream != null) {
+        return logOutputStream;
+      }
+      try {
+        File logFile = getLogFile();
+        return logFile == null ? OutputStream.nullOutputStream() : new FileOutputStream(logFile);
+      } catch (FileNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    protected void parseLogOutput(String logProperty) {
+      if (getLogFile() != null || logOutputStream != null) {
+        return;
+      }
+
+      String logLocation = System.getProperty(logProperty, LOG_NULL);
+      switch (logLocation) {
+        case LOG_STDOUT:
+          withLogOutput(System.out);
+          break;
+        case LOG_STDERR:
+          withLogOutput(System.err);
+          break;
+        case LOG_NULL:
+          withLogOutput(OutputStream.nullOutputStream());
+          break;
+        default:
+          withLogFile(new File(logLocation));
+          break;
+      }
+    }
+
     /**
-     * Creates a new service to manage the driver server. Before creating a new service, the
-     * builder will find a port for the server to listen to.
+     * Creates a new service to manage the driver server. Before creating a new service, the builder
+     * will find a port for the server to listen to.
      *
      * @return The new service object.
      */
@@ -433,27 +505,26 @@ public class DriverService implements Closeable {
         port = PortProber.findFreePort();
       }
 
-      if (exe == null) {
-        exe = findDefaultExecutable();
-      }
-
       if (timeout == null) {
         timeout = getDefaultTimeout();
       }
 
+      loadSystemProperties();
       List<String> args = createArgs();
 
       DS service = createDriverService(exe, port, timeout, args, environment);
+      service.sendOutputTo(getLogOutput());
+
       port = 0; // reset port to allow reusing this builder
 
       return service;
     }
 
-    protected abstract File findDefaultExecutable();
+    protected abstract void loadSystemProperties();
 
     protected abstract List<String> createArgs();
 
-    protected abstract DS createDriverService(File exe, int port, Duration timeout, List<String> args,
-        Map<String, String> environment);
+    protected abstract DS createDriverService(
+        File exe, int port, Duration timeout, List<String> args, Map<String, String> environment);
   }
 }

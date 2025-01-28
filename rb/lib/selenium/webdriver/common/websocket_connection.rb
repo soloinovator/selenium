@@ -22,6 +22,11 @@ require 'websocket'
 module Selenium
   module WebDriver
     class WebSocketConnection
+      CONNECTION_ERRORS = [
+        Errno::ECONNRESET, # connection is aborted (browser process was killed)
+        Errno::EPIPE # broken pipe (browser process was killed)
+      ].freeze
+
       RESPONSE_WAIT_TIMEOUT = 30
       RESPONSE_WAIT_INTERVAL = 0.1
 
@@ -47,10 +52,22 @@ module Selenium
         @callbacks ||= Hash.new { |callbacks, event| callbacks[event] = [] }
       end
 
+      def add_callback(event, &block)
+        callbacks[event] << block
+        block.object_id
+      end
+
+      def remove_callback(event, id)
+        return if callbacks[event].reject! { |callback| callback.object_id == id }
+
+        ids = callbacks[event]&.map(&:object_id)
+        raise Error::WebDriverError, "Callback with ID #{id} does not exist for event #{event}: #{ids}"
+      end
+
       def send_cmd(**payload)
         id = next_id
         data = payload.merge(id: id)
-        WebDriver.logger.debug "WebSocket -> #{data}"[...MAX_LOG_MESSAGE_SIZE]
+        WebDriver.logger.debug "WebSocket -> #{data}"[...MAX_LOG_MESSAGE_SIZE], id: :bidi
         data = JSON.generate(data)
         out_frame = WebSocket::Frame::Outgoing::Client.new(version: ws.version, data: data, type: 'text')
         socket.write(out_frame.to_s)
@@ -90,6 +107,8 @@ module Selenium
               end
             end
           end
+        rescue *CONNECTION_ERRORS
+          Thread.stop
         end
       end
 
@@ -104,8 +123,8 @@ module Selenium
         return {} if message.empty?
 
         message = JSON.parse(message)
-        messages[message["id"]] = message
-        WebDriver.logger.debug "WebSocket <- #{message}"[...MAX_LOG_MESSAGE_SIZE]
+        messages[message['id']] = message
+        WebDriver.logger.debug "WebSocket <- #{message}"[...MAX_LOG_MESSAGE_SIZE], id: :bidi
 
         message
       end
@@ -122,6 +141,8 @@ module Selenium
           Thread.current.report_on_exception = true
 
           yield params
+        rescue Error::WebDriverError, *CONNECTION_ERRORS
+          Thread.stop
         end
       end
 
@@ -150,7 +171,6 @@ module Selenium
         @id ||= 0
         @id += 1
       end
-
     end # BiDi
   end # WebDriver
 end # Selenium

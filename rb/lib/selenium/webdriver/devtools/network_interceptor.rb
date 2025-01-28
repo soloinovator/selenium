@@ -20,7 +20,6 @@
 module Selenium
   module WebDriver
     class DevTools
-
       #
       # Wraps the network request/response interception, providing
       # thread-safety guarantees and handling special cases such as browser
@@ -31,14 +30,13 @@ module Selenium
       #
 
       class NetworkInterceptor
-
         # CDP fails to get body on certain responses (301) and raises:
         # "Can only get response body on requests captured after headers received."
-        CANNOT_GET_BODY_ON_REDIRECT_ERROR_CODE = "-32000"
+        CANNOT_GET_BODY_ON_REDIRECT_ERROR_CODE = '-32000'
 
         # CDP fails to operate with intercepted requests.
         # Typical reason is browser cancelling intercepted requests/responses.
-        INVALID_INTERCEPTION_ID_ERROR_CODE = "-32602"
+        INVALID_INTERCEPTION_ID_ERROR_CODE = '-32602'
 
         def initialize(devtools)
           @devtools = devtools
@@ -100,7 +98,7 @@ module Selenium
           original = DevTools::Request.from(id, params)
           mutable = DevTools::Request.from(id, params)
 
-          block.call(mutable) do |&continue| # rubocop:disable Performance/RedundantBlockCall
+          block.call(mutable) do |&continue|
             pending_response_requests[id] = continue
 
             if original == mutable
@@ -129,14 +127,14 @@ module Selenium
         def continue_request(id)
           devtools.fetch.continue_request(request_id: id)
         end
-        alias_method :continue_response, :continue_request
+        alias continue_response continue_request
 
         def mutate_request(request)
           devtools.fetch.continue_request(
             request_id: request.id,
             url: request.url,
             method: request.method,
-            post_data: request.post_data,
+            post_data: (Base64.strict_encode64(request.post_data) if request.post_data),
             headers: request.headers.map do |k, v|
               {name: k, value: v}
             end
@@ -169,7 +167,6 @@ module Selenium
         def cancelled?(network_id)
           lock.synchronize { !!cancelled_requests.delete(network_id) }
         end
-
       end # NetworkInterceptor
     end # DevTools
   end # WebDriver

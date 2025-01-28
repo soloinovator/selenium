@@ -17,26 +17,24 @@
 
 'use strict'
 
-const assert = require('assert')
-const fs = require('fs')
-const path = require('path')
+const assert = require('node:assert')
+const fs = require('node:fs')
+const path = require('node:path')
 
-const chrome = require('../../chrome')
-const error = require('../../lib/error')
+const chrome = require('selenium-webdriver/chrome')
+const by = require('selenium-webdriver/lib/by')
+const error = require('selenium-webdriver/lib/error')
 const fileServer = require('../../lib/test/fileserver')
-const io = require('../../io')
+const io = require('selenium-webdriver/io')
 const test = require('../../lib/test')
-const until = require('../../lib/until')
+const until = require('selenium-webdriver/lib/until')
 
 test.suite(
   function (env) {
     let driver
 
     beforeEach(async function () {
-      driver = await env
-        .builder()
-        .setChromeOptions(new chrome.Options().headless())
-        .build()
+      driver = await env.builder().setChromeOptions(new chrome.Options().addArguments('-headless')).build()
     })
     afterEach(async () => await driver.quit())
 
@@ -57,19 +55,11 @@ test.suite(
       await driver.get(test.Pages.echoPage)
       assert.strictEqual(await driver.getCurrentUrl(), test.Pages.echoPage)
 
-      let history = await driver.sendAndGetDevToolsCommand(
-        'Page.getNavigationHistory'
-      )
+      let history = await driver.sendAndGetDevToolsCommand('Page.getNavigationHistory')
       assert(history)
       assert(history.currentIndex >= 2)
-      assert.strictEqual(
-        history.entries[history.currentIndex].url,
-        test.Pages.echoPage
-      )
-      assert.strictEqual(
-        history.entries[history.currentIndex - 1].url,
-        test.Pages.ajaxyPage
-      )
+      assert.strictEqual(history.entries[history.currentIndex].url, test.Pages.echoPage)
+      assert.strictEqual(history.entries[history.currentIndex - 1].url, test.Pages.ajaxyPage)
     })
 
     it('sends Page.enable command using devtools', async function () {
@@ -85,13 +75,9 @@ test.suite(
         assert(!err)
       })
 
-      cdpConnection.execute(
-        'Page.navigate',
-        { url: 'chrome://newtab/' },
-        function (_res, err) {
-          assert(!err)
-        }
-      )
+      cdpConnection.execute('Page.navigate', { url: 'chrome://newtab/' }, function (_res, err) {
+        assert(!err)
+      })
     })
 
     describe('JS CDP events', function () {
@@ -106,12 +92,7 @@ test.suite(
       it('calls the event listener for js exceptions', async function () {
         const cdpConnection = await driver.createCDPConnection('page')
         await driver.onLogException(cdpConnection, function (event) {
-          assert.strictEqual(
-            event['exceptionDetails']['stackTrace']['callFrames'][0][
-              'functionName'
-            ],
-            'onmouseover'
-          )
+          assert.strictEqual(event['exceptionDetails']['stackTrace']['callFrames'][0]['functionName'], 'onmouseover')
         })
         await driver.get(test.Pages.javascriptPage)
         let element = driver.findElement({ id: 'throwing-mouseover' })
@@ -173,14 +154,8 @@ test.suite(
         const downloadPath = path.join(dir, 'download.bin')
         await driver.wait(() => io.exists(downloadPath), 5000)
 
-        const goldenPath = path.join(
-          __dirname,
-          '../../lib/test/data/chrome/download.bin'
-        )
-        assert.strictEqual(
-          fs.readFileSync(downloadPath, 'binary'),
-          fs.readFileSync(goldenPath, 'binary')
-        )
+        const goldenPath = path.join(__dirname, '../../lib/test/data/chrome/download.bin')
+        assert.strictEqual(fs.readFileSync(downloadPath, 'binary'), fs.readFileSync(goldenPath, 'binary'))
       })
 
       it('throws if path is not a directory', async function () {
@@ -205,6 +180,93 @@ test.suite(
         }
       })
     })
+
+    describe('Script pinning', function () {
+      it('allows to pin script', async function () {
+        await driver.get(fileServer.Pages.xhtmlTestPage)
+
+        let script = await driver.pinScript('return document.title;')
+
+        const result = await driver.executeScript(script)
+
+        assert.strictEqual(result, 'XHTML Test Page')
+      })
+
+      it('ensures pinned script is available on new pages', async function () {
+        await driver.get(fileServer.Pages.xhtmlTestPage)
+        await driver.createCDPConnection('page')
+
+        let script = await driver.pinScript('return document.title;')
+        await driver.get(fileServer.Pages.formPage)
+
+        const result = await driver.executeScript(script)
+
+        assert.strictEqual(result, 'We Leave From Here')
+      })
+
+      it('allows to unpin script', async function () {
+        let script = await driver.pinScript('return document.title;')
+        await driver.unpinScript(script)
+
+        await assertJSError(() => driver.executeScript(script))
+
+        async function assertJSError(fn) {
+          try {
+            await fn()
+            return Promise.reject(Error('should have failed'))
+          } catch (err) {
+            if (err instanceof error.JavascriptError) {
+              return
+            }
+            throw err
+          }
+        }
+      })
+
+      it('ensures unpinned scripts are not available on new pages', async function () {
+        await driver.createCDPConnection('page')
+
+        let script = await driver.pinScript('return document.title;')
+        await driver.unpinScript(script)
+
+        await driver.get(fileServer.Pages.formPage)
+
+        await assertJSError(() => driver.executeScript(script))
+
+        async function assertJSError(fn) {
+          try {
+            await fn()
+            return Promise.reject(Error('should have failed'))
+          } catch (err) {
+            if (err instanceof error.JavascriptError) {
+              return
+            }
+            throw err
+          }
+        }
+      })
+
+      it('handles arguments in pinned script', async function () {
+        await driver.get(fileServer.Pages.xhtmlTestPage)
+        await driver.createCDPConnection('page')
+
+        let script = await driver.pinScript('return arguments;')
+        let element = await driver.findElement(by.By.id('id1'))
+
+        const result = await driver.executeScript(script, 1, true, element)
+
+        assert.deepEqual(result, [1, true, element])
+      })
+
+      it('supports async pinned scripts', async function () {
+        let script = await driver.pinScript('arguments[0]()')
+        await assertAsyncScriptPinned(() => driver.executeAsyncScript(script))
+
+        async function assertAsyncScriptPinned(fn) {
+          await fn()
+        }
+      })
+    })
   },
-  { browsers: ['chrome'] }
+  { browsers: ['chrome'] },
 )

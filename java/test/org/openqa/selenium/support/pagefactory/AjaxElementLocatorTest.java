@@ -25,8 +25,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.Test;
+import java.lang.reflect.Field;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
@@ -34,31 +39,23 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ByIdOrName;
 import org.openqa.selenium.support.ui.TickingClock;
 
-import java.lang.reflect.Field;
-import java.time.Clock;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-
 @Tag("UnitTests")
-public class AjaxElementLocatorTest {
+class AjaxElementLocatorTest {
 
-  private TickingClock clock = new TickingClock();
+  private final TickingClock clock = new TickingClock();
 
   protected ElementLocator newLocator(WebDriver driver, Field field) {
     return new MonkeyedAjaxElementLocator(clock, driver, field, 10);
   }
 
   @Test
-  public void shouldContinueAttemptingToFindElement() throws Exception {
+  void shouldContinueAttemptingToFindElement() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
     final WebElement element = mock(WebElement.class);
 
-    when(driver.findElement(by))
-        .thenThrow(new NoSuchElementException("bar"))
-        .thenReturn(element);
+    when(driver.findElement(by)).thenThrow(new NoSuchElementException("bar")).thenReturn(element);
 
     ElementLocator locator = newLocator(driver, f);
     WebElement returnedElement = locator.findElement();
@@ -67,7 +64,7 @@ public class AjaxElementLocatorTest {
   }
 
   @Test
-  public void shouldContinueAttemptingToFindElements() throws Exception {
+  void shouldContinueAttemptingToFindElements() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
@@ -86,7 +83,7 @@ public class AjaxElementLocatorTest {
   }
 
   @Test
-  public void shouldThrowNoSuchElementExceptionIfElementTakesTooLongToAppear() throws Exception {
+  void shouldThrowNoSuchElementExceptionIfElementTakesTooLongToAppear() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
@@ -95,10 +92,9 @@ public class AjaxElementLocatorTest {
 
     ElementLocator locator = new MonkeyedAjaxElementLocator(clock, driver, f, 2);
 
-    assertThatExceptionOfType(NoSuchElementException.class)
-        .isThrownBy(locator::findElement);
+    assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(locator::findElement);
 
-    // Look ups:
+    // Look-ups:
     // 1. In "isLoaded"
     // 2. Immediately after call of load. (clock is 0)
     // 3. First sleep, then third call.   (clock is 1)
@@ -108,7 +104,7 @@ public class AjaxElementLocatorTest {
   }
 
   @Test
-  public void shouldAlwaysDoAtLeastOneAttemptAtFindingTheElement() throws Exception {
+  void shouldAlwaysDoAtLeastOneAttemptAtFindingTheElement() throws Exception {
     Field f = Page.class.getDeclaredField("first");
     final WebDriver driver = mock(WebDriver.class);
     final By by = new ByIdOrName("first");
@@ -117,27 +113,27 @@ public class AjaxElementLocatorTest {
 
     ElementLocator locator = new MonkeyedAjaxElementLocator(clock, driver, f, 0);
 
-    assertThatExceptionOfType(NoSuchElementException.class)
-        .isThrownBy(locator::findElement);
+    assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(locator::findElement);
 
     verify(driver, atLeast(2)).findElement(by);
   }
 
   @Test
-  public void shouldWorkWithCustomAnnotations() {
+  void shouldWorkWithCustomAnnotations() {
     final WebDriver driver = mock(WebDriver.class);
 
-    AbstractAnnotations npeAnnotations = new AbstractAnnotations() {
-      @Override
-      public boolean isLookupCached() {
-        return false;
-      }
+    AbstractAnnotations npeAnnotations =
+        new AbstractAnnotations() {
+          @Override
+          public boolean isLookupCached() {
+            return false;
+          }
 
-      @Override
-      public By buildBy() {
-        throw new NullPointerException();
-      }
-    };
+          @Override
+          public By buildBy() {
+            throw new NullPointerException();
+          }
+        };
 
     assertThatExceptionOfType(NullPointerException.class)
         .isThrownBy(() -> new AjaxElementLocator(driver, 5, npeAnnotations));
@@ -145,8 +141,8 @@ public class AjaxElementLocatorTest {
 
   private class MonkeyedAjaxElementLocator extends AjaxElementLocator {
 
-    public MonkeyedAjaxElementLocator(Clock clock, WebDriver driver, Field field,
-                                      int timeOutInSeconds) {
+    public MonkeyedAjaxElementLocator(
+        Clock clock, WebDriver driver, Field field, int timeOutInSeconds) {
       super(clock, driver, field, timeOutInSeconds);
     }
 

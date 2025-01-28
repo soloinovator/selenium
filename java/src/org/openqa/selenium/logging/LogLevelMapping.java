@@ -20,26 +20,25 @@ package org.openqa.selenium.logging;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
+@NullMarked
 public class LogLevelMapping {
 
-  /**
-   *  WebDriver log level DEBUG which is mapped to Level.FINE.
-   */
+  /** WebDriver log level DEBUG which is mapped to Level.FINE. */
   private static final String DEBUG = "DEBUG";
+
+  // Default the log level to info.
+  private static final Level DEFAULT_LEVEL = Level.INFO;
 
   private static final Map<Integer, Level> levelMap;
 
   static {
-    Level[] supportedLevels = new Level[] {
-      Level.ALL,
-      Level.FINE,
-      Level.INFO,
-      Level.WARNING,
-      Level.SEVERE,
-      Level.OFF
-    };
+    Level[] supportedLevels =
+        new Level[] {Level.ALL, Level.FINE, Level.INFO, Level.WARNING, Level.SEVERE, Level.OFF};
     Map<Integer, Level> builder = new HashMap<>();
     for (Level level : supportedLevels) {
       builder.put(level.intValue(), level);
@@ -78,15 +77,15 @@ public class LogLevelMapping {
     return normalized == Level.FINE ? DEBUG : normalized.getName();
   }
 
-  public static Level toLevel(String logLevelName) {
-    if (logLevelName == null || "".equals(logLevelName)) {
-      // Default the log level to info.
-      return Level.INFO;
+  public static Level toLevel(@Nullable String logLevelName) {
+    if (logLevelName == null || logLevelName.isEmpty()) {
+      return DEFAULT_LEVEL;
     }
 
     if (logLevelName.equals(DEBUG)) {
       return Level.FINE;
     }
-    return levelMap.get(Level.parse(logLevelName).intValue());
+    return Optional.ofNullable(levelMap.get(Level.parse(logLevelName).intValue()))
+        .orElse(DEFAULT_LEVEL);
   }
 }

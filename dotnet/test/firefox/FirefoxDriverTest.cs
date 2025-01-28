@@ -1,9 +1,28 @@
+// <copyright file="FirefoxDriverTest.cs" company="Selenium Committers">
+// Licensed to the Software Freedom Conservancy (SFC) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
+
+using NUnit.Framework;
+using OpenQA.Selenium.Environment;
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
-using System.Threading;
-using OpenQA.Selenium.Environment;
 using System.IO;
+using System.Threading;
 
 namespace OpenQA.Selenium.Firefox
 {
@@ -15,15 +34,9 @@ namespace OpenQA.Selenium.Firefox
         {
             driver.Url = formsPage;
 
-            try
-            {
-                driver.FindElement(By.Id("notThere"));
-                Assert.Fail("Should not be able to select element by id here");
-            }
-            catch (NoSuchElementException)
-            {
-                // This is expected
-            }
+            Assert.That(
+                () => driver.FindElement(By.Id("notThere")),
+                Throws.InstanceOf<NoSuchElementException>());
 
             // Is this works, then we're golden
             driver.Url = xhtmlTestPage;
@@ -39,13 +52,13 @@ namespace OpenQA.Selenium.Firefox
 
             driver.Url = formsPage;
             IWebElement textarea = driver.FindElement(By.Id("withText"));
-            string expectedText = "I like cheese" + System.Environment.NewLine 
+            string expectedText = "I like cheese" + System.Environment.NewLine
                 + System.Environment.NewLine + "It's really nice";
             textarea.Clear();
             textarea.SendKeys(expectedText);
 
             string seenText = textarea.GetAttribute("value");
-            Assert.AreEqual(expectedText, seenText);
+            Assert.That(seenText, Is.EqualTo(expectedText));
         }
 
         //[Test]
@@ -56,8 +69,8 @@ namespace OpenQA.Selenium.Firefox
             driver.Url = xhtmlTestPage;
             secondDriver.Url = formsPage;
 
-            Assert.AreEqual("XHTML Test Page", driver.Title);
-            Assert.AreEqual("We Leave From Here", secondDriver.Title);
+            Assert.That(driver.Title, Is.EqualTo("XHTML Test Page"));
+            Assert.That(secondDriver.Title, Is.EqualTo("We Leave From Here"));
 
             // We only need to quit the second driver if the test passes
             secondDriver.Quit();
@@ -90,7 +103,7 @@ namespace OpenQA.Selenium.Firefox
             string profileLocation = profile.ProfileDirectory;
 
             firefox.Quit();
-            Assert.IsFalse(Directory.Exists(profileLocation));
+            Assert.That(profileLocation, Does.Not.Exist);
         }
 
         //[Test]
@@ -114,7 +127,7 @@ namespace OpenQA.Selenium.Firefox
             IWebElement keyReporter = driver.FindElement(By.Id("keyReporter"));
             keyReporter.SendKeys("ABC DEF");
 
-            Assert.AreEqual("ABC DEF", keyReporter.GetAttribute("value"));
+            Assert.That(keyReporter.GetAttribute("value"), Is.EqualTo("ABC DEF"));
         }
 
         //[Test]
@@ -138,7 +151,7 @@ namespace OpenQA.Selenium.Firefox
             List<string> allWindowHandles = new List<string>(driver.WindowHandles);
 
             // There should be two windows. We should also see each of the window titles at least once.
-            Assert.AreEqual(2, allWindowHandles.Count);
+            Assert.That(allWindowHandles, Has.Exactly(2).Items);
 
             allWindowHandles.Remove(originalWinHandle);
             string newWinHandle = (string)allWindowHandles[0];
@@ -150,7 +163,7 @@ namespace OpenQA.Selenium.Firefox
 
             IWebElement keyReporter = driver.FindElement(By.Id("keyReporter"));
             keyReporter.SendKeys("ABC DEF");
-            Assert.AreEqual("ABC DEF", keyReporter.GetAttribute("value"));
+            Assert.That(keyReporter.GetAttribute("value"), Is.EqualTo("ABC DEF"));
 
             // Key events in original window.
             driver.SwitchTo().Window(originalWinHandle);
@@ -159,7 +172,7 @@ namespace OpenQA.Selenium.Firefox
 
             IWebElement keyReporter2 = driver.FindElement(By.Id("keyReporter"));
             keyReporter2.SendKeys("QWERTY");
-            Assert.AreEqual("QWERTY", keyReporter2.GetAttribute("value"));
+            Assert.That(keyReporter2.GetAttribute("value"), Is.EqualTo("QWERTY"));
         }
 
         //[Test]
@@ -180,7 +193,7 @@ namespace OpenQA.Selenium.Firefox
             SleepBecauseWindowsTakeTimeToOpen();
             List<string> allWindowHandles = new List<string>(driver.WindowHandles);
             // There should be two windows. We should also see each of the window titles at least once.
-            Assert.AreEqual(2, allWindowHandles.Count);
+            Assert.That(allWindowHandles, Has.Exactly(2).Items);
 
             allWindowHandles.Remove(originalWinHandle);
             string newWinHandle = (string)allWindowHandles[0];
@@ -198,7 +211,7 @@ namespace OpenQA.Selenium.Firefox
             driver.Url = javascriptPage;
             IWebElement keyReporter = driver.FindElement(By.Id("keyReporter"));
             keyReporter.SendKeys("ABC DEF");
-            Assert.AreEqual("ABC DEF", keyReporter.GetAttribute("value"));
+            Assert.That(keyReporter.GetAttribute("value"), Is.EqualTo("ABC DEF"));
         }
 
         //[Test]
@@ -215,7 +228,7 @@ namespace OpenQA.Selenium.Firefox
                 secondDriver = new FirefoxDriver(options);
                 secondDriver.Url = url;
                 string gotTitle = secondDriver.Title;
-                Assert.AreNotEqual("Hello IWebDriver", gotTitle);
+                Assert.That(gotTitle, Is.EqualTo("Hello IWebDriver"));
             }
             catch (Exception)
             {
@@ -244,12 +257,114 @@ namespace OpenQA.Selenium.Firefox
 
             try
             {
-                Assert.AreEqual(javascriptPage, driver2.Url);
+                Assert.That(driver2.Url, Is.EqualTo(javascriptPage));
             }
             finally
             {
                 driver2.Quit();
             }
+        }
+
+        [Test]
+        public void ShouldInstallAndUninstallXpiAddon()
+        {
+            FirefoxDriver firefoxDriver = driver as FirefoxDriver;
+
+            string extension = GetPath("webextensions-selenium-example.xpi");
+            string id = firefoxDriver.InstallAddOnFromFile(extension);
+
+            driver.Url = blankPage;
+
+            IWebElement injected = firefoxDriver.FindElement(By.Id("webextensions-selenium-example"));
+            Assert.That(injected.Text, Is.EqualTo("Content injected by webextensions-selenium-example"));
+
+            firefoxDriver.UninstallAddOn(id);
+
+            driver.Navigate().Refresh();
+            Assert.That(driver.FindElements(By.Id("webextensions-selenium-example")).Count, Is.Zero);
+        }
+
+        [Test]
+        public void ShouldInstallAndUninstallUnSignedZipAddon()
+        {
+            FirefoxDriver firefoxDriver = driver as FirefoxDriver;
+
+            string extension = GetPath("webextensions-selenium-example-unsigned.zip");
+            string id = firefoxDriver.InstallAddOnFromFile(extension, true);
+
+            driver.Url = blankPage;
+
+            IWebElement injected = firefoxDriver.FindElement(By.Id("webextensions-selenium-example"));
+            Assert.That(injected.Text, Is.EqualTo("Content injected by webextensions-selenium-example"));
+
+            firefoxDriver.UninstallAddOn(id);
+
+            driver.Navigate().Refresh();
+            Assert.That(driver.FindElements(By.Id("webextensions-selenium-example")).Count, Is.Zero);
+        }
+
+        [Test]
+        public void ShouldInstallAndUninstallSignedZipAddon()
+        {
+            FirefoxDriver firefoxDriver = driver as FirefoxDriver;
+
+            string extension = GetPath("webextensions-selenium-example.zip");
+            string id = firefoxDriver.InstallAddOnFromFile(extension);
+
+            driver.Url = blankPage;
+
+            IWebElement injected = firefoxDriver.FindElement(By.Id("webextensions-selenium-example"));
+            Assert.That(injected.Text, Is.EqualTo("Content injected by webextensions-selenium-example"));
+
+            firefoxDriver.UninstallAddOn(id);
+
+            driver.Navigate().Refresh();
+            Assert.That(driver.FindElements(By.Id("webextensions-selenium-example")).Count, Is.Zero);
+        }
+
+        [Test]
+        public void ShouldInstallAndUninstallSignedDirAddon()
+        {
+            FirefoxDriver firefoxDriver = driver as FirefoxDriver;
+
+            string extension = GetPath("webextensions-selenium-example-signed");
+            string id = firefoxDriver.InstallAddOnFromDirectory(extension);
+
+            driver.Url = blankPage;
+
+            IWebElement injected = firefoxDriver.FindElement(By.Id("webextensions-selenium-example"));
+            Assert.That(injected.Text, Is.EqualTo("Content injected by webextensions-selenium-example"));
+
+            firefoxDriver.UninstallAddOn(id);
+
+            driver.Navigate().Refresh();
+            Assert.That(driver.FindElements(By.Id("webextensions-selenium-example")).Count, Is.Zero);
+        }
+
+        [Test]
+        public void ShouldInstallAndUninstallUnSignedDirAddon()
+        {
+            FirefoxDriver firefoxDriver = driver as FirefoxDriver;
+
+            string extension = GetPath("webextensions-selenium-example");
+            string id = firefoxDriver.InstallAddOnFromDirectory(extension, true);
+
+            driver.Url = blankPage;
+
+            IWebElement injected = firefoxDriver.FindElement(By.Id("webextensions-selenium-example"));
+            Assert.That(injected.Text, Is.EqualTo("Content injected by webextensions-selenium-example"));
+
+            firefoxDriver.UninstallAddOn(id);
+
+            driver.Navigate().Refresh();
+            Assert.That(driver.FindElements(By.Id("webextensions-selenium-example")).Count, Is.Zero);
+        }
+
+        private string GetPath(string name)
+        {
+            string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            string sFile = Path.Combine(sCurrentDirectory, "../../../../common/extensions/" + name);
+            return Path.GetFullPath(sFile);
         }
 
         private static bool PlatformHasNativeEvents()

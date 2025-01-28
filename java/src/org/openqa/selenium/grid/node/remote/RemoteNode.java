@@ -17,13 +17,36 @@
 
 package org.openqa.selenium.grid.node.remote;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.openqa.selenium.grid.data.Availability.DOWN;
+import static org.openqa.selenium.grid.data.Availability.DRAINING;
+import static org.openqa.selenium.grid.data.Availability.UP;
+import static org.openqa.selenium.net.Urls.fromUri;
+import static org.openqa.selenium.remote.http.ClientConfig.defaultConfig;
+import static org.openqa.selenium.remote.http.Contents.asJson;
+import static org.openqa.selenium.remote.http.Contents.reader;
+import static org.openqa.selenium.remote.http.HttpMethod.DELETE;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+import static org.openqa.selenium.remote.http.HttpMethod.POST;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.RetrySessionRequestException;
 import org.openqa.selenium.SessionNotCreatedException;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
 import org.openqa.selenium.grid.data.CreateSessionResponse;
@@ -40,6 +63,7 @@ import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.json.JsonInput;
 import org.openqa.selenium.remote.SessionId;
+import org.openqa.selenium.remote.http.ClientConfig;
 import org.openqa.selenium.remote.http.Filter;
 import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.http.HttpHandler;
@@ -48,28 +72,7 @@ import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.tracing.HttpTracing;
 import org.openqa.selenium.remote.tracing.Tracer;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.UncheckedIOException;
-import java.net.URI;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.openqa.selenium.grid.data.Availability.DOWN;
-import static org.openqa.selenium.grid.data.Availability.DRAINING;
-import static org.openqa.selenium.grid.data.Availability.UP;
-import static org.openqa.selenium.net.Urls.fromUri;
-import static org.openqa.selenium.remote.http.Contents.asJson;
-import static org.openqa.selenium.remote.http.Contents.reader;
-import static org.openqa.selenium.remote.http.HttpMethod.DELETE;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-import static org.openqa.selenium.remote.http.HttpMethod.POST;
-
-public class RemoteNode extends Node {
+public class RemoteNode extends Node implements Closeable {
 
   public static final Json JSON = new Json();
   private final HttpHandler client;
@@ -84,13 +87,15 @@ public class RemoteNode extends Node {
       NodeId id,
       URI externalUri,
       Secret registrationSecret,
+      Duration sessionTimeout,
       Collection<Capabilities> capabilities) {
-    super(tracer, id, externalUri, registrationSecret);
+    super(tracer, id, externalUri, registrationSecret, sessionTimeout);
     this.externalUri = Require.nonNull("External URI", externalUri);
     this.capabilities = ImmutableSet.copyOf(capabilities);
 
-    this.client = Require.nonNull("HTTP client factory", clientFactory)
-      .createClient(fromUri(externalUri));
+    ClientConfig clientConfig =
+        defaultConfig().readTimeout(this.getSessionTimeout()).baseUrl(fromUri(externalUri));
+    this.client = Require.nonNull("HTTP client factory", clientFactory).createClient(clientConfig);
 
     this.healthCheck = new RemoteCheck();
 
@@ -110,33 +115,45 @@ public class RemoteNode extends Node {
   @Override
   public boolean isSupporting(Capabilities capabilities) {
     return this.capabilities.stream()
-        .anyMatch(caps -> caps.getCapabilityNames().stream()
-            .allMatch(name -> Objects.equals(
-                caps.getCapability(name),
-                capabilities.getCapability(name))));
-
+        .anyMatch(
+            caps ->
+                caps.getCapabilityNames().stream()
+                    .allMatch(
+                        name ->
+                            Objects.equals(
+                                caps.getCapability(name), capabilities.getCapability(name))));
   }
 
   @Override
   public Either<WebDriverException, CreateSessionResponse> newSession(
-    CreateSessionRequest sessionRequest) {
+      CreateSessionRequest sessionRequest) {
     Require.nonNull("Capabilities for session", sessionRequest);
 
     HttpRequest req = new HttpRequest(POST, "/se/grid/node/session");
     HttpTracing.inject(tracer, tracer.getCurrentContext(), req);
     req.setContent(asJson(sessionRequest));
 
-    HttpResponse httpResponse = client.with(addSecret).execute(req);
+    HttpResponse httpResponse;
+    try {
+      httpResponse = client.with(addSecret).execute(req);
+    } catch (TimeoutException e) {
+      // When using a short session timeout the node might not be able to start the session in time.
+      // The client timeout might be higher so, it makes sense to retry. In case the client does
+      // timeout, the SessionRequest is marked as canceled and the session is either not added to
+      // the queue or disposed as soon as the node started it.
+      return Either.left(new RetrySessionRequestException("Timeout while starting the session", e));
+    }
 
     Optional<Map<String, Object>> maybeResponse =
-      Optional.ofNullable(Values.get(httpResponse, Map.class));
+        Optional.ofNullable(Values.get(httpResponse, Map.class));
 
     if (maybeResponse.isPresent()) {
       Map<String, Object> response = maybeResponse.get();
 
       if (response.containsKey("sessionResponse")) {
         String rawResponse = JSON.toJson(response.get("sessionResponse"));
-        CreateSessionResponse sessionResponse = JSON.toType(rawResponse, CreateSessionResponse.class);
+        CreateSessionResponse sessionResponse =
+            JSON.toType(rawResponse, CreateSessionResponse.class);
         return Either.right(sessionResponse);
       } else {
         String rawException = JSON.toJson(response.get("exception"));
@@ -168,6 +185,30 @@ public class RemoteNode extends Node {
   }
 
   @Override
+  public boolean tryAcquireConnection(SessionId id) {
+    Require.nonNull("Session ID", id);
+
+    HttpRequest req = new HttpRequest(POST, "/se/grid/node/connection/" + id);
+    HttpTracing.inject(tracer, tracer.getCurrentContext(), req);
+
+    HttpResponse res = client.with(addSecret).execute(req);
+
+    return Boolean.TRUE.equals(Values.get(res, Boolean.class));
+  }
+
+  @Override
+  public void releaseConnection(SessionId id) {
+    Require.nonNull("Session ID", id);
+
+    HttpRequest req = new HttpRequest(DELETE, "/se/grid/node/connection/" + id);
+    HttpTracing.inject(tracer, tracer.getCurrentContext(), req);
+
+    HttpResponse res = client.with(addSecret).execute(req);
+
+    Values.get(res, Void.class);
+  }
+
+  @Override
   public Session getSession(SessionId id) throws NoSuchSessionException {
     Require.nonNull("Session ID", id);
 
@@ -190,6 +231,11 @@ public class RemoteNode extends Node {
   }
 
   @Override
+  public HttpResponse downloadFile(HttpRequest req, SessionId id) {
+    return client.execute(req);
+  }
+
+  @Override
   public void stop(SessionId id) throws NoSuchSessionException {
     Require.nonNull("Session ID", id);
     HttpRequest req = new HttpRequest(DELETE, "/se/grid/node/session/" + id);
@@ -208,7 +254,7 @@ public class RemoteNode extends Node {
     HttpResponse res = client.execute(req);
 
     try (Reader reader = reader(res);
-         JsonInput in = JSON.newInput(reader)) {
+        JsonInput in = JSON.newInput(reader)) {
       in.beginObject();
 
       // Skip everything until we find "value"
@@ -248,7 +294,7 @@ public class RemoteNode extends Node {
 
     HttpResponse res = client.with(addSecret).execute(req);
 
-    if(res.getStatus() == HTTP_OK) {
+    if (res.getStatus() == HTTP_OK) {
       draining = true;
     }
   }
@@ -256,9 +302,14 @@ public class RemoteNode extends Node {
   @SuppressWarnings("unused")
   private Map<String, Object> toJson() {
     return ImmutableMap.of(
-      "id", getId(),
-      "uri", externalUri,
-      "capabilities", capabilities);
+        "id", getId(),
+        "uri", externalUri,
+        "capabilities", capabilities);
+  }
+
+  @Override
+  public void close() {
+    ((HttpClient) (this.client)).close();
   }
 
   private class RemoteCheck implements HealthCheck {
@@ -266,6 +317,12 @@ public class RemoteNode extends Node {
     public Result check() {
       try {
         NodeStatus status = getStatus();
+
+        if (status.getNodeId() != null && !Objects.equals(getId(), status.getNodeId())) {
+          // ensure the original RemoteNode stays DOWN when it has been restarted and registered
+          // again as another RemoteNode with the same externalUri
+          return new Result(DOWN, externalUri + " has unexpected node id");
+        }
 
         switch (status.getAvailability()) {
           case DOWN:
@@ -278,12 +335,11 @@ public class RemoteNode extends Node {
             return new Result(UP, externalUri + " is ok");
 
           default:
-            throw new IllegalStateException("Unknown node availability: " + status.getAvailability());
+            throw new IllegalStateException(
+                "Unknown node availability: " + status.getAvailability());
         }
       } catch (RuntimeException e) {
-        return new Result(
-            DOWN,
-            "Unable to determine node status: " + e.getMessage());
+        return new Result(DOWN, "Unable to determine node status: " + e.getMessage());
       }
     }
   }

@@ -16,6 +16,8 @@
 // under the License.
 package org.openqa.selenium.net;
 
+import static java.util.Collections.list;
+
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -27,15 +29,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-import static java.util.Collections.list;
-
+@NullMarked
 public class NetworkInterface {
+  private static final Logger LOG = Logger.getLogger(NetworkInterface.class.getName());
 
   private final String name;
-  private java.net.NetworkInterface networkInterface;
+  private java.net.@Nullable NetworkInterface networkInterface;
   private final Iterable<InetAddress> inetAddresses;
-  private Boolean isLoopback;
+  private @Nullable Boolean isLoopback;
 
   public NetworkInterface(java.net.NetworkInterface networkInterface) {
     this(networkInterface.getName(), list(networkInterface.getInetAddresses()));
@@ -44,8 +48,9 @@ public class NetworkInterface {
 
   NetworkInterface(String name, Iterable<InetAddress> inetAddresses) {
     this.name = name;
-    this.inetAddresses = StreamSupport.stream(inetAddresses.spliterator(), false)
-      .collect(Collectors.toCollection(LinkedHashSet::new));
+    this.inetAddresses =
+        StreamSupport.stream(inetAddresses.spliterator(), false)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
   }
 
   NetworkInterface(String name, InetAddress... inetAddresses) {
@@ -64,7 +69,7 @@ public class NetworkInterface {
         // from java.net.NetworkInterface API
         isLoopback = networkInterface.isLoopback();
       } catch (SocketException ex) {
-        Logger.getLogger(NetworkInterface.class.getName()).log(Level.WARNING, null, ex);
+        LOG.log(Level.WARNING, null, ex);
         // If a SocketException is caught, determine whether this NetworkInterface
         // instance is loopback from computation from its inetAddresses
         isLoopback = isLoopBackFromINetAddresses(list(networkInterface.getInetAddresses()));
@@ -80,7 +85,7 @@ public class NetworkInterface {
     return iterator.hasNext() && iterator.next().isLoopbackAddress();
   }
 
-  InetAddress getIp4LoopbackOnly() {
+  @Nullable InetAddress getIp4LoopbackOnly() {
     // Goes by the wildly unscientific assumption that if there are more than one set of
     // loopback addresses, firefox will bind to the last one we get.
     // An alternate theory if this fails is that firefox prefers 127.0.0.1
@@ -104,7 +109,7 @@ public class NetworkInterface {
     return address instanceof Inet6Address;
   }
 
-  public InetAddress getIp4NonLoopBackOnly() {
+  public @Nullable InetAddress getIp4NonLoopBackOnly() {
     for (InetAddress inetAddress : inetAddresses) {
       if (!inetAddress.isLoopbackAddress() && !isIpv6(inetAddress)) {
         return inetAddress;
@@ -113,7 +118,7 @@ public class NetworkInterface {
     return null;
   }
 
-  public InetAddress getIp6Address() {
+  public @Nullable InetAddress getIp6Address() {
     for (InetAddress inetAddress : inetAddresses) {
       if (isIpv6(inetAddress)) {
         return inetAddress;

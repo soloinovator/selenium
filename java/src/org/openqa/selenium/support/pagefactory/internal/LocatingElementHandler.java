@@ -17,13 +17,12 @@
 
 package org.openqa.selenium.support.pagefactory.internal;
 
-import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.pagefactory.ElementLocator;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.pagefactory.ElementLocator;
 
 public class LocatingElementHandler implements InvocationHandler {
   private final ElementLocator locator;
@@ -39,7 +38,7 @@ public class LocatingElementHandler implements InvocationHandler {
       element = locator.findElement();
     } catch (NoSuchElementException e) {
       if ("toString".equals(method.getName())) {
-        return "Proxy element for: " + locator.toString();
+        return "Proxy element for: " + locator;
       }
       throw e;
     }

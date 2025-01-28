@@ -38,7 +38,7 @@ module Selenium
       let(:bridge)         { instance_double(Remote::Bridge).as_null_object }
       let(:search_context) { test_search_context.new(bridge) }
 
-      context 'finding a single element' do
+      context 'when finding a single element' do
         it 'accepts a hash' do
           allow(bridge).to receive(:find_element_by).with('id', 'bar', nil).and_return(element)
 
@@ -68,7 +68,7 @@ module Selenium
         end
       end
 
-      context 'finding multiple elements' do
+      context 'when finding multiple elements' do
         it 'accepts a hash' do
           allow(bridge).to receive(:find_elements_by).with('id', 'bar', nil).and_return([])
 
@@ -87,6 +87,22 @@ module Selenium
           expect {
             search_context.find_elements(foo: 'bar')
           }.to raise_error(ArgumentError, 'cannot find elements by :foo')
+        end
+      end
+
+      context 'when extra finders are registered' do
+        around do |example|
+          described_class.extra_finders = {accessibility_id: 'accessibility id'}
+          example.call
+        ensure
+          described_class.extra_finders = nil
+        end
+
+        it 'finds element' do
+          allow(bridge).to receive(:find_element_by).with('accessibility id', 'foo', nil).and_return(element)
+
+          expect(search_context.find_element(accessibility_id: 'foo')).to eq(element)
+          expect(bridge).to have_received(:find_element_by).with('accessibility id', 'foo', nil)
         end
       end
     end

@@ -20,18 +20,16 @@ package org.openqa.selenium.safari;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NoDriverAfterTest;
 import org.openqa.selenium.testing.NoDriverBeforeTest;
 
-public class CleanSessionTest extends JupiterTestBase {
+class CleanSessionTest extends JupiterTestBase {
 
   private static final Cookie COOKIE = new Cookie("foo", "bar");
 
@@ -81,33 +79,34 @@ public class CleanSessionTest extends JupiterTestBase {
     JavascriptExecutor executor = (JavascriptExecutor) driver;
     executor.executeScript("setTimeout = function() {}");
 
-    long result = (Long) executor.executeAsyncScript(
-        "var callback = arguments[arguments.length - 1];" +
-        "window.constructor.prototype.setTimeout.call(window, function() {" +
-            "callback(123);\n}, 0);");
+    long result =
+        (Long)
+            executor.executeAsyncScript(
+                "var callback = arguments[arguments.length - 1];"
+                    + "window.constructor.prototype.setTimeout.call(window, function() {"
+                    + "callback(123);\n}, 0);");
 
     assertThat(result).isEqualTo(123L);
   }
 
   @Test
-  public void doesNotLeakInternalMessagesToThePageUnderTest() {
+  void doesNotLeakInternalMessagesToThePageUnderTest() {
     driver.get(appServer.whereIs("messages.html"));
 
     JavascriptExecutor executor = (JavascriptExecutor) driver;
     executor.executeScript("window.postMessage('hi', '*');");
 
-    long numMessages = (Long) executor.executeScript(
-        "return window.messages.length;");
+    long numMessages = (Long) executor.executeScript("return window.messages.length;");
 
     assertThat(numMessages).isEqualTo(1L);
   }
 
   @Test
-  public void doesNotCreateExtraIframeOnPageUnderTest() {
+  void doesNotCreateExtraIframeOnPageUnderTest() {
     driver.get(appServer.whereIs("messages.html"));
-    assertThat(driver.findElements(By.tagName("iframe"))).hasSize(0);
+    assertThat(driver.findElements(By.tagName("iframe"))).isEmpty();
 
     ((JavascriptExecutor) driver).executeScript("return location.href;");
-    assertThat(driver.findElements(By.tagName("iframe"))).hasSize(0);
+    assertThat(driver.findElements(By.tagName("iframe"))).isEmpty();
   }
 }

@@ -17,6 +17,17 @@
 
 package org.openqa.selenium.devtools;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
+import static org.openqa.selenium.remote.http.Contents.string;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+
+import java.io.UncheckedIOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.json.Json;
@@ -25,29 +36,22 @@ import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import java.io.UncheckedIOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.Optional;
-import java.util.logging.Logger;
-
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.openqa.selenium.json.Json.MAP_TYPE;
-import static org.openqa.selenium.remote.http.Contents.string;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-
 public class CdpEndpointFinder {
 
   private static final Logger LOG = Logger.getLogger(CdpEndpointFinder.class.getName());
   private static final Json JSON = new Json();
 
-  public static Optional<URI> getCdpEndPoint(HttpClient.Factory clientFactory, URI reportedUri) {
+  public static HttpClient getHttpClient(HttpClient.Factory clientFactory, URI reportedUri) {
     Require.nonNull("HTTP client factory", clientFactory);
     Require.nonNull("DevTools URI", reportedUri);
 
     ClientConfig config = ClientConfig.defaultConfig().baseUri(reportedUri);
-    HttpClient client = clientFactory.createClient(config);
+
+    return clientFactory.createClient(config);
+  }
+
+  public static Optional<URI> getCdpEndPoint(HttpClient client) {
+    Require.nonNull("HTTP client", client);
 
     HttpResponse res;
     try {
@@ -87,6 +91,9 @@ public class CdpEndpointFinder {
         break;
       case "firefox":
         key = "moz:debuggerAddress";
+        LOG.warning(
+            "CDP support for Firefox is deprecated and will be removed in future versions. "
+                + "Please switch to WebDriver BiDi.");
         break;
       default:
         return Optional.empty();
@@ -121,5 +128,4 @@ public class CdpEndpointFinder {
       return Optional.empty();
     }
   }
-
 }

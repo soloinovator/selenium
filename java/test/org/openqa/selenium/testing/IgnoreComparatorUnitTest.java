@@ -17,16 +17,6 @@
 
 package org.openqa.selenium.testing;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.openqa.selenium.Platform;
-import org.openqa.selenium.testing.drivers.Browser;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -34,7 +24,16 @@ import static org.mockito.Mockito.when;
 import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
-public class IgnoreComparatorUnitTest {
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.testing.drivers.Browser;
+
+class IgnoreComparatorUnitTest {
 
   private static final Platform CURRENT_PLATFORM = Platform.MAC;
   private static final Platform OTHER_PLATFORM = Platform.WINDOWS;
@@ -45,78 +44,90 @@ public class IgnoreComparatorUnitTest {
   IgnoreComparator ignoreComparator = new IgnoreComparator();
 
   @Test
-  public void shouldNotIgnoreIfNothingBeingIgnored() {
+  void shouldNotIgnoreIfNothingBeingIgnored() {
     assertFalse(new IgnoreComparator().shouldIgnore((Ignore) null));
     assertFalse(new IgnoreComparator().shouldIgnore((IgnoreList) null));
   }
 
   @Test
-  public void shouldIgnoreOnlyDriverBeingIgnored() {
+  void shouldIgnoreOnlyDriverBeingIgnored() {
     ignoreComparator.addDriver(SAFARI);
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldIgnoreDriverAll() {
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(Browser.ALL), CURRENT_PLATFORM_SET)));
+  void shouldIgnoreDriverAll() {
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(Browser.ALL), CURRENT_PLATFORM_SET)));
   }
 
   @Test
   @Disabled
   public void shouldNotIgnoreOtherPlatform() {
     ignoreComparator.addDriver(SAFARI);
-    assertFalse(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), OTHER_PLATFORM_SET)));
+    assertFalse(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), OTHER_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldNotIgnoreOtherBrowser() {
+  void shouldNotIgnoreOtherBrowser() {
     ignoreComparator.addDriver(SAFARI);
-    assertFalse(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(IE), CURRENT_PLATFORM_SET)));
+    assertFalse(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(IE), CURRENT_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldIgnoreEnabledNativeEventsIfIgnoringEnabled() {
+  void shouldIgnoreEnabledNativeEventsIfIgnoringEnabled() {
     ignoreComparator.addDriver(SAFARI);
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldIgnoreDisabledNativeEventsIfIgnoringDisabled() {
+  void shouldIgnoreDisabledNativeEventsIfIgnoringDisabled() {
     ignoreComparator.addDriver(SAFARI);
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldIgnoreEnabledNativeEventsIfIgnoringAll() {
+  void shouldIgnoreEnabledNativeEventsIfIgnoringAll() {
     ignoreComparator.addDriver(SAFARI);
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
   }
 
   @Test
-  public void shouldIgnoreDisabledNativeEventsIfIgnoringAll() {
+  void shouldIgnoreDisabledNativeEventsIfIgnoringAll() {
     ignoreComparator.addDriver(SAFARI);
-    assertTrue(ignoreComparator.shouldIgnore(ignoreForDriver(
-      Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
+    assertTrue(
+        ignoreComparator.shouldIgnore(
+            ignoreForDriver(Collections.singleton(SAFARI), CURRENT_PLATFORM_SET)));
   }
 
-  private IgnoreList ignoreForDriver(final Set<Browser> drivers,
-                                     final Set<Platform> platforms) {
+  private IgnoreList ignoreForDriver(final Set<Browser> drivers, final Set<Platform> platforms) {
     final IgnoreList ignore = mock(IgnoreList.class, Mockito.RETURNS_SMART_NULLS);
-    final Ignore[] list = drivers.stream().map(driver -> {
-      Ignore ig = mock(Ignore.class, Mockito.RETURNS_SMART_NULLS);
-      when(ig.value()).thenReturn(driver);
-      return ig;
-    }).collect(Collectors.toList()).toArray(new Ignore[drivers.size()]);
+    final Ignore[] list =
+        drivers.stream()
+            .map(
+                driver -> {
+                  Ignore ig = mock(Ignore.class, Mockito.RETURNS_SMART_NULLS);
+                  when(ig.value()).thenReturn(driver);
+                  return ig;
+                })
+            .collect(Collectors.toList())
+            .toArray(new Ignore[drivers.size()]);
 
     when(ignore.value()).thenReturn(list);
-    //when(ignore.platforms()).thenReturn(platforms.toArray(new Platform[platforms.size()]));
+    // when(ignore.platforms()).thenReturn(platforms.toArray(new Platform[platforms.size()]));
 
     return ignore;
   }

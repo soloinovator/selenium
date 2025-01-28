@@ -17,34 +17,35 @@
 
 package org.openqa.selenium.testing;
 
+import static org.junit.platform.commons.util.AnnotationUtils.findAnnotation;
+import static org.junit.platform.commons.util.AnnotationUtils.findRepeatableAnnotations;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.testing.drivers.Browser;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+/** Class that decides whether a test class or method should be ignored. */
+class TestIgnorance {
 
-import static org.junit.platform.commons.util.AnnotationUtils.findAnnotation;
-import static org.junit.platform.commons.util.AnnotationUtils.findRepeatableAnnotations;
-
-/**
- * Class that decides whether a test class or method should be ignored.
- */
-public class TestIgnorance {
-
-  private IgnoreComparator ignoreComparator = new IgnoreComparator();
-  private Set<String> methods = new HashSet<>();
-  private Set<String> only = new HashSet<>();
-  private Set<String> ignoreMethods = new HashSet<>();
-  private Set<String> ignoreClasses = new HashSet<>();
+  private final IgnoreComparator ignoreComparator = new IgnoreComparator();
+  private final Set<String> methods = new HashSet<>();
+  private final Set<String> only = new HashSet<>();
+  private final Set<String> ignoreMethods = new HashSet<>();
+  private final Set<String> ignoreClasses = new HashSet<>();
 
   public TestIgnorance(Browser driver) {
-    ignoreComparator.addDriver(Require.argument("Driver", driver).nonNull(
-      "Browser to use must be set. Do this by setting the 'selenium.browser' system property"));
+    ignoreComparator.addDriver(
+        Require.argument("Driver", driver)
+            .nonNull(
+                "Browser to use must be set. Do this by setting the 'selenium.browser' system"
+                    + " property"));
 
     String onlyRun = System.getProperty("only_run");
     if (onlyRun != null) {
@@ -72,10 +73,16 @@ public class TestIgnorance {
     Optional<Method> testMethod = extensionContext.getTestMethod();
 
     // Ignored because of Selenium's custom extensions
-    boolean ignored = findAnnotation(testClass, IgnoreList.class).isPresent() ||
-      !findRepeatableAnnotations(testClass, Ignore.class).isEmpty() ||
-      findAnnotation(testMethod, IgnoreList.class).isPresent() ||
-      !findRepeatableAnnotations(testMethod, Ignore.class).isEmpty();
+    Optional<IgnoreList> ignoreListClass = findAnnotation(testClass, IgnoreList.class);
+    List<Ignore> ignoreClass = findRepeatableAnnotations(testClass, Ignore.class);
+    Optional<IgnoreList> ignoreListMethod = findAnnotation(testMethod, IgnoreList.class);
+    List<Ignore> ignoreMethod = findRepeatableAnnotations(testMethod, Ignore.class);
+    boolean ignored =
+        (ignoreListClass.isPresent() && ignoreComparator.shouldIgnore(ignoreListClass.get()))
+            || (!ignoreClass.isEmpty() && ignoreComparator.shouldIgnore(ignoreClass.stream()))
+            || (ignoreListMethod.isPresent()
+                && ignoreComparator.shouldIgnore(ignoreListMethod.get()))
+            || (!ignoreMethod.isEmpty() && ignoreComparator.shouldIgnore(ignoreMethod.stream()));
 
     // Ignored because of Jupiter's @Disabled
     ignored |= findAnnotation(testClass, Disabled.class).isPresent();
@@ -93,10 +100,9 @@ public class TestIgnorance {
   }
 
   private boolean isIgnoredDueToEnvironmentVariables(Class<?> testClass, Method testMethod) {
-    return (!only.isEmpty() && !only.contains(testClass.getSimpleName())) ||
-      (!methods.isEmpty() && !methods.contains(testMethod.getName())) ||
-      ignoreClasses.contains(testClass.getSimpleName()) ||
-      ignoreMethods.contains(testMethod.getName());
+    return (!only.isEmpty() && !only.contains(testClass.getSimpleName()))
+        || (!methods.isEmpty() && !methods.contains(testMethod.getName()))
+        || ignoreClasses.contains(testClass.getSimpleName())
+        || ignoreMethods.contains(testMethod.getName());
   }
-
 }

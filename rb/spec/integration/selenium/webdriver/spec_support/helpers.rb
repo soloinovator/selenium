@@ -25,20 +25,16 @@ module Selenium
           GlobalTestEnv.driver_instance
         end
 
-        def reset_driver!(time = 0)
-          GlobalTestEnv.reset_driver!(time)
+        def reset_driver!(...)
+          GlobalTestEnv.reset_driver!(...)
         end
 
         def quit_driver
           GlobalTestEnv.quit_driver
         end
 
-        def create_driver!(**opts, &block)
-          GlobalTestEnv.create_driver!(**opts, &block)
-        end
-
-        def ensure_single_window
-          GlobalTestEnv.ensure_single_window
+        def create_driver!(...)
+          GlobalTestEnv.create_driver!(...)
         end
 
         def url_for(filename)
@@ -91,6 +87,19 @@ module Selenium
 
         def wait(timeout = 10)
           Wait.new(timeout: timeout)
+        end
+
+        def png_size(path)
+          png = File.read(path, mode: 'rb')[0x10..0x18]
+          width = png.unpack1('NN')
+          height = png.unpack('NN').last
+
+          if Platform.mac? # Retina
+            width /= 2
+            height /= 2
+          end
+
+          [width, height]
         end
       end # Helpers
     end # SpecSupport

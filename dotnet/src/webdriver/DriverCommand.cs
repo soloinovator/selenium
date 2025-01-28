@@ -1,22 +1,22 @@
-// <copyright file="DriverCommand.cs" company="WebDriver Committers">
+// <copyright file="DriverCommand.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License = string.Empty; Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing = string.Empty; software
-// distributed under the License is distributed on an "AS IS" BASIS = string.Empty;
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND = string.Empty; either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
-using System;
 using System.Collections.Generic;
 
 namespace OpenQA.Selenium
@@ -120,11 +120,6 @@ namespace OpenQA.Selenium
         /// Represents FindShadosChildElements command
         /// </summary>
         public static readonly string FindShadowChildElements = "findShadowChildElements";
-
-        /// <summary>
-        /// Describes an element
-        /// </summary>
-        //public static readonly string DescribeElement = "describeElement";
 
         /// <summary>
         /// Represents ClearElement command
@@ -363,14 +358,59 @@ namespace OpenQA.Selenium
 
         // Virtual Authenticator API
         // http://w3c.github.io/webauthn#sctn-automation
+        /// <summary>
+        /// Represents the AddVirtualAuthenticator command.
+        /// </summary>
         public static readonly string AddVirtualAuthenticator = "addVirtualAuthenticator";
+
+        /// <summary>
+        /// Represents the RemoveVirtualAuthenticator command.
+        /// </summary>
         public static readonly string RemoveVirtualAuthenticator = "removeVirtualAuthenticator";
+
+        /// <summary>
+        /// Represents the AddCredential command
+        /// </summary>
         public static readonly string AddCredential = "addCredential";
+
+        /// <summary>
+        /// Represents the GetCredentials command.
+        /// </summary>
         public static readonly string GetCredentials = "getCredentials";
+
+        /// <summary>
+        /// Represents the RemoveCredential command.
+        /// </summary>
         public static readonly string RemoveCredential = "removeCredential";
+
+        /// <summary>
+        /// Represents the RemoveAllCredentials command.
+        /// </summary>
         public static readonly string RemoveAllCredentials = "removeAllCredentials";
+
+        /// <summary>
+        /// Represents the SetUserVerified command.
+        /// </summary>
         public static readonly string SetUserVerified = "setUserVerified";
 
+        /// <summary>
+        /// Represents the GetDownloadableFiles command.
+        /// </summary>
+        public static readonly string GetDownloadableFiles = "getDownloadableFiles";
+
+        /// <summary>
+        /// Represents the DownloadFile command.
+        /// </summary>
+        public static readonly string DownloadFile = "downloadFile";
+
+        /// <summary>
+        /// Represents the DeleteDownloadableFiles command.
+        /// </summary>
+        public static readonly string DeleteDownloadableFiles = "deleteDownloadableFiles";
+
+        /// <summary>
+        /// Lists the set of known commands valid for the Selenium library.
+        /// </summary>
         public static readonly IList<string> KnownCommands = new List<string>()
         {
             Status,
@@ -443,7 +483,10 @@ namespace OpenQA.Selenium
             GetCredentials,
             RemoveCredential,
             RemoveAllCredentials,
-            SetUserVerified
+            SetUserVerified,
+            GetDownloadableFiles,
+            DownloadFile,
+            DeleteDownloadableFiles
         }.AsReadOnly();
     }
 }

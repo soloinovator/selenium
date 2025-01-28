@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 root = File.expand_path(File.dirname(__FILE__))
-raise "cwd must be #{root} when reading gemspec" if root != Dir.pwd
-
 $LOAD_PATH.push(File.expand_path('lib', root))
 require 'selenium/webdriver/version'
 
@@ -24,12 +22,15 @@ Gem::Specification.new do |s|
   s.homepage = 'https://selenium.dev'
   s.metadata = {
     'changelog_uri' => 'https://github.com/SeleniumHQ/selenium/blob/trunk/rb/CHANGES',
+    'documentation_uri' => 'https://www.selenium.dev/documentation/?tab=ruby',
+    'github_repo' => 'ssh://github.com/SeleniumHQ/selenium',
     'source_code_uri' => 'https://github.com/SeleniumHQ/selenium/tree/trunk/rb',
-    'rubygems_mfa_required' => 'true'
+    'rubygems_mfa_required' => 'true',
+    'funding_uri' => 'https://github.com/sponsors/SeleniumHQ'
   }
 
   s.required_rubygems_version = Gem::Requirement.new('> 1.3.1') if s.respond_to? :required_rubygems_version=
-  s.required_ruby_version = Gem::Requirement.new('>= 2.7')
+  s.required_ruby_version = Gem::Requirement.new('>= 3.1')
 
   s.files = [
     'CHANGES',
@@ -41,26 +42,28 @@ Gem::Specification.new do |s|
     'lib/selenium-webdriver.rb',
     'lib/selenium/server.rb',
     'lib/selenium/webdriver.rb'
-  ] + Dir['lib/selenium/webdriver/**/*']
+  ]
+  s.files += Dir['bin/**/*']
+  s.files += Dir['lib/selenium/webdriver/**/*']
 
+  s.bindir = 'bin'
   s.require_paths = ['lib']
 
-  s.add_runtime_dependency 'childprocess', ['>= 0.5', '< 5.0']
-  s.add_runtime_dependency 'rexml', ['~> 3.2', '>= 3.2.5']
-  s.add_runtime_dependency 'rubyzip', ['>= 1.2.2', '< 3.0']
-  s.add_runtime_dependency 'websocket', ['~> 1.0']
+  s.add_dependency 'base64', ['~> 0.2']
+  s.add_dependency 'logger', ['~> 1.4']
+  s.add_dependency 'rexml', ['~> 3.2', '>= 3.2.5']
+  s.add_dependency 'rubyzip', ['>= 1.2.2', '< 3.0']
+  s.add_dependency 'websocket', ['~> 1.0']
 
-  # childprocess requires ffi on windows but doesn't declare it in its dependencies
-  s.add_development_dependency 'ffi'
-  s.add_development_dependency 'pry', ['~> 0.14']
+  s.add_development_dependency 'git', ['~> 1.19']
   s.add_development_dependency 'rack', ['~> 2.0']
-  s.add_development_dependency 'rake'
+  s.add_development_dependency 'rake', ['~> 13.0']
   s.add_development_dependency 'rspec', ['~> 3.0']
-  s.add_development_dependency 'rubocop', ['~> 1.31']
-  s.add_development_dependency 'rubocop-performance', ['~> 1.13']
-  s.add_development_dependency 'rubocop-rake'
-  s.add_development_dependency 'rubocop-rspec', ['~> 2.12']
+  s.add_development_dependency 'rubocop', ['~> 1.60', '>=1.60.2']
+  s.add_development_dependency 'rubocop-performance', ['~> 1.15']
+  s.add_development_dependency 'rubocop-rake', ['~> 0.6.0']
+  s.add_development_dependency 'rubocop-rspec', ['~> 2.16']
   s.add_development_dependency 'webmock', ['~> 3.5']
   s.add_development_dependency 'webrick', ['~> 1.7']
-  s.add_development_dependency 'yard', ['~> 0.9.11']
+  s.add_development_dependency 'yard', ['~> 0.9.11', '>= 0.9.36']
 end

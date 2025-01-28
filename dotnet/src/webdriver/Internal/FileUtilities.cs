@@ -1,25 +1,29 @@
-// <copyright file="FileUtilities.cs" company="WebDriver Committers">
+// <copyright file="FileUtilities.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
+using OpenQA.Selenium.Internal.Logging;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+
+#nullable enable
 
 namespace OpenQA.Selenium.Internal
 {
@@ -28,6 +32,8 @@ namespace OpenQA.Selenium.Internal
     /// </summary>
     internal static class FileUtilities
     {
+        private static readonly ILogger logger = Log.GetLogger(typeof(FileUtilities));
+
         /// <summary>
         /// Recursively copies a directory.
         /// </summary>
@@ -36,7 +42,7 @@ namespace OpenQA.Selenium.Internal
         /// <returns><see langword="true"/> if the copy is completed; otherwise <see langword="false"/>.</returns>
         public static bool CopyDirectory(string sourceDirectory, string destinationDirectory)
         {
-            bool copyComplete = false;
+            bool copyComplete;
             DirectoryInfo sourceDirectoryInfo = new DirectoryInfo(sourceDirectory);
             DirectoryInfo destinationDirectoryInfo = new DirectoryInfo(destinationDirectory);
 
@@ -99,7 +105,10 @@ namespace OpenQA.Selenium.Internal
 
             if (Directory.Exists(directoryToDelete))
             {
-                Console.WriteLine("Unable to delete directory '{0}'", directoryToDelete);
+                if (logger.IsEnabled(LogEventLevel.Trace))
+                {
+                    logger.Trace($"Unable to delete directory '{directoryToDelete}'");
+                }
             }
         }
 
@@ -125,7 +134,7 @@ namespace OpenQA.Selenium.Internal
 
             // If it's not in the same directory as the executing assembly,
             // try looking in the system path.
-            string systemPath = Environment.GetEnvironmentVariable("PATH");
+            string? systemPath = Environment.GetEnvironmentVariable("PATH");
             if (!string.IsNullOrEmpty(systemPath))
             {
                 string expandedPath = Environment.ExpandEnvironmentVariables(systemPath);
@@ -158,7 +167,7 @@ namespace OpenQA.Selenium.Internal
         public static string GetCurrentDirectory()
         {
             Assembly executingAssembly = typeof(FileUtilities).Assembly;
-            string location = null;
+            string? location = null;
 
             // Make sure not to call Path.GetDirectoryName if assembly location is null or empty
             if (!string.IsNullOrEmpty(executingAssembly.Location))
@@ -177,14 +186,20 @@ namespace OpenQA.Selenium.Internal
                 location = Directory.GetCurrentDirectory();
             }
 
-            string currentDirectory = location;
+            string currentDirectory = location!;
 
+#if !NET8_0_OR_GREATER
             // If we're shadow copying, get the directory from the codebase instead
             if (AppDomain.CurrentDomain.ShadowCopyFiles)
             {
-                Uri uri = new Uri(executingAssembly.CodeBase);
-                currentDirectory = Path.GetDirectoryName(uri.LocalPath);
+                var codeBase = executingAssembly.CodeBase;
+
+                if (codeBase is not null)
+                {
+                    currentDirectory = Path.GetDirectoryName(codeBase);
+                }
             }
+#endif
 
             return currentDirectory;
         }

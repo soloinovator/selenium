@@ -21,7 +21,6 @@ module Selenium
   module WebDriver
     module DriverExtensions
       module HasBiDi
-
         #
         # Retrieves WebDriver BiDi connection.
         #
@@ -29,9 +28,8 @@ module Selenium
         #
 
         def bidi
-          @bidi ||= Selenium::WebDriver::BiDi.new(url: capabilities[:web_socket_url])
+          @bridge.bidi
         end
-
       end # HasBiDi
     end # DriverExtensions
   end # WebDriver

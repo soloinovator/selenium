@@ -30,7 +30,7 @@ the issue is a regression.
 ## Feature Requests
 
 If you find that Selenium is missing something, feel free to open an issue
-with details describing what feature(s) you'd like added or changed.  
+with details describing what feature(s) you'd like added or changed.
 
 If you'd like a hand at trying to implement the feature yourself, please refer to the [Code Contributions](#code-contributions) section of the document.
 
@@ -65,10 +65,11 @@ This document will guide you through the contribution process.
 ### Step 1: Fork
 
 Fork the project [on Github](https://github.com/seleniumhq/selenium)
-and check out your copy locally.
+and check out your copy locally. Use `--depth 1` for a quick check out.
+The repository is ~2GB and checking the whole history takes a while.
 
 ```shell
-% git clone git@github.com:username/selenium.git
+% git clone git@github.com:username/selenium.git --depth 1
 % cd selenium
 % git remote add upstream git://github.com/seleniumhq/selenium.git
 ```
@@ -87,6 +88,40 @@ often a good idea to reach out to the committers on the
 to check that your approach aligns with the project's
 ideas. Nothing is more frustrating than seeing your hard work go to
 waste because your vision doesn't align with the project's.
+
+#### Dependencies Managed by Bazel
+
+##### Java
+
+Edit `MODULE.bazel`, and either update or add the dependency you want
+using the regular maven coordinates to the `maven.install` with the
+name `maven`. Once done, run `REPIN=1 bazel run @maven//:pin` to
+update the lock file, create a PR and check the change in.
+
+##### JS
+
+We use `pnpm` for JS development in the project, and we also use [pnpm
+workspaces](https://pnpm.io/workspaces). Take a look at the top-level
+`pnpm-workspace.yaml` file to find them all, but the main thing to
+know is that each of the workspaces has its own `package.json`. You
+can add dependencies to specific workspaces either by using `pnpm`
+installed on your local machine, or by executing:
+
+```shell
+# Example of adding a dep to the JS webdriver bindings 
+cd javascript/node/selenium-webdriver
+bazel run javascript:pnpm -- install my-amazing-dep --dir $PWD
+```
+
+This will install the dependency using the same version of `pnpm` we
+build the project with for a single JS project.
+
+To update all dependencies in the tree to the latest version:
+
+`bazel run javascript:pnpm -- -r up --dir $PWD`
+
+This will also update the lock file, so once a change is made, create
+a PR and commit all the changed files.
 
 #### License Headers
 
@@ -180,7 +215,7 @@ Use `git rebase` (not `git merge`) to sync your work from time to time.
 ### Step 5: Test
 
 Bug fixes and features **should have tests**. Look at other tests to
-see how they should be structured. Verify that new and existing tests are 
+see how they should be structured. Verify that new and existing tests are
 passing locally before pushing code.
 
 #### Running tests locally
@@ -192,20 +227,20 @@ Build your code for the latest changes and run tests locally.
   <summary>
     Click to see How to run Python Tests.
   </summary>
-  
+
   It's not mandatory to run tests sequentially but running Unit tests
   before browser testing is recommended.
-  
+
   Unit Tests
   ```shell
   % bazel test //py:unit
   ```
-  
+
   Remote Tests
   ```shell
   % bazel test --jobs 1 //py:test-remote
   ```
-  
+
   Browser Tests
   ```shell
   % bazel test //py:test-<browsername> #eg test-chrome, test-firefox
@@ -217,17 +252,17 @@ Build your code for the latest changes and run tests locally.
   <summary>
     Click to see How to run JavaScript Tests.
   </summary>
-  
+
   Node Tests
   ```shell
   % bazel test //javascript/node/selenium-webdriver:tests
   ```
-  
+
   Firefox Atom Tests
   ```shell
   % bazel test --test_tag_filters=firefox //javascript/atoms/... //javascript/selenium-atoms/... //javascript/webdriver/...
   ```
-  
+
   Grid UI Unit Tests
   ```shell
   % cd javascript/grid-ui && npm install && npm test
@@ -239,17 +274,17 @@ Build your code for the latest changes and run tests locally.
   <summary>
     Click to see How to run Java Tests.
   </summary>
-  
+
   Small Tests
   ```shell
   % bazel test --cache_test_results=no --test_size_filters=small grid java/test/...
   ```
-  
+
   Large Tests
   ```shell
   % bazel test --cache_test_results=no java/test/org/openqa/selenium/grid/router:large-tests
   ```
-  
+
   Browser Tests
   ```shell
   bazel test --test_size_filters=small,medium --cache_test_results=no --test_tag_filters=-browser-test //java/...
@@ -257,29 +292,9 @@ Build your code for the latest changes and run tests locally.
 </details>
 
 ##### Ruby
-<details>
-  <summary>
-    Click to see How to run Ruby Tests.
-  </summary>
-  
-  It's not mandatory to run tests sequentially but running Unit tests
-  before browser testing is recommended.
-  
-  Unit Tests
-  ```shell
-  % bazel test rb:unit-test
-  ```
 
-  Chrome Tests
-  ```shell
-  bazel test rb:chrome-test
-  ```
-
-  Remote Tests
-  ```shell
-  % bazel test --test_output=all --test_arg="-tfocus" --test_arg="--fail-fast" rb:remote-chrome-test
-  ```
-</details>
+Please see https://github.com/SeleniumHQ/selenium#ruby for details about running
+tests.
 
 ### Step 6: Push
 
@@ -288,7 +303,7 @@ Build your code for the latest changes and run tests locally.
 ```
 
 Go to https://github.com/yourusername/selenium.git and press the _Pull
-Request_ and fill out the form. 
+Request_ and fill out the form.
 
 Pull requests are usually reviewed within a few days. If there are
 comments to address, apply your changes in new commits (preferably
@@ -338,3 +353,14 @@ Selenium contributors frequent the `#selenium` channel on
 [`irc.freenode.org`](https://webchat.freenode.net/). You can also join
 the [`selenium-developers@` mailing list](https://groups.google.com/forum/#!forum/selenium-developers).
 Check https://selenium.dev/support/ for a complete list of options to communicate.
+
+## Using the EngFlow RBE
+
+To access the EngFlow RBE, a developer needs to be granted access to our project
+container repository. Once that has been done, then any bazel command can be run
+remotely by using `--config=remote`. For example: `bazel build --config=remote
+grid` or `bazel test --config=remote java/test/...`
+
+When you run a remote build, one of the first lines of output from Bazel will 
+include a link to the EngFlow UI so you can track the progress of the build and
+gather information about the efficiency of the build.

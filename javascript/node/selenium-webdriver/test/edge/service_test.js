@@ -17,9 +17,10 @@
 
 'use strict'
 
-const assert = require('assert')
-const edge = require('../../edge')
+const assert = require('node:assert')
+const edge = require('selenium-webdriver/edge')
 const test = require('../../lib/test')
+const { getBinaryPaths } = require('selenium-webdriver/common/driverFinder')
 
 test.suite(
   function (_env) {
@@ -34,11 +35,11 @@ test.suite(
 
       it('can start msedgedriver', async function () {
         service = new edge.ServiceBuilder().build()
-
+        service.setExecutable(getBinaryPaths(new edge.Options()).driverPath)
         let url = await service.start()
         assert(/127\.0\.0\.1/.test(url), `unexpected url: ${url}`)
       })
     })
   },
-  { browsers: ['MicrosoftEdge'] }
+  { browsers: ['MicrosoftEdge'] },
 )

@@ -22,10 +22,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
+import org.jspecify.annotations.NullMarked;
 
-/**
- * Represents a single log statement.
- */
+/** Represents a single log statement. */
+@NullMarked
 public class LogEntry {
 
   private final Level level;
@@ -33,9 +33,9 @@ public class LogEntry {
   private final String message;
 
   /**
-   * @param level     the severity of the log entry
+   * @param level the severity of the log entry
    * @param timestamp UNIX Epoch timestamp at which this log entry was created
-   * @param message ew  the log entry's message
+   * @param message ew the log entry's message
    */
   public LogEntry(Level level, long timestamp, String message) {
     this.level = level;
@@ -84,5 +84,4 @@ public class LogEntry {
     map.put("message", message);
     return map;
   }
-
 }

@@ -17,16 +17,18 @@
 
 package org.openqa.selenium.print;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class PrintOptionsTest {
+class PrintOptionsTest {
 
   @Test
-  public void setsDefaultValues() {
+  void setsDefaultValues() {
     PrintOptions printOptions = new PrintOptions();
 
     assertThat(printOptions.getScale()).isEqualTo(1.0);
@@ -35,7 +37,7 @@ public class PrintOptionsTest {
   }
 
   @Test
-  public void setsValuesAsPassed() {
+  void setsValuesAsPassed() {
     PrintOptions printOptions = new PrintOptions();
 
     printOptions.setBackground(true);
@@ -45,5 +47,35 @@ public class PrintOptionsTest {
     assertThat(printOptions.getScale()).isEqualTo(1.5);
     assertThat(printOptions.getBackground()).isTrue();
     assertThat(printOptions.getShrinkToFit()).isFalse();
+  }
+
+  @Test
+  void setsPageRanges() {
+    PrintOptions printOptions = new PrintOptions();
+
+    printOptions.setPageRanges(List.of("1-2", "6-7"));
+    assertThat(printOptions.getPageRanges().length).isEqualTo(2);
+  }
+
+  @Test
+  void toMapContainsProperKey() {
+    PrintOptions printOptions = new PrintOptions();
+
+    printOptions.setPageRanges("1-2");
+
+    Map<String, Object> map = printOptions.toMap();
+    assertThat(map.size()).isEqualTo(7);
+    assertThat(map.containsKey("page")).isTrue();
+    assertThat(map.containsKey("orientation")).isTrue();
+    assertThat(map.containsKey("scale")).isTrue();
+    assertThat(map.containsKey("shrinkToFit")).isTrue();
+    assertThat(map.containsKey("background")).isTrue();
+    assertThat(map.containsKey("pageRanges")).isTrue();
+    assertThat(map.containsKey("margin")).isTrue();
+
+    Map<String, Double> margin = (Map<String, Double>) map.get("margin");
+    assertThat(margin.size()).isEqualTo(4);
+    Map<String, Double> page = (Map<String, Double>) map.get("page");
+    assertThat(page.size()).isEqualTo(2);
   }
 }

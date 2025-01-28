@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Proxy;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -33,12 +34,10 @@ import org.openqa.selenium.support.How;
 import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.support.pagefactory.ElementLocator;
 
-import java.lang.reflect.Proxy;
-
-public class LocatingElementHandlerTest {
+class LocatingElementHandlerTest {
 
   @Test
-  public void shouldAlwaysLocateTheElementPerCall() {
+  void shouldAlwaysLocateTheElementPerCall() {
     final ElementLocator locator = mock(ElementLocator.class);
     final WebElement element = mock(WebElement.class);
 
@@ -46,8 +45,9 @@ public class LocatingElementHandlerTest {
 
     LocatingElementHandler handler = new LocatingElementHandler(locator);
     WebElement proxy =
-        (WebElement) Proxy.newProxyInstance(getClass().getClassLoader(),
-            new Class[] {WebElement.class}, handler);
+        (WebElement)
+            Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class[] {WebElement.class}, handler);
 
     proxy.sendKeys("Fishy");
     proxy.submit();
@@ -59,7 +59,7 @@ public class LocatingElementHandlerTest {
   }
 
   @Test
-  public void shouldUseAnnotationsToLookUpByAlternativeMechanisms() {
+  void shouldUseAnnotationsToLookUpByAlternativeMechanisms() {
     final WebDriver driver = mock(WebDriver.class);
     final WebElement element = mock(WebElement.class);
 
@@ -76,7 +76,7 @@ public class LocatingElementHandlerTest {
   }
 
   @Test
-  public void shouldNotRepeatedlyLookUpElementsMarkedAsNeverChanging() {
+  void shouldNotRepeatedlyLookUpElementsMarkedAsNeverChanging() {
     final ElementLocator locator = mock(ElementLocator.class);
     final WebElement element = mock(WebElement.class);
 
@@ -84,8 +84,9 @@ public class LocatingElementHandlerTest {
 
     LocatingElementHandler handler = new LocatingElementHandler(locator);
     WebElement proxy =
-        (WebElement) Proxy.newProxyInstance(getClass().getClassLoader(),
-            new Class[] {WebElement.class}, handler);
+        (WebElement)
+            Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class[] {WebElement.class}, handler);
 
     proxy.isEnabled();
     proxy.sendKeys("Cheese");
@@ -95,7 +96,7 @@ public class LocatingElementHandlerTest {
   }
 
   @Test
-  public void findByAnnotationShouldBeInherited() {
+  void findByAnnotationShouldBeInherited() {
     ChildPage page = new ChildPage();
 
     final WebDriver driver = mock(WebDriver.class);

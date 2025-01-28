@@ -17,12 +17,6 @@
 
 package org.openqa.selenium;
 
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.testing.Ignore;
-import org.openqa.selenium.testing.JupiterTestBase;
-import org.openqa.selenium.testing.NotYetImplemented;
-
 import static com.google.common.base.Joiner.on;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -32,12 +26,19 @@ import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
 import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
-public class TypingTest extends JupiterTestBase {
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.testing.Ignore;
+import org.openqa.selenium.testing.JupiterTestBase;
+import org.openqa.selenium.testing.NotYetImplemented;
+
+class TypingTest extends JupiterTestBase {
 
   private static void checkRecordedKeySequence(WebElement element, int expectedKeyCode) {
-    assertThat(element.getText().trim()).contains(
-      String.format("down: %1$d", expectedKeyCode),
-      String.format("up: %1$d", expectedKeyCode));
+    assertThat(element.getText().trim())
+        .contains(
+            String.format("down: %1$d", expectedKeyCode),
+            String.format("up: %1$d", expectedKeyCode));
   }
 
   private static String getValueText(WebElement el) {
@@ -58,7 +59,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFireKeyPressEvents() {
+  void testShouldFireKeyPressEvents() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -69,7 +70,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFireKeyDownEvents() {
+  void testShouldFireKeyDownEvents() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -80,7 +81,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFireKeyUpEvents() {
+  void testShouldFireKeyUpEvents() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -91,7 +92,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldTypeLowerCaseLetters() {
+  void testShouldTypeLowerCaseLetters() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -101,7 +102,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToTypeCapitalLetters() {
+  void testShouldBeAbleToTypeCapitalLetters() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -111,7 +112,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToTypeQuoteMarks() {
+  void testShouldBeAbleToTypeQuoteMarks() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -121,7 +122,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToTypeTheAtCharacter() {
+  void testShouldBeAbleToTypeTheAtCharacter() {
     // simon: I tend to use a US/UK or AUS keyboard layout with English
     // as my primary language. There are consistent reports that we're
     // not handling i18nised keyboards properly. This test exposes this
@@ -137,7 +138,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToMixUpperAndLowerCaseLetters() {
+  void testShouldBeAbleToMixUpperAndLowerCaseLetters() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -147,17 +148,17 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testArrowKeysShouldNotBePrintable() {
+  void testArrowKeysShouldNotBePrintable() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
     keyReporter.sendKeys(Keys.ARROW_LEFT);
 
-    assertThat(keyReporter.getAttribute("value")).isEqualTo("");
+    assertThat(keyReporter.getAttribute("value")).isEmpty();
   }
 
   @Test
-  public void testShouldBeAbleToUseArrowKeys() {
+  void testShouldBeAbleToUseArrowKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement keyReporter = driver.findElement(By.id("keyReporter"));
@@ -259,7 +260,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldReportKeyCodeOfArrowKeys() {
+  void testShouldReportKeyCodeOfArrowKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement result = driver.findElement(By.id("result"));
@@ -278,11 +279,11 @@ public class TypingTest extends JupiterTestBase {
     checkRecordedKeySequence(result, 39);
 
     // And leave no rubbish/printable keys in the "keyReporter"
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  public void testShouldReportKeyCodeOfArrowKeysUpDownEvents() {
+  void testShouldReportKeyCodeOfArrowKeysUpDownEvents() {
     driver.get(pages.javascriptPage);
 
     WebElement result = driver.findElement(By.id("result"));
@@ -301,11 +302,11 @@ public class TypingTest extends JupiterTestBase {
     assertThat(result.getText().trim()).contains("down: 39", "up: 39");
 
     // And leave no rubbish/printable keys in the "keyReporter"
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  public void testNumericNonShiftKeys() {
+  void testNumericNonShiftKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
@@ -317,9 +318,10 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Final assertion isn't 16 since keyUp not sent from shift",
-    issue = "https://github.com/mozilla/geckodriver/issues/646")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Final assertion isn't 16 since keyUp not sent from shift",
+      issue = "https://github.com/mozilla/geckodriver/issues/646")
   public void testNumericShiftKeys() {
     driver.get(pages.javascriptPage);
 
@@ -334,7 +336,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testLowerCaseAlphaKeys() {
+  void testLowerCaseAlphaKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
@@ -346,9 +348,10 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Final assertion isn't 16 since keyUp not sent from shift",
-    issue = "https://github.com/mozilla/geckodriver/issues/646")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Final assertion isn't 16 since keyUp not sent from shift",
+      issue = "https://github.com/mozilla/geckodriver/issues/646")
   public void testUppercaseAlphaKeys() {
     driver.get(pages.javascriptPage);
 
@@ -363,9 +366,10 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Final assertion isn't 16 since keyUp not sent from shift",
-    issue = "https://github.com/mozilla/geckodriver/issues/646")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Final assertion isn't 16 since keyUp not sent from shift",
+      issue = "https://github.com/mozilla/geckodriver/issues/646")
   public void testAllPrintableKeys() {
     driver.get(pages.javascriptPage);
 
@@ -373,8 +377,8 @@ public class TypingTest extends JupiterTestBase {
     WebElement element = driver.findElement(By.id("keyReporter"));
 
     String allPrintable =
-        "!\"#$%&'()*+,-./0123456789:;<=>?@ ABCDEFGHIJKLMNO" +
-        "PQRSTUVWXYZ [\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+        "!\"#$%&'()*+,-./0123456789:;<=>?@ ABCDEFGHIJKLMNO"
+            + "PQRSTUVWXYZ [\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
     element.sendKeys(allPrintable);
 
     assertThat(element.getAttribute("value")).isEqualTo(allPrintable);
@@ -382,33 +386,56 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testArrowKeysAndPageUpAndDown() {
+  void testArrowKeysAndPageUpAndDown() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
 
-    element.sendKeys("a" + Keys.LEFT + "b" + Keys.RIGHT +
-                     Keys.UP + Keys.DOWN + Keys.PAGE_UP + Keys.PAGE_DOWN + "1");
+    element.sendKeys(
+        "a"
+            + Keys.LEFT
+            + "b"
+            + Keys.RIGHT
+            + Keys.UP
+            + Keys.DOWN
+            + Keys.PAGE_UP
+            + Keys.PAGE_DOWN
+            + "1");
     assertThat(element.getAttribute("value")).isEqualTo("ba1");
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Firefox can't type at beginning of field",
-    issue = "https://github.com/mozilla/geckodriver/issues/2015")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Firefox can't type at beginning of field",
+      issue = "https://github.com/mozilla/geckodriver/issues/2015")
   public void testHomeAndEndAndPageUpAndPageDownKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
 
-    element.sendKeys("abc" + homeKey() + "0" + Keys.LEFT + Keys.RIGHT +
-                     Keys.PAGE_UP + Keys.PAGE_DOWN + endKey() + "1" + homeKey() +
-                     "0" + Keys.PAGE_UP + endKey() + "111" + homeKey() + "00");
+    element.sendKeys(
+        "abc"
+            + homeKey()
+            + "0"
+            + Keys.LEFT
+            + Keys.RIGHT
+            + Keys.PAGE_UP
+            + Keys.PAGE_DOWN
+            + endKey()
+            + "1"
+            + homeKey()
+            + "0"
+            + Keys.PAGE_UP
+            + endKey()
+            + "111"
+            + homeKey()
+            + "00");
     assertThat(element.getAttribute("value")).isEqualTo("0000abc1111");
   }
 
   @Test
-  public void testDeleteAndBackspaceKeys() {
+  void testDeleteAndBackspaceKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
@@ -424,7 +451,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSpecialSpaceKeys() {
+  void testSpecialSpaceKeys() {
     driver.get(pages.javascriptPage);
 
     WebElement element = driver.findElement(By.id("keyReporter"));
@@ -440,10 +467,21 @@ public class TypingTest extends JupiterTestBase {
 
     WebElement element = driver.findElement(By.id("keyReporter"));
 
-    element.sendKeys("abcd" + Keys.MULTIPLY + Keys.SUBTRACT + Keys.ADD +
-                     Keys.DECIMAL + Keys.SEPARATOR + Keys.NUMPAD0 + Keys.NUMPAD9 +
-                     Keys.ADD + Keys.SEMICOLON + Keys.EQUALS + Keys.DIVIDE +
-                     Keys.NUMPAD3 + "abcd");
+    element.sendKeys(
+        "abcd"
+            + Keys.MULTIPLY
+            + Keys.SUBTRACT
+            + Keys.ADD
+            + Keys.DECIMAL
+            + Keys.SEPARATOR
+            + Keys.NUMPAD0
+            + Keys.NUMPAD9
+            + Keys.ADD
+            + Keys.SEMICOLON
+            + Keys.EQUALS
+            + Keys.DIVIDE
+            + Keys.NUMPAD3
+            + "abcd");
     assertThat(element.getAttribute("value")).isEqualTo("abcd*-+.,09+;=/3abcd");
   }
 
@@ -475,7 +513,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testChordControlHomeShiftEndDelete() {
+  void testChordControlHomeShiftEndDelete() {
 
     driver.get(pages.javascriptPage);
 
@@ -487,13 +525,14 @@ public class TypingTest extends JupiterTestBase {
     element.sendKeys("" + Keys.SHIFT + homeKey());
 
     element.sendKeys(Keys.DELETE);
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Firefox can't type at beginning of field",
-    issue = "https://github.com/mozilla/geckodriver/issues/2015")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Firefox can't type at beginning of field",
+      issue = "https://github.com/mozilla/geckodriver/issues/2015")
   public void testChordReverseShiftHomeSelectionDeletes() {
     driver.get(pages.javascriptPage);
 
@@ -514,13 +553,14 @@ public class TypingTest extends JupiterTestBase {
     assertThat(result.getText().trim()).contains(" up: 16");
 
     element.sendKeys(Keys.DELETE);
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  @Ignore(value = FIREFOX,
-    reason = "Firefox can't type at beginning of field",
-    issue = "https://github.com/mozilla/geckodriver/issues/2015")
+  @Ignore(
+      value = FIREFOX,
+      reason = "Firefox can't type at beginning of field",
+      issue = "https://github.com/mozilla/geckodriver/issues/2015")
   public void testChordControlCutAndPaste() {
     driver.get(pages.javascriptPage);
 
@@ -534,7 +574,7 @@ public class TypingTest extends JupiterTestBase {
     element.sendKeys("" + homeKey() + Keys.SHIFT + endKey());
 
     element.sendKeys(primaryModifier(), "x");
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
 
     element.sendKeys(primaryModifier(), "v");
     wait.until(elementValueToEqual(element, paste));
@@ -556,11 +596,11 @@ public class TypingTest extends JupiterTestBase {
     assertThat(element.getAttribute("value")).isEqualTo("EFGEFGEFGEFGEFGEFG" + paste);
 
     element.sendKeys("" + Keys.END + Keys.SHIFT + homeKey() + Keys.NULL + Keys.DELETE);
-    assertThat(element.getAttribute("value")).isEqualTo("");
+    assertThat(element.getAttribute("value")).isEmpty();
   }
 
   @Test
-  public void testShouldTypeIntoInputElementsThatHaveNoTypeAttribute() {
+  void testShouldTypeIntoInputElementsThatHaveNoTypeAttribute() {
     driver.get(pages.formPage);
 
     WebElement element = driver.findElement(By.id("no-type"));
@@ -570,13 +610,13 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldNotTypeIntoElementsThatPreventKeyDownEvents() {
+  void testShouldNotTypeIntoElementsThatPreventKeyDownEvents() {
     driver.get(pages.javascriptPage);
 
     WebElement silent = driver.findElement(By.name("suppress"));
 
     silent.sendKeys("s");
-    assertThat(silent.getAttribute("value")).isEqualTo("");
+    assertThat(silent.getAttribute("value")).isEmpty();
   }
 
   @Test
@@ -592,7 +632,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToTypeOnAnEmailInputField() {
+  void testShouldBeAbleToTypeOnAnEmailInputField() {
     driver.get(pages.formPage);
     WebElement email = driver.findElement(By.id("email"));
     email.sendKeys("foobar");
@@ -600,7 +640,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToTypeOnANumberInputField() {
+  void testShouldBeAbleToTypeOnANumberInputField() {
     driver.get(pages.formPage);
     WebElement email = driver.findElement(By.id("age"));
     email.sendKeys("33");
@@ -608,7 +648,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldThrowIllegalArgumentException() {
+  void testShouldThrowIllegalArgumentException() {
     driver.get(pages.formPage);
     WebElement email = driver.findElement(By.id("age"));
     assertThatExceptionOfType(IllegalArgumentException.class)
@@ -616,36 +656,36 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void canSafelyTypeOnElementThatIsRemovedFromTheDomOnKeyPress() {
+  void canSafelyTypeOnElementThatIsRemovedFromTheDomOnKeyPress() {
     driver.get(appServer.whereIs("key_tests/remove_on_keypress.html"));
 
     WebElement input = driver.findElement(By.id("target"));
     WebElement log = driver.findElement(By.id("log"));
 
-    assertThat(log.getAttribute("value")).isEqualTo("");
+    assertThat(log.getAttribute("value")).isEmpty();
 
     input.sendKeys("b");
-    assertThat(getValueText(log)).isEqualTo(on('\n').join(
-        "keydown (target)",
-        "keyup (target)",
-        "keyup (body)"));
+    assertThat(getValueText(log))
+        .isEqualTo(on('\n').join("keydown (target)", "keyup (target)", "keyup (body)"));
 
     input.sendKeys("a");
 
     // Some drivers (IE, Firefox) do not always generate the final keyup event since the element
     // is removed from the DOM in response to the keypress (note, this is a product of how events
     // are generated and does not match actual user behavior).
-    String expected = String.join("\n",
-        "keydown (target)",
-        "keyup (target)",
-        "keyup (body)",
-        "keydown (target)",
-        "a pressed; removing");
+    String expected =
+        String.join(
+            "\n",
+            "keydown (target)",
+            "keyup (target)",
+            "keyup (body)",
+            "keydown (target)",
+            "a pressed; removing");
     assertThat(getValueText(log)).isIn(expected, expected + "\nkeyup (body)");
   }
 
   @Test
-  public void canClearNumberInputAfterTypingInvalidInput() {
+  void canClearNumberInputAfterTypingInvalidInput() {
     driver.get(pages.formPage);
     WebElement input = driver.findElement(By.id("age"));
     input.sendKeys("e");
@@ -655,7 +695,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void canTypeSingleNewLineCharacterIntoTextArea() {
+  void canTypeSingleNewLineCharacterIntoTextArea() {
     driver.get(pages.formPage);
     WebElement element = driver.findElement(By.id("emptyTextArea"));
     element.sendKeys("\n");
@@ -663,7 +703,7 @@ public class TypingTest extends JupiterTestBase {
   }
 
   @Test
-  public void canTypeMultipleNewLineCharactersIntoTextArea() {
+  void canTypeMultipleNewLineCharactersIntoTextArea() {
     driver.get(pages.formPage);
     WebElement element = driver.findElement(By.id("emptyTextArea"));
     element.sendKeys("\n\n\n");

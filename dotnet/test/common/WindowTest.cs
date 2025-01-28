@@ -1,6 +1,25 @@
+// <copyright file="WindowTest.cs" company="Selenium Committers">
+// Licensed to the Software Freedom Conservancy (SFC) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
+
+using NUnit.Framework;
 using System;
 using System.Drawing;
-using NUnit.Framework;
 
 namespace OpenQA.Selenium
 {
@@ -41,8 +60,8 @@ namespace OpenQA.Selenium
             ChangeSizeBy(-20, -20);
 
             Size newSize = window.Size;
-            Assert.AreEqual(targetSize.Width, newSize.Width);
-            Assert.AreEqual(targetSize.Height, newSize.Height);
+            Assert.That(newSize.Width, Is.EqualTo(targetSize.Width));
+            Assert.That(newSize.Height, Is.EqualTo(targetSize.Height));
         }
 
         [Test]
@@ -61,8 +80,8 @@ namespace OpenQA.Selenium
 
 
                 Size newSize = window.Size;
-                Assert.AreEqual(targetSize.Width, newSize.Width);
-                Assert.AreEqual(targetSize.Height, newSize.Height);
+                Assert.That(newSize.Width, Is.EqualTo(targetSize.Width));
+                Assert.That(newSize.Height, Is.EqualTo(targetSize.Height));
             }
             finally
             {
@@ -86,8 +105,8 @@ namespace OpenQA.Selenium
 
 
                 Size newSize = window.Size;
-                Assert.AreEqual(targetSize.Width, newSize.Width);
-                Assert.AreEqual(targetSize.Height, newSize.Height);
+                Assert.That(newSize.Width, Is.EqualTo(targetSize.Width));
+                Assert.That(newSize.Height, Is.EqualTo(targetSize.Height));
             }
             finally
             {
@@ -115,8 +134,8 @@ namespace OpenQA.Selenium
 
             Point newLocation = window.Position;
 
-            Assert.AreEqual(targetPosition.X, newLocation.X);
-            Assert.AreEqual(targetPosition.Y, newLocation.Y);
+            Assert.That(newLocation.X, Is.EqualTo(targetPosition.X));
+            Assert.That(newLocation.Y, Is.EqualTo(targetPosition.Y));
         }
 
         [Test]
@@ -172,6 +191,7 @@ namespace OpenQA.Selenium
         //------------------------------------------------------------------
 
         [Test]
+        [IgnoreBrowser(Browser.IE, "Edge in IE Mode does not support full screen")]
         public void ShouldBeAbleToFullScreenTheCurrentWindow()
         {
             IWindow window = driver.Manage().Window;
@@ -184,29 +204,21 @@ namespace OpenQA.Selenium
             FullScreen();
 
             Size windowSize = window.Size;
-            Point windowPosition = window.Position;
+
             Assert.That(windowSize.Height, Is.GreaterThan(targetSize.Height));
             Assert.That(windowSize.Width, Is.GreaterThan(targetSize.Width));
         }
 
         [Test]
-        [IgnoreBrowser(Browser.Chrome, "Chrome window size does not report zero when minimized.")]
-        [IgnoreBrowser(Browser.Edge, "Edge window size does not report zero when minimized.")]
         public void ShouldBeAbleToMinimizeTheCurrentWindow()
         {
             Size targetSize = new Size(640, 400);
 
             ChangeSizeTo(targetSize);
 
-            Minimize();
+            driver.Manage().Window.Minimize();
 
-            IWindow window = driver.Manage().Window;
-            Size windowSize = window.Size;
-            Point windowPosition = window.Position;
-            Assert.That(windowSize.Height, Is.LessThan(targetSize.Height));
-            Assert.That(windowSize.Width, Is.LessThan(targetSize.Width));
-            Assert.That(windowPosition.X, Is.LessThan(0));
-            Assert.That(windowPosition.Y, Is.LessThan(0));
+            Assert.That(((IJavaScriptExecutor)driver).ExecuteScript("return document.hidden;"), Is.True);
         }
 
         private void FullScreen()
@@ -223,15 +235,6 @@ namespace OpenQA.Selenium
             window.Maximize();
             WaitFor(WindowHeightToBeGreaterThan(currentSize.Height), "Window height was not greater than " + currentSize.Height.ToString());
             WaitFor(WindowWidthToBeGreaterThan(currentSize.Width), "Window width was not greater than " + currentSize.Width.ToString());
-        }
-
-        private void Minimize()
-        {
-            IWindow window = driver.Manage().Window;
-            Size currentSize = window.Size;
-            window.Minimize();
-            WaitFor(WindowHeightToBeLessThan(currentSize.Height), "Window height was not less than " + currentSize.Height.ToString());
-            WaitFor(WindowWidthToBeLessThan(currentSize.Width), "Window width was not less than " + currentSize.Width.ToString());
         }
 
         private void ChangeSizeTo(Size targetSize)

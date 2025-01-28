@@ -22,11 +22,6 @@ import static org.openqa.selenium.remote.http.Contents.string;
 import static org.openqa.selenium.remote.http.Contents.utf8String;
 
 import com.google.common.base.Splitter;
-
-import org.openqa.selenium.remote.http.HttpHandler;
-import org.openqa.selenium.remote.http.HttpRequest;
-import org.openqa.selenium.remote.http.HttpResponse;
-
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -37,8 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.openqa.selenium.remote.http.HttpHandler;
+import org.openqa.selenium.remote.http.HttpRequest;
+import org.openqa.selenium.remote.http.HttpResponse;
 
-public class UploadHandler implements HttpHandler {
+class UploadHandler implements HttpHandler {
 
   @Override
   public HttpResponse execute(HttpRequest req) throws UncheckedIOException {
@@ -50,9 +48,7 @@ public class UploadHandler implements HttpHandler {
 
     // I mean. Seriously. *sigh*
     try {
-      String decoded = URLDecoder.decode(
-          string(req),
-          Charset.defaultCharset().displayName());
+      String decoded = URLDecoder.decode(string(req), Charset.defaultCharset().displayName());
 
       String[] splits = decoded.split("\r\n");
 
@@ -74,7 +70,8 @@ public class UploadHandler implements HttpHandler {
         }
 
         if (inHeaders && splits[i].toLowerCase().startsWith("content-disposition:")) {
-          for (String keyValue : Splitter.on(';').trimResults().omitEmptyStrings().split(splits[i])) {
+          for (String keyValue :
+              Splitter.on(';').trimResults().omitEmptyStrings().split(splits[i])) {
             Matcher matcher = Pattern.compile("(\\S+)\\s*=.*\"(.*?)\".*").matcher(keyValue);
             if (matcher.find()) {
               values.put(matcher.group(1), matcher.group(2));
@@ -87,11 +84,12 @@ public class UploadHandler implements HttpHandler {
         }
       }
 
-      Object value = allParts.stream()
-          .filter(map -> "upload".equals(map.get("name")))
-          .findFirst()
-          .map(map -> map.get("content"))
-          .orElseThrow(() -> new RuntimeException("Cannot find uploaded data"));
+      Object value =
+          allParts.stream()
+              .filter(map -> "upload".equals(map.get("name")))
+              .findFirst()
+              .map(map -> map.get("content"))
+              .orElseThrow(() -> new RuntimeException("Cannot find uploaded data"));
 
       content.append(value);
     } catch (UnsupportedEncodingException e) {

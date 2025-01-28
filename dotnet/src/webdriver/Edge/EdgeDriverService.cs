@@ -1,26 +1,26 @@
-// <copyright file="EdgeDriverService.cs" company="WebDriver Committers">
+// <copyright file="EdgeDriverService.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
-using System;
-using System.Globalization;
-using System.Text;
-using OpenQA.Selenium.Internal;
 using OpenQA.Selenium.Chromium;
+using OpenQA.Selenium.Internal;
+using System;
+using System.IO;
 
 namespace OpenQA.Selenium.Edge
 {
@@ -31,8 +31,6 @@ namespace OpenQA.Selenium.Edge
     {
         private const string MSEdgeDriverServiceFileName = "msedgedriver";
 
-        private static readonly Uri MicrosoftWebDriverDownloadUrl = new Uri("https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/");
-
         /// <summary>
         /// Initializes a new instance of the <see cref="EdgeDriverService"/> class.
         /// </summary>
@@ -40,13 +38,20 @@ namespace OpenQA.Selenium.Edge
         /// <param name="executableFileName">The file name of the EdgeDriver executable.</param>
         /// <param name="port">The port on which the EdgeDriver executable should listen.</param>
         private EdgeDriverService(string executablePath, string executableFileName, int port)
-            : base(executablePath, executableFileName, port, MicrosoftWebDriverDownloadUrl)
+            : base(executablePath, executableFileName, port)
         {
+        }
+
+        /// <inheritdoc />
+        protected override DriverOptions GetDefaultDriverOptions()
+        {
+            return new EdgeOptions();
         }
 
         /// <summary>
         /// Gets or sets a value indicating whether the service should use verbose logging.
         /// </summary>
+        [Obsolete("Use EnableVerboseLogging")]
         public bool UseVerboseLogging
         {
             get { return this.EnableVerboseLogging; }
@@ -59,9 +64,7 @@ namespace OpenQA.Selenium.Edge
         /// <returns>A EdgeDriverService that implements default settings.</returns>
         public static EdgeDriverService CreateDefaultService()
         {
-            string serviceDirectory = DriverService.FindDriverServiceExecutable(ChromiumDriverServiceFileName(MSEdgeDriverServiceFileName),
-                                                                                MicrosoftWebDriverDownloadUrl);
-            return CreateDefaultService(serviceDirectory);
+            return new EdgeDriverService(null, null, PortUtilities.FindFreePort());
         }
 
         /// <summary>
@@ -71,7 +74,18 @@ namespace OpenQA.Selenium.Edge
         /// <returns>An EdgeDriverService using a random port.</returns>
         public static EdgeDriverService CreateDefaultService(string driverPath)
         {
-            return CreateDefaultService(driverPath, ChromiumDriverServiceFileName(MSEdgeDriverServiceFileName));
+            string fileName;
+            if (File.Exists(driverPath))
+            {
+                fileName = Path.GetFileName(driverPath);
+                driverPath = Path.GetDirectoryName(driverPath);
+            }
+            else
+            {
+                fileName = ChromiumDriverServiceFileName(MSEdgeDriverServiceFileName);
+            }
+
+            return CreateDefaultService(driverPath, fileName);
         }
 
         /// <summary>

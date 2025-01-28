@@ -20,22 +20,21 @@ package org.openqa.selenium.remote.http;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class UrlTemplateTest {
+class UrlTemplateTest {
 
   @Test
-  public void shouldNotMatchAgainstTemplateThatDoesNotMatch() {
+  void shouldNotMatchAgainstTemplateThatDoesNotMatch() {
     UrlTemplate.Match match = new UrlTemplate("/session/cake").match("/i/like/peas");
 
     assertThat(match).isNull();
   }
 
   @Test
-  public void shouldReturnAStraightUrl() {
+  void shouldReturnAStraightUrl() {
     UrlTemplate.Match match = new UrlTemplate("/session/cake").match("/session/cake");
 
     assertThat(match.getUrl()).isEqualTo("/session/cake");
@@ -43,7 +42,7 @@ public class UrlTemplateTest {
   }
 
   @Test
-  public void shouldExpandParameters() {
+  void shouldExpandParameters() {
     UrlTemplate.Match match = new UrlTemplate("/i/like/{veggie}").match("/i/like/cake");
 
     assertThat(match.getUrl()).isEqualTo("/i/like/cake");
@@ -51,7 +50,17 @@ public class UrlTemplateTest {
   }
 
   @Test
-  public void itIsFineForTheFirstCharacterToBeAPattern() {
+  void shouldExpandTwoParameters() {
+    UrlTemplate.Match match =
+        new UrlTemplate("/i/like/{flavor}/{veggie}").match("/i/like/sweet/cake");
+
+    assertThat(match.getUrl()).isEqualTo("/i/like/sweet/cake");
+    assertThat(match.getParameters())
+        .isEqualTo(ImmutableMap.of("flavor", "sweet", "veggie", "cake"));
+  }
+
+  @Test
+  void itIsFineForTheFirstCharacterToBeAPattern() {
     UrlTemplate.Match match = new UrlTemplate("{cake}/type").match("cheese/type");
 
     assertThat(match.getUrl()).isEqualTo("cheese/type");
@@ -59,7 +68,32 @@ public class UrlTemplateTest {
   }
 
   @Test
-  public void aNullMatchDoesNotCauseANullPointerExceptionToBeThrown() {
+  void shouldMatchAgainstUrlTemplateExcludePrefix() {
+    UrlTemplate.Match match =
+        new UrlTemplate("/session/{id}/se/vnc").match("/prefix/session/1234/se/vnc", "/prefix");
+
+    assertThat(match.getUrl()).isEqualTo("/session/1234/se/vnc");
+    assertThat(match.getParameters()).isEqualTo(ImmutableMap.of("id", "1234"));
+  }
+
+  @Test
+  void shouldMatchAgainstUrlTemplateWithEmptyPrefix() {
+    UrlTemplate.Match match =
+        new UrlTemplate("/session/{id}/se/vnc").match("/session/1234/se/vnc", "");
+
+    assertThat(match.getUrl()).isEqualTo("/session/1234/se/vnc");
+    assertThat(match.getParameters()).isEqualTo(ImmutableMap.of("id", "1234"));
+  }
+
+  @Test
+  void aNullMatchDoesNotCauseANullPointerExceptionToBeThrown() {
     assertThat(new UrlTemplate("/").match(null)).isNull();
+  }
+
+  @Test
+  void noPartialMatches() {
+    assertThat(new UrlTemplate("/session").match("/no-session")).isNull();
+    assertThat(new UrlTemplate("/session").match("/session-no")).isNull();
+    assertThat(new UrlTemplate("/session").match("/no-session-no")).isNull();
   }
 }

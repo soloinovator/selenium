@@ -1,26 +1,29 @@
-// <copyright file="ChromiumDriver.cs" company="WebDriver Committers">
+// <copyright file="ChromiumDriver.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
+using OpenQA.Selenium.DevTools;
+using OpenQA.Selenium.Remote;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using OpenQA.Selenium.DevTools;
-using OpenQA.Selenium.Remote;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace OpenQA.Selenium.Chromium
 {
@@ -125,14 +128,41 @@ namespace OpenQA.Selenium.Chromium
         /// <param name="options">The <see cref="ChromiumOptions"/> to be used with the ChromiumDriver.</param>
         /// <param name="commandTimeout">The maximum amount of time to wait for each command.</param>
         protected ChromiumDriver(ChromiumDriverService service, ChromiumOptions options, TimeSpan commandTimeout)
-            : base(new DriverServiceCommandExecutor(service, commandTimeout), ConvertOptionsToCapabilities(options))
+            : base(GenerateDriverServiceCommandExecutor(service, options, commandTimeout), ConvertOptionsToCapabilities(options))
         {
             this.optionsCapabilityName = options.CapabilityName;
         }
 
+        /// <summary>
+        /// Gets the dictionary of custom Chromium commands registered with the driver.
+        /// </summary>
         protected static IReadOnlyDictionary<string, CommandInfo> ChromiumCustomCommands
         {
             get { return new ReadOnlyDictionary<string, CommandInfo>(chromiumCustomCommands); }
+        }
+
+        /// <summary>
+        /// Uses DriverFinder to set Service attributes if necessary when creating the command executor
+        /// </summary>
+        /// <param name="service"></param>
+        /// <param name="commandTimeout"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        private static ICommandExecutor GenerateDriverServiceCommandExecutor(DriverService service, DriverOptions options, TimeSpan commandTimeout)
+        {
+            if (service.DriverServicePath == null)
+            {
+                DriverFinder finder = new DriverFinder(options);
+                string fullServicePath = finder.GetDriverPath();
+                service.DriverServicePath = Path.GetDirectoryName(fullServicePath);
+                service.DriverServiceExecutableName = Path.GetFileName(fullServicePath);
+                if (finder.HasBrowserPath())
+                {
+                    options.BinaryLocation = finder.GetBrowserPath();
+                    options.BrowserVersion = null;
+                }
+            }
+            return new DriverServiceCommandExecutor(service, commandTimeout);
         }
 
         /// <summary>
@@ -247,19 +277,17 @@ namespace OpenQA.Selenium.Chromium
         /// <summary>
         /// Creates a session to communicate with a browser using the Chromium Developer Tools debugging protocol.
         /// </summary>
-        /// <param name="devToolsProtocolVersion">The version of the Chromium Developer Tools protocol to use. Defaults to autodetect the protocol version.</param>
         /// <returns>The active session to use to communicate with the Chromium Developer Tools debugging protocol.</returns>
         public DevToolsSession GetDevToolsSession()
         {
-            return GetDevToolsSession(DevToolsSession.AutoDetectDevToolsProtocolVersion);
+            return GetDevToolsSession(new DevToolsOptions() { ProtocolVersion = DevToolsSession.AutoDetectDevToolsProtocolVersion });
         }
 
         /// <summary>
         /// Creates a session to communicate with a browser using the Chromium Developer Tools debugging protocol.
         /// </summary>
-        /// <param name="devToolsProtocolVersion">The version of the Chromium Developer Tools protocol to use. Defaults to autodetect the protocol version.</param>
         /// <returns>The active session to use to communicate with the Chromium Developer Tools debugging protocol.</returns>
-        public DevToolsSession GetDevToolsSession(int devToolsProtocolVersion)
+        public DevToolsSession GetDevToolsSession(DevToolsOptions options)
         {
             if (this.devToolsSession == null)
             {
@@ -268,22 +296,22 @@ namespace OpenQA.Selenium.Chromium
                     throw new WebDriverException("Cannot find " + this.optionsCapabilityName + " capability for driver");
                 }
 
-                Dictionary<string, object> options = this.Capabilities.GetCapability(this.optionsCapabilityName) as Dictionary<string, object>;
-                if (options == null)
+                Dictionary<string, object> optionsCapability = this.Capabilities.GetCapability(this.optionsCapabilityName) as Dictionary<string, object>;
+                if (optionsCapability == null)
                 {
                     throw new WebDriverException("Found " + this.optionsCapabilityName + " capability, but is not an object");
                 }
 
-                if (!options.ContainsKey("debuggerAddress"))
+                if (!optionsCapability.ContainsKey("debuggerAddress"))
                 {
                     throw new WebDriverException("Did not find debuggerAddress capability in " + this.optionsCapabilityName);
                 }
 
-                string debuggerAddress = options["debuggerAddress"].ToString();
+                string debuggerAddress = optionsCapability["debuggerAddress"].ToString();
                 try
                 {
-                    DevToolsSession session = new DevToolsSession(debuggerAddress);
-                    session.StartSession(devToolsProtocolVersion).ConfigureAwait(false).GetAwaiter().GetResult();
+                    DevToolsSession session = new DevToolsSession(debuggerAddress, options);
+                    Task.Run(async () => await session.StartSession()).GetAwaiter().GetResult();
                     this.devToolsSession = session;
                 }
                 catch (Exception e)
@@ -296,13 +324,24 @@ namespace OpenQA.Selenium.Chromium
         }
 
         /// <summary>
+        /// Creates a session to communicate with a browser using the Chromium Developer Tools debugging protocol.
+        /// </summary>
+        /// <param name="devToolsProtocolVersion">The version of the Chromium Developer Tools protocol to use. Defaults to autodetect the protocol version.</param>
+        /// <returns>The active session to use to communicate with the Chromium Developer Tools debugging protocol.</returns>
+        [Obsolete("Use GetDevToolsSession(DevToolsOptions options)")]
+        public DevToolsSession GetDevToolsSession(int devToolsProtocolVersion)
+        {
+            return GetDevToolsSession(new DevToolsOptions() { ProtocolVersion = devToolsProtocolVersion });
+        }
+
+        /// <summary>
         /// Closes a DevTools session.
         /// </summary>
         public void CloseDevToolsSession()
         {
             if (this.devToolsSession != null)
             {
-                this.devToolsSession.StopSession(true).ConfigureAwait(false).GetAwaiter().GetResult();
+                Task.Run(async () => await this.devToolsSession.StopSession(true)).GetAwaiter().GetResult();
             }
         }
 
@@ -417,6 +456,10 @@ namespace OpenQA.Selenium.Chromium
             this.Execute(StopCastingCommand, parameters);
         }
 
+        /// <summary>
+        /// Stops the driver from running
+        /// </summary>
+        /// <param name="disposing">if its in the process of disposing</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing)

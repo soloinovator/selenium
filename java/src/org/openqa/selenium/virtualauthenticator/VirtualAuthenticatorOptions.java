@@ -20,11 +20,15 @@ package org.openqa.selenium.virtualauthenticator;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.jspecify.annotations.NullMarked;
 
 /**
  * Options for the creation of virtual authenticators.
- * @see <a href="https://w3c.github.io/webauthn/#sctn-automation">https://w3c.github.io/webauthn/#sctn-automation</a>
+ *
+ * @see <a
+ *     href="https://w3c.github.io/webauthn/#sctn-automation">https://w3c.github.io/webauthn/#sctn-automation</a>
  */
+@NullMarked
 public class VirtualAuthenticatorOptions {
 
   public enum Protocol {
@@ -58,7 +62,7 @@ public class VirtualAuthenticatorOptions {
   private boolean isUserConsenting = true;
   private boolean isUserVerified = false;
 
-  public VirtualAuthenticatorOptions() { }
+  public VirtualAuthenticatorOptions() {}
 
   public VirtualAuthenticatorOptions setProtocol(Protocol protocol) {
     this.protocol = protocol;

@@ -25,11 +25,10 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
-/**
- * Utility methods for common filesystem activities
- */
+/** Utility methods for common filesystem activities */
 public class FileHandler {
 
   public static void copyResource(File outputDir, Class<?> forClassLoader, String... names)
@@ -43,10 +42,10 @@ public class FileHandler {
 
   private static InputStream locateResource(Class<?> forClassLoader, String name)
       throws IOException {
-    String arch = Objects.requireNonNull(System.getProperty("os.arch")).toLowerCase() + "/";
-    List<String> alternatives =
-        Arrays.asList(name, "/" + name, arch + name, "/" + arch + name);
-    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+    String arch =
+        Objects.requireNonNull(System.getProperty("os.arch")).toLowerCase(Locale.ENGLISH) + "/";
+    List<String> alternatives = Arrays.asList(name, "/" + name, arch + name, "/" + arch + name);
+    if (System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("mac")) {
       alternatives.add("mac/" + name);
       alternatives.add("/mac/" + name);
     }
@@ -66,10 +65,8 @@ public class FileHandler {
     throw new IOException("Unable to locate: " + name);
   }
 
-
   public static boolean createDir(File dir) {
-    if ((dir.exists() || dir.mkdirs()) && dir.canWrite())
-      return true;
+    if ((dir.exists() || dir.mkdirs()) && dir.canWrite()) return true;
 
     if (dir.exists()) {
       FileHandler.makeWritable(dir);

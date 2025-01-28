@@ -1,26 +1,27 @@
-// <copyright file="FirefoxDriverService.cs" company="WebDriver Committers">
+// <copyright file="FirefoxDriverService.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
+using OpenQA.Selenium.Internal;
 using System;
 using System.Globalization;
-using System.Net;
+using System.IO;
 using System.Text;
-using OpenQA.Selenium.Internal;
 
 namespace OpenQA.Selenium.Firefox
 {
@@ -30,7 +31,6 @@ namespace OpenQA.Selenium.Firefox
     public sealed class FirefoxDriverService : DriverService
     {
         private const string DefaultFirefoxDriverServiceFileName = "geckodriver";
-        private static readonly Uri FirefoxDriverDownloadUrl = new Uri("https://github.com/mozilla/geckodriver/releases");
 
         private bool connectToRunningBrowser;
         private bool openBrowserToolbox;
@@ -47,8 +47,14 @@ namespace OpenQA.Selenium.Firefox
         /// <param name="executableFileName">The file name of the Firefox driver executable.</param>
         /// <param name="port">The port on which the Firefox driver executable should listen.</param>
         private FirefoxDriverService(string executablePath, string executableFileName, int port)
-            : base(executablePath, port, executableFileName, FirefoxDriverDownloadUrl)
+            : base(executablePath, port, executableFileName)
         {
+        }
+
+        /// <inheritdoc />
+        protected override DriverOptions GetDefaultDriverOptions()
+        {
+            return new FirefoxOptions();
         }
 
         /// <summary>
@@ -209,18 +215,29 @@ namespace OpenQA.Selenium.Firefox
         /// <returns>A FirefoxDriverService that implements default settings.</returns>
         public static FirefoxDriverService CreateDefaultService()
         {
-            string serviceDirectory = DriverService.FindDriverServiceExecutable(FirefoxDriverServiceFileName(), FirefoxDriverDownloadUrl);
-            return CreateDefaultService(serviceDirectory);
+            return new FirefoxDriverService(null, null, PortUtilities.FindFreePort());
         }
+
 
         /// <summary>
         /// Creates a default instance of the FirefoxDriverService using a specified path to the Firefox driver executable.
         /// </summary>
-        /// <param name="driverPath">The directory containing the Firefox driver executable.</param>
+        /// <param name="driverPath">The path to the executable or the directory containing the Firefox driver executable.</param>
         /// <returns>A FirefoxDriverService using a random port.</returns>
         public static FirefoxDriverService CreateDefaultService(string driverPath)
         {
-            return CreateDefaultService(driverPath, FirefoxDriverServiceFileName());
+            string fileName;
+            if (File.Exists(driverPath))
+            {
+                fileName = Path.GetFileName(driverPath);
+                driverPath = Path.GetDirectoryName(driverPath);
+            }
+            else
+            {
+                fileName = FirefoxDriverServiceFileName();
+            }
+
+            return CreateDefaultService(driverPath, fileName);
         }
 
         /// <summary>
@@ -246,7 +263,7 @@ namespace OpenQA.Selenium.Firefox
             // straightforward as you might hope.
             // See: http://mono.wikia.com/wiki/Detecting_the_execution_platform
             // and https://msdn.microsoft.com/en-us/library/3a8hyw88(v=vs.110).aspx
-            const int PlatformMonoUnixValue = 128;
+            const PlatformID PlatformIDMonoUnix = (PlatformID)128;
 
             switch (Environment.OSVersion.Platform)
             {
@@ -259,17 +276,13 @@ namespace OpenQA.Selenium.Firefox
 
                 case PlatformID.MacOSX:
                 case PlatformID.Unix:
+                case PlatformIDMonoUnix:
                     break;
 
                 // Don't handle the Xbox case. Let default handle it.
                 // case PlatformID.Xbox:
                 //     break;
                 default:
-                    if ((int)Environment.OSVersion.Platform == PlatformMonoUnixValue)
-                    {
-                        break;
-                    }
-
                     throw new WebDriverException("Unsupported platform: " + Environment.OSVersion.Platform);
             }
 

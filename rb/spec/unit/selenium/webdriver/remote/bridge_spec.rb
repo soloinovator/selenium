@@ -23,22 +23,48 @@ module Selenium
   module WebDriver
     module Remote
       describe Bridge do
+        describe '.add_command' do
+          let(:http) { WebDriver::Remote::Http::Default.new }
+          let(:bridge) { described_class.new(http_client: http, url: 'http://localhost') }
+
+          before do
+            allow(http).to receive(:request)
+              .with(any_args)
+              .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
+
+            bridge.create_session({})
+          end
+
+          after do
+            described_class.extra_commands.clear
+          end
+
+          it 'adds new command' do
+            described_class.add_command(:highlight, :get, 'session/:session_id/highlight/:id') do |element|
+              execute :highlight, id: element
+            end
+
+            bridge.highlight('bar')
+            expect(http).to have_received(:request)
+              .with(:get, URI('http://localhost/session/foo/highlight/bar'), any_args)
+          end
+        end
+
         describe '#initialize' do
           it 'raises ArgumentError if passed invalid options' do
-            expect { Bridge.new(foo: 'bar') }.to raise_error(ArgumentError)
+            expect { described_class.new(foo: 'bar') }.to raise_error(ArgumentError)
           end
         end
 
         describe '#create_session' do
           let(:http) { WebDriver::Remote::Http::Default.new }
-          let(:bridge) { Bridge.new(http_client: http, url: 'http://localhost') }
+          let(:bridge) { described_class.new(http_client: http, url: 'http://localhost') }
 
-          it 'sends plain capabilities' do
+          it 'accepts Hash' do
             payload = JSON.generate(
               capabilities: {
                 alwaysMatch: {
-                  browserName: 'internet explorer',
-                  platformName: 'windows'
+                  browserName: 'internet explorer'
                 }
               }
             )
@@ -47,27 +73,7 @@ module Selenium
               .with(any_args, payload)
               .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
 
-            bridge.create_session(Capabilities.ie)
-            expect(http).to have_received(:request).with(any_args, payload)
-          end
-
-          it 'passes options as capabilities' do
-            payload = JSON.generate(
-              capabilities: {
-                alwaysMatch: {
-                  'browserName' => 'chrome',
-                  'goog:chromeOptions' => {
-                    args: %w[foo bar]
-                  }
-                }
-              }
-            )
-
-            allow(http).to receive(:request)
-              .with(any_args, payload)
-              .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
-
-            bridge.create_session(Chrome::Options.new(args: %w[foo bar]).as_json)
+            bridge.create_session(browserName: 'internet explorer')
             expect(http).to have_received(:request).with(any_args, payload)
           end
 
@@ -84,7 +90,7 @@ module Selenium
               .with(any_args, payload)
               .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
 
-            bridge.create_session(Capabilities.always_match(Capabilities.chrome).as_json)
+            bridge.create_session('alwaysMatch' => {'browserName' => 'chrome'})
             expect(http).to have_received(:request).with(any_args, payload)
           end
 
@@ -102,7 +108,10 @@ module Selenium
               .with(any_args, payload)
               .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
 
-            bridge.create_session(Capabilities.first_match(Capabilities.chrome, Capabilities.firefox).as_json)
+            bridge.create_session('firstMatch' => [
+                                    {'browserName' => 'chrome'},
+                                    {'browserName' => 'firefox'}
+                                  ])
             expect(http).to have_received(:request).with(any_args, payload)
           end
 
@@ -117,15 +126,85 @@ module Selenium
 
         describe '#upload' do
           it 'raises WebDriverError if uploading non-files' do
-            expect { Bridge.new(url: 'http://localhost').upload('NotAFile') }.to raise_error(Error::WebDriverError)
+            expect {
+              bridge = described_class.new(url: 'http://localhost')
+              bridge.extend(WebDriver::Remote::Features)
+              bridge.upload('NotAFile')
+            }.to raise_error(Error::WebDriverError)
           end
         end
 
         describe '#quit' do
           it 'respects quit_errors' do
-            bridge = Bridge.new(url: 'http://localhost')
+            bridge = described_class.new(url: 'http://localhost')
             allow(bridge).to receive(:execute).with(:delete_session).and_raise(IOError)
             expect { bridge.quit }.not_to raise_error
+          end
+        end
+
+        describe 'finding elements' do
+          let(:http) { WebDriver::Remote::Http::Default.new }
+          let(:bridge) { described_class.new(http_client: http, url: 'http://localhost') }
+
+          before do
+            allow(http).to receive(:request)
+              .with(:post, URI('http://localhost/session'), any_args)
+              .and_return('status' => 200, 'value' => {'sessionId' => 'foo', 'capabilities' => {}})
+            bridge.create_session({})
+          end
+
+          describe '#find_element_by' do
+            before do
+              allow(http).to receive(:request)
+                .with(:post, URI('http://localhost/session/foo/element'), any_args)
+                .and_return('status' => 200, 'value' => {Element::ELEMENT_KEY => 'bar'})
+            end
+
+            it 'returns an element' do
+              expect(bridge.find_element_by(:id, 'test', nil)).to be_an_instance_of(Element)
+            end
+
+            context 'when custom element class is used' do
+              before do
+                stub_const('MyCustomElement', Class.new(Selenium::WebDriver::Element))
+                described_class.element_class = MyCustomElement
+              end
+
+              after do
+                described_class.element_class = nil
+              end
+
+              it 'returns a custom element' do
+                expect(bridge.find_element_by(:id, 'test', nil)).to be_an_instance_of(MyCustomElement)
+              end
+            end
+          end
+
+          describe '#find_elements_by' do
+            before do
+              allow(http).to receive(:request)
+                .with(:post, URI('http://localhost/session/foo/elements'), any_args)
+                .and_return('status' => 200, 'value' => [{Element::ELEMENT_KEY => 'bar'}])
+            end
+
+            it 'returns an element' do
+              expect(bridge.find_elements_by(:id, 'test', nil)).to all(be_an_instance_of(Element))
+            end
+
+            context 'when custom element class is used' do
+              before do
+                stub_const('MyCustomElement', Class.new(Selenium::WebDriver::Element))
+                described_class.element_class = MyCustomElement
+              end
+
+              after do
+                described_class.element_class = nil
+              end
+
+              it 'returns a custom element' do
+                expect(bridge.find_elements_by(:id, 'test', nil)).to all(be_an_instance_of(MyCustomElement))
+              end
+            end
           end
         end
       end

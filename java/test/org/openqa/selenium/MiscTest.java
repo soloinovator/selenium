@@ -29,10 +29,10 @@ import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NotYetImplemented;
 
-public class MiscTest extends JupiterTestBase {
+class MiscTest extends JupiterTestBase {
 
   @Test
-  public void testShouldReturnTitleOfPageIfSet() {
+  void testShouldReturnTitleOfPageIfSet() {
     driver.get(pages.xhtmlTestPage);
     assertThat(driver.getTitle()).isEqualTo(("XHTML Test Page"));
 
@@ -41,7 +41,7 @@ public class MiscTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldReportTheCurrentUrlCorrectly() {
+  void testShouldReportTheCurrentUrlCorrectly() {
     driver.get(pages.simpleTestPage);
     assertThat(driver.getCurrentUrl()).isEqualToIgnoringCase(pages.simpleTestPage);
 
@@ -50,26 +50,34 @@ public class MiscTest extends JupiterTestBase {
   }
 
   @Test
-  public void shouldReturnTagName() {
+  void shouldReturnTagName() {
     driver.get(pages.formPage);
     WebElement selectBox = driver.findElement(By.id("cheese"));
     assertThat(selectBox.getTagName()).isEqualToIgnoringCase("input");
   }
 
   @Test
-  public void testShouldReturnTheSourceOfAPage() {
+  void testShouldReturnTheSourceOfAPage() {
     driver.get(pages.simpleTestPage);
 
     String source = driver.getPageSource().toLowerCase();
 
-    assertThat(source).contains("<html", "</html", "an inline element", "<p id=", "lotsofspaces",
-                                "with document.write and with document.write again");
+    assertThat(source)
+        .contains(
+            "<html",
+            "</html",
+            "an inline element",
+            "<p id=",
+            "lotsofspaces",
+            "with document.write and with document.write again");
   }
 
   @Test
   @Ignore(value = CHROME, reason = "returns XML content formatted for display as HTML document")
   @Ignore(value = EDGE, reason = "returns XML content formatted for display as HTML document")
-  @NotYetImplemented(value = SAFARI, reason = "returns XML content formatted for display as HTML document")
+  @NotYetImplemented(
+      value = SAFARI,
+      reason = "returns XML content formatted for display as HTML document")
   @Ignore(IE)
   public void testShouldBeAbleToGetTheSourceOfAnXmlDocument() {
     driver.get(pages.simpleXmlDocument);
@@ -77,10 +85,9 @@ public class MiscTest extends JupiterTestBase {
     assertThat(source).isEqualToIgnoringWhitespace("<xml><foo><bar>baz</bar></foo></xml>");
   }
 
-
   @Test
   @Ignore(value = ALL, reason = "issue 2282")
-  public void testStimulatesStrangeOnloadInteractionInFirefox()  {
+  public void testStimulatesStrangeOnloadInteractionInFirefox() {
     driver.get(pages.documentWrite);
 
     // If this command succeeds, then all is well.
@@ -91,9 +98,9 @@ public class MiscTest extends JupiterTestBase {
   }
 
   @Test
-  public void testClickingShouldNotTrampleWOrHInGlobalScope() {
+  void testClickingShouldNotTrampleWOrHInGlobalScope() {
     driver.get(appServer.whereIs("globalscope.html"));
-    String[] vars = new String[]{"w", "h"};
+    String[] vars = new String[] {"w", "h"};
     for (String var : vars) {
       assertThat(getGlobalVar(driver, var)).isEqualTo(var);
     }
@@ -107,5 +114,4 @@ public class MiscTest extends JupiterTestBase {
     Object val = ((JavascriptExecutor) driver).executeScript("return window." + var + ";");
     return val == null ? "null" : val.toString();
   }
-
 }

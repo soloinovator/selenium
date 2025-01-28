@@ -19,19 +19,17 @@ package org.openqa.selenium.grid.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.json.JsonInput;
 
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-
-
-public class TeeReaderTest {
+class TeeReaderTest {
 
   @Test
-  public void shouldDuplicateStreams() {
+  void shouldDuplicateStreams() {
     String expected = "{\"key\": \"value\"}";
     Reader source = new StringReader(expected);
 

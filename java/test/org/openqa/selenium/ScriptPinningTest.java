@@ -17,18 +17,17 @@
 
 package org.openqa.selenium;
 
-import com.google.common.collect.ImmutableSet;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.testing.JupiterTestBase;
-
-import java.util.Set;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
-public class ScriptPinningTest extends JupiterTestBase {
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.testing.JupiterTestBase;
+
+class ScriptPinningTest extends JupiterTestBase {
 
   private JavascriptExecutor executor;
 
@@ -42,7 +41,7 @@ public class ScriptPinningTest extends JupiterTestBase {
   }
 
   @Test
-  public void shouldAllowAScriptToBePinned() {
+  void shouldAllowAScriptToBePinned() {
     ScriptKey hello = executor.pin("return 'I like cheese'");
 
     Object value = executor.executeScript(hello);
@@ -51,7 +50,7 @@ public class ScriptPinningTest extends JupiterTestBase {
   }
 
   @Test
-  public void pinnedScriptsShouldBeAbleToTakeArguments() {
+  void pinnedScriptsShouldBeAbleToTakeArguments() {
     ScriptKey hello = executor.pin("return arguments[0]");
 
     Object value = executor.executeScript(hello, "cheese");
@@ -60,11 +59,12 @@ public class ScriptPinningTest extends JupiterTestBase {
   }
 
   @Test
-  public void shouldBeAbleToListAllPinnedScripts() {
-    Set<ScriptKey> expected = ImmutableSet.of(
-      executor.pin("return arguments[0];"),
-      executor.pin("return 'cheese';"),
-      executor.pin("return 42;"));
+  void shouldBeAbleToListAllPinnedScripts() {
+    Set<ScriptKey> expected =
+        ImmutableSet.of(
+            executor.pin("return arguments[0];"),
+            executor.pin("return 'cheese';"),
+            executor.pin("return 42;"));
 
     Set<ScriptKey> pinned = executor.getPinnedScripts();
 
@@ -72,7 +72,7 @@ public class ScriptPinningTest extends JupiterTestBase {
   }
 
   @Test
-  public void shouldAllowAPinnedScriptToBeUnpinned() {
+  void shouldAllowAPinnedScriptToBeUnpinned() {
     ScriptKey cheese = executor.pin("return 'brie'");
     executor.unpin(cheese);
 
@@ -80,11 +80,20 @@ public class ScriptPinningTest extends JupiterTestBase {
   }
 
   @Test
-  public void callingAnUnpinnedScriptIsAnError() {
+  void callingAnUnpinnedScriptIsAnError() {
     ScriptKey cheese = executor.pin("return 'brie'");
     executor.unpin(cheese);
 
-    assertThatExceptionOfType(JavascriptException.class).isThrownBy(() -> executor.executeScript(cheese));
+    assertThatExceptionOfType(JavascriptException.class)
+        .isThrownBy(() -> executor.executeScript(cheese));
   }
 
+  @Test
+  void afterPinningScriptShouldBeAvailableOnEveryPage() {
+    ScriptKey cheese = executor.pin("return 'havarti'");
+
+    driver.get(pages.xhtmlTestPage);
+
+    assertThat(executor.executeScript(cheese)).isEqualTo("havarti");
+  }
 }

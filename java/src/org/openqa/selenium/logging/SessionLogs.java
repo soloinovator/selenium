@@ -17,8 +17,6 @@
 
 package org.openqa.selenium.logging;
 
-import org.openqa.selenium.Beta;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,11 +24,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.NullMarked;
+import org.openqa.selenium.Beta;
+import org.openqa.selenium.internal.Require;
 
-/**
- * Contains the logs for a session divided by supported log types.
- */
+/** Contains the logs for a session divided by supported log types. */
 @Beta
+@NullMarked
 public class SessionLogs {
   private final Map<String, LogEntries> logTypeToEntriesMap;
 
@@ -64,11 +64,13 @@ public class SessionLogs {
       Collection<?> rawLogEntries = (Collection<?>) entry.getValue();
       List<LogEntry> logEntries = new ArrayList<>();
       for (Object o : rawLogEntries) {
-        @SuppressWarnings("unchecked") Map<String, Object> rawEntry = (Map<String, Object>) o;
-        logEntries.add(new LogEntry(
-            LogLevelMapping.toLevel(String.valueOf(rawEntry.get("level"))),
-            ((Number) rawEntry.get("timestamp")).longValue(),
-            String.valueOf(rawEntry.get("message"))));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> rawEntry = (Map<String, Object>) o;
+        logEntries.add(
+            new LogEntry(
+                LogLevelMapping.toLevel(String.valueOf(rawEntry.get("level"))),
+                Require.nonNull("timestamp", (Number) rawEntry.get("timestamp")).longValue(),
+                String.valueOf(rawEntry.get("message"))));
       }
       sessionLogs.addLog(logType, new LogEntries(logEntries));
     }

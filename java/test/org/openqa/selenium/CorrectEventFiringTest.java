@@ -25,13 +25,14 @@ import static org.openqa.selenium.WaitingConditions.elementTextToContain;
 import static org.openqa.selenium.WaitingConditions.elementTextToEqual;
 import static org.openqa.selenium.WaitingConditions.elementValueToEqual;
 import static org.openqa.selenium.support.ui.ExpectedConditions.visibilityOfElementLocated;
-import static org.openqa.selenium.testing.drivers.Browser.CHROME;
-import static org.openqa.selenium.testing.drivers.Browser.EDGE;
 import static org.openqa.selenium.testing.drivers.Browser.FIREFOX;
-import static org.openqa.selenium.testing.drivers.Browser.HTMLUNIT;
 import static org.openqa.selenium.testing.drivers.Browser.IE;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -41,12 +42,7 @@ import org.openqa.selenium.testing.NotYetImplemented;
 import org.openqa.selenium.testing.TestUtilities;
 import org.openqa.selenium.testing.drivers.WebDriverBuilder;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.List;
-
-public class CorrectEventFiringTest extends JupiterTestBase {
+class CorrectEventFiringTest extends JupiterTestBase {
 
   private static void clickOnElementWhichRecordsEvents(WebDriver driver) {
     driver.findElement(By.id("plainButton")).click();
@@ -55,8 +51,9 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   private static void assertEventFired(String eventName, WebDriver driver) {
     WebElement result = driver.findElement(By.id("result"));
 
-    String text = new WebDriverWait(driver, Duration.ofSeconds(10))
-      .until(elementTextToContain(result, eventName));
+    String text =
+        new WebDriverWait(driver, Duration.ofSeconds(10))
+            .until(elementTextToContain(result, eventName));
     boolean conditionMet = text.contains(eventName);
 
     assertThat(conditionMet).as("%s fired with text %s", eventName, text).isTrue();
@@ -180,7 +177,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldNotThrowIfEventHandlerThrows() {
+  void testShouldNotThrowIfEventHandlerThrows() {
     driver.get(pages.javascriptPage);
 
     try {
@@ -274,7 +271,8 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   public void testShouldEmitOnClickEventsWhenSelectingElements() {
     driver.get(pages.javascriptPage);
     // Intentionally not looking up the select tag. See selenium r7937 for details.
-    List<WebElement> allOptions = driver.findElements(By.xpath("//select[@id='selector2']//option"));
+    List<WebElement> allOptions =
+        driver.findElements(By.xpath("//select[@id='selector2']//option"));
 
     WebElement foo = allOptions.get(0);
     WebElement bar = allOptions.get(1);
@@ -298,7 +296,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldEmitClickEventWhenClickingOnATextInputElement() {
+  void testShouldEmitClickEventWhenClickingOnATextInputElement() {
     driver.get(pages.javascriptPage);
 
     WebElement clicker = driver.findElement(By.id("clickField"));
@@ -332,7 +330,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSendingKeysToAnotherElementShouldCauseTheBlurEventToFire() {
+  void testSendingKeysToAnotherElementShouldCauseTheBlurEventToFire() {
     assumeFalse(browserNeedsFocusOnThisOs(driver));
 
     driver.get(pages.javascriptPage);
@@ -379,7 +377,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSendingKeysToAnElementShouldCauseTheFocusEventToFire() {
+  void testSendingKeysToAnElementShouldCauseTheFocusEventToFire() {
     assumeFalse(browserNeedsFocusOnThisOs(driver));
 
     driver.get(pages.javascriptPage);
@@ -421,7 +419,6 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   @NotYetImplemented(IE)
   @NotYetImplemented(SAFARI)
   public void testClickingAnUnfocusableChildShouldNotBlurTheParent() {
@@ -432,7 +429,9 @@ public class CorrectEventFiringTest extends JupiterTestBase {
     assertEventNotFired("blur", driver);
     // Click on child. It is not focusable, so focus should stay on the parent.
     driver.findElement(By.id("hideOnBlurChild")).click();
-    assertThat(parent.isDisplayed()).as("#hideOnBlur should still be displayed after click").isTrue();
+    assertThat(parent.isDisplayed())
+        .as("#hideOnBlur should still be displayed after click")
+        .isTrue();
     assertEventNotFired("blur", driver);
     // Click elsewhere, and let the element disappear.
     driver.findElement(By.id("result")).click();
@@ -440,7 +439,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSubmittingFormFromFormElementShouldFireOnSubmitForThatForm() {
+  void testSubmittingFormFromFormElementShouldFireOnSubmitForThatForm() {
     driver.get(pages.javascriptPage);
     WebElement formElement = driver.findElement(By.id("submitListeningForm"));
     formElement.submit();
@@ -448,7 +447,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSubmittingFormFromFormInputSubmitElementShouldFireOnSubmitForThatForm() {
+  void testSubmittingFormFromFormInputSubmitElementShouldFireOnSubmitForThatForm() {
     driver.get(pages.javascriptPage);
     WebElement submit = driver.findElement(By.id("submitListeningForm-submit"));
     submit.submit();
@@ -456,7 +455,8 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testSubmittingFormFromFormInputTextElementShouldFireOnSubmitForThatFormAndNotClickOnThatInput() {
+  void
+      testSubmittingFormFromFormInputTextElementShouldFireOnSubmitForThatFormAndNotClickOnThatInput() {
     driver.get(pages.javascriptPage);
     WebElement submit = driver.findElement(By.id("submitListeningForm-submit"));
     submit.submit();
@@ -465,11 +465,11 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testUploadingFileShouldFireOnChangeEvent() throws IOException {
+  void testUploadingFileShouldFireOnChangeEvent() throws IOException {
     driver.get(pages.formPage);
     WebElement uploadElement = driver.findElement(By.id("upload"));
     WebElement result = driver.findElement(By.id("fileResults"));
-    assertThat(result.getText()).isEqualTo("");
+    assertThat(result.getText()).isEmpty();
 
     File file = File.createTempFile("test", "txt");
     file.deleteOnExit();
@@ -486,7 +486,7 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldReportTheXAndYCoordinatesWhenClicking() {
+  void testShouldReportTheXAndYCoordinatesWhenClicking() {
     driver.get(pages.clickEventPage);
 
     WebElement element = driver.findElement(By.id("eventish"));
@@ -500,34 +500,33 @@ public class CorrectEventFiringTest extends JupiterTestBase {
   }
 
   @Test
-  public void testClickEventsShouldBubble() {
+  void testClickEventsShouldBubble() {
     driver.get(pages.clicksPage);
     driver.findElement(By.id("bubblesFrom")).click();
-    boolean eventBubbled = (Boolean)((JavascriptExecutor)driver).executeScript("return !!window.bubbledClick;");
+    boolean eventBubbled =
+        (Boolean) ((JavascriptExecutor) driver).executeScript("return !!window.bubbledClick;");
     assertThat(eventBubbled).as("Event bubbled").isTrue();
   }
 
   @Test
-  @Ignore(HTMLUNIT)
   public void testClickOverlappingElements() {
     driver.get(appServer.whereIs("click_tests/overlapping_elements.html"));
     WebElement element = driver.findElement(By.id("under"));
     // TODO: change to ElementClickInterceptedException
-    assertThatExceptionOfType(WebDriverException.class)
-        .isThrownBy(element::click);
+    assertThatExceptionOfType(WebDriverException.class).isThrownBy(element::click);
   }
 
   @Test
-  @Ignore(HTMLUNIT)
   @NotYetImplemented(SAFARI)
   public void testClickAnElementThatDisappear() {
     driver.get(appServer.whereIs("click_tests/disappearing_element.html"));
     driver.findElement(By.id("over")).click();
     assertThat(driver.findElement(By.id("log")).getText())
-        .startsWith("Log:\n"
-                  + "mousedown in over (handled by over)\n"
-                  + "mousedown in over (handled by body)\n"
-                  + "mouseup in under (handled by under)\n"
-                  + "mouseup in under (handled by body)");
+        .startsWith(
+            "Log:\n"
+                + "mousedown in over (handled by over)\n"
+                + "mousedown in over (handled by body)\n"
+                + "mouseup in under (handled by under)\n"
+                + "mouseup in under (handled by body)");
   }
 }

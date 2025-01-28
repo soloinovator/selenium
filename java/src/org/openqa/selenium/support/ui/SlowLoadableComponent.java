@@ -21,7 +21,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
-
 /**
  * A {@link LoadableComponent} which might not have finished loading when load() returns. After a
  * call to load(), the isLoaded() method should continue to fail until the component has fully
@@ -37,11 +36,19 @@ public abstract class SlowLoadableComponent<T extends LoadableComponent<T>>
     extends LoadableComponent<T> {
 
   private final Clock clock;
-  private final Duration timeOutInSeconds;
+  private final Duration timeOut;
 
-  public SlowLoadableComponent(java.time.Clock clock, int timeOutInSeconds) {
+  /**
+   * @deprecated Use {@link #SlowLoadableComponent(Clock, Duration)} instead.
+   */
+  @Deprecated
+  public SlowLoadableComponent(Clock clock, int timeOutInSeconds) {
+    this(clock, Duration.ofSeconds(timeOutInSeconds));
+  }
+
+  public SlowLoadableComponent(Clock clock, Duration timeOut) {
     this.clock = clock;
-    this.timeOutInSeconds = Duration.ofSeconds(timeOutInSeconds);
+    this.timeOut = timeOut;
   }
 
   @Override
@@ -54,7 +61,7 @@ public abstract class SlowLoadableComponent<T extends LoadableComponent<T>>
       load();
     }
 
-    Instant end = clock.instant().plus(timeOutInSeconds);
+    Instant end = clock.instant().plus(timeOut);
 
     while (clock.instant().isBefore(end)) {
       try {
@@ -84,7 +91,6 @@ public abstract class SlowLoadableComponent<T extends LoadableComponent<T>>
     // no-op by default
   }
 
-
   protected long sleepFor() {
     return 200;
   }
@@ -97,5 +103,4 @@ public abstract class SlowLoadableComponent<T extends LoadableComponent<T>>
       throw new AssertionError(e);
     }
   }
-
 }

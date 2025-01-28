@@ -27,21 +27,20 @@ import static org.openqa.selenium.Proxy.ProxyType.SYSTEM;
 import static org.openqa.selenium.Proxy.ProxyType.UNSPECIFIED;
 import static org.openqa.selenium.remote.CapabilityType.PROXY;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.openqa.selenium.Proxy.ProxyType;
-import org.openqa.selenium.json.Json;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.Proxy.ProxyType;
+import org.openqa.selenium.json.Json;
 
 @Tag("UnitTests")
-public class ProxyTest {
+class ProxyTest {
 
   @Test
-  public void testNotInitializedProxy() {
+  void testNotInitializedProxy() {
     Proxy proxy = new Proxy();
 
     assertThat(proxy.getProxyType()).isEqualTo(UNSPECIFIED);
@@ -59,70 +58,66 @@ public class ProxyTest {
   }
 
   @Test
-  public void testCanNotChangeAlreadyInitializedProxyType() {
+  void testCanNotChangeAlreadyInitializedProxyType() {
     final Proxy proxy = new Proxy();
     proxy.setProxyType(DIRECT);
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setAutodetect(true));
+        .isThrownBy(() -> proxy.setAutodetect(true));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setSocksPassword(""));
+        .isThrownBy(() -> proxy.setSocksPassword(""));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setSocksUsername(""));
+        .isThrownBy(() -> proxy.setSocksUsername(""));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setSocksProxy(""));
+        .isThrownBy(() -> proxy.setSocksProxy(""));
+
+    assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> proxy.setFtpProxy(""));
+
+    assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> proxy.setHttpProxy(""));
+
+    assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> proxy.setNoProxy(""));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setFtpProxy(""));
+        .isThrownBy(() -> proxy.setProxyAutoconfigUrl(""));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setHttpProxy(""));
+        .isThrownBy(() -> proxy.setProxyType(SYSTEM));
 
-    assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setNoProxy(""));
-
-    assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setProxyAutoconfigUrl(""));
-
-    assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setProxyType(SYSTEM));
-
-    assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setSslProxy(""));
+    assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> proxy.setSslProxy(""));
 
     final Proxy proxy2 = new Proxy();
     proxy2.setProxyType(AUTODETECT);
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy2.setProxyType(SYSTEM));
+        .isThrownBy(() -> proxy2.setProxyType(SYSTEM));
 
     assertThatExceptionOfType(IllegalStateException.class)
-      .isThrownBy(() -> proxy.setSocksVersion(5));
+        .isThrownBy(() -> proxy.setSocksVersion(5));
   }
 
   @Test
-  public void testManualProxy() {
+  void testManualProxy() {
     Proxy proxy = new Proxy();
 
-    proxy.
-        setHttpProxy("http.proxy:1234").
-        setFtpProxy("ftp.proxy").
-        setSslProxy("ssl.proxy").
-        setNoProxy("localhost,127.0.0.*").
-        setSocksProxy("socks.proxy:65555").
-        setSocksVersion(5).
-        setSocksUsername("test1").
-        setSocksPassword("test2");
+    proxy
+        .setHttpProxy("http.proxy:1234")
+        .setFtpProxy("ftp.proxy")
+        .setSslProxy("ssl.proxy")
+        .setNoProxy("localhost,127.0.0.*")
+        .setSocksProxy("socks.proxy:65555")
+        .setSocksVersion(5)
+        .setSocksUsername("test1")
+        .setSocksPassword("test2");
 
     assertThat(proxy.getProxyType()).isEqualTo(MANUAL);
     assertThat(proxy.getFtpProxy()).isEqualTo("ftp.proxy");
     assertThat(proxy.getHttpProxy()).isEqualTo("http.proxy:1234");
     assertThat(proxy.getSslProxy()).isEqualTo("ssl.proxy");
     assertThat(proxy.getSocksProxy()).isEqualTo("socks.proxy:65555");
-    assertThat(proxy.getSocksVersion()).isEqualTo(Integer.valueOf(5));
+    assertThat(proxy.getSocksVersion()).isEqualTo(5);
     assertThat(proxy.getSocksUsername()).isEqualTo("test1");
     assertThat(proxy.getSocksPassword()).isEqualTo("test2");
     assertThat(proxy.getNoProxy()).isEqualTo("localhost,127.0.0.*");
@@ -132,7 +127,7 @@ public class ProxyTest {
   }
 
   @Test
-  public void testPACProxy() {
+  void testPACProxy() {
     Proxy proxy = new Proxy();
     proxy.setProxyAutoconfigUrl("http://aaa/bbb.pac");
 
@@ -151,11 +146,11 @@ public class ProxyTest {
   }
 
   @Test
-  public void testAutodetectProxy() {
+  void testAutodetectProxy() {
     Proxy proxy = new Proxy();
     proxy.setAutodetect(true);
 
-    assertThat(proxy.getProxyType()).isEqualTo(AUTODETECT);
+    assertThat(proxy.getProxyType().name()).isEqualTo(AUTODETECT.name());
     assertThat(proxy.isAutodetect()).isTrue();
 
     assertThat(proxy.getFtpProxy()).isNull();
@@ -169,9 +164,8 @@ public class ProxyTest {
     assertThat(proxy.getProxyAutoconfigUrl()).isNull();
   }
 
-
   @Test
-  public void manualProxyFromMap() {
+  void manualProxyFromMap() {
     Map<String, Object> proxyData = new HashMap<>();
     proxyData.put("proxyType", "manual");
     proxyData.put("httpProxy", "http.proxy:1234");
@@ -190,7 +184,7 @@ public class ProxyTest {
     assertThat(proxy.getHttpProxy()).isEqualTo("http.proxy:1234");
     assertThat(proxy.getSslProxy()).isEqualTo("ssl.proxy");
     assertThat(proxy.getSocksProxy()).isEqualTo("socks.proxy:65555");
-    assertThat(proxy.getSocksVersion()).isEqualTo(Integer.valueOf(5));
+    assertThat(proxy.getSocksVersion()).isEqualTo(5);
     assertThat(proxy.getSocksUsername()).isEqualTo("test1");
     assertThat(proxy.getSocksPassword()).isEqualTo("test2");
     assertThat(proxy.getNoProxy()).isEqualTo("localhost,127.0.0.*");
@@ -200,7 +194,7 @@ public class ProxyTest {
   }
 
   @Test
-  public void longSocksVersionFromMap() {
+  void longSocksVersionFromMap() {
     Map<String, Object> proxyData = new HashMap<>();
     long l = 5;
     proxyData.put("proxyType", "manual");
@@ -215,11 +209,11 @@ public class ProxyTest {
 
     Proxy proxy = new Proxy(proxyData);
 
-    assertThat(proxy.getSocksVersion()).isEqualTo(Integer.valueOf(5));
+    assertThat(proxy.getSocksVersion()).isEqualTo(5);
   }
 
   @Test
-  public void manualProxyToJson() {
+  void manualProxyToJson() {
     Proxy proxy = new Proxy();
     proxy.setProxyType(ProxyType.MANUAL);
     proxy.setHttpProxy("http.proxy:1234");
@@ -233,7 +227,7 @@ public class ProxyTest {
 
     Map<String, Object> json = proxy.toJson();
 
-    assertThat(json.get("proxyType")).isEqualTo("MANUAL");
+    assertThat(json.get("proxyType")).isEqualTo("manual");
     assertThat(json.get("ftpProxy")).isEqualTo("ftp.proxy");
     assertThat(json.get("httpProxy")).isEqualTo("http.proxy:1234");
     assertThat(json.get("sslProxy")).isEqualTo("ssl.proxy");
@@ -246,7 +240,7 @@ public class ProxyTest {
   }
 
   @Test
-  public void pacProxyFromMap() {
+  void pacProxyFromMap() {
     Map<String, String> proxyData = new HashMap<>();
     proxyData.put("proxyType", "PAC");
     proxyData.put("proxyAutoconfigUrl", "http://aaa/bbb.pac");
@@ -268,20 +262,20 @@ public class ProxyTest {
   }
 
   @Test
-  public void pacProxyToJson() {
+  void pacProxyToJson() {
     Proxy proxy = new Proxy();
     proxy.setProxyType(ProxyType.PAC);
     proxy.setProxyAutoconfigUrl("http://aaa/bbb.pac");
 
     Map<String, Object> json = proxy.toJson();
 
-    assertThat(json.get("proxyType")).isEqualTo("PAC");
+    assertThat(json.get("proxyType")).isEqualTo("pac");
     assertThat(json.get("proxyAutoconfigUrl")).isEqualTo("http://aaa/bbb.pac");
     assertThat(json.entrySet()).hasSize(2);
   }
 
   @Test
-  public void autodetectProxyFromMap() {
+  void autodetectProxyFromMap() {
     Map<String, Object> proxyData = new HashMap<>();
     proxyData.put("proxyType", "AUTODETECT");
     proxyData.put("autodetect", true);
@@ -303,20 +297,20 @@ public class ProxyTest {
   }
 
   @Test
-  public void autodetectProxyToJson() {
+  void autodetectProxyToJson() {
     Proxy proxy = new Proxy();
     proxy.setProxyType(ProxyType.AUTODETECT);
     proxy.setAutodetect(true);
 
     Map<String, ?> json = proxy.toJson();
 
-    assertThat(json.get("proxyType")).isEqualTo("AUTODETECT");
+    assertThat(json.get("proxyType")).isEqualTo("autodetect");
     assertThat((Boolean) json.get("autodetect")).isTrue();
     assertThat(json.entrySet()).hasSize(2);
   }
 
   @Test
-  public void systemProxyFromMap() {
+  void systemProxyFromMap() {
     Map<String, String> proxyData = new HashMap<>();
     proxyData.put("proxyType", "system");
 
@@ -337,18 +331,18 @@ public class ProxyTest {
   }
 
   @Test
-  public void systemProxyToJson() {
+  void systemProxyToJson() {
     Proxy proxy = new Proxy();
     proxy.setProxyType(ProxyType.SYSTEM);
 
     Map<String, Object> json = proxy.toJson();
 
-    assertThat(json.get("proxyType")).isEqualTo("SYSTEM");
+    assertThat(json.get("proxyType")).isEqualTo("system");
     assertThat(json.entrySet()).hasSize(1);
   }
 
   @Test
-  public void directProxyFromMap() {
+  void directProxyFromMap() {
     Map<String, String> proxyData = new HashMap<>();
     proxyData.put("proxyType", "DIRECT");
 
@@ -369,18 +363,18 @@ public class ProxyTest {
   }
 
   @Test
-  public void directProxyToJson() {
+  void directProxyToJson() {
     Proxy proxy = new Proxy();
     proxy.setProxyType(ProxyType.DIRECT);
 
     Map<String, Object> json = proxy.toJson();
 
-    assertThat(json.get("proxyType")).isEqualTo("DIRECT");
+    assertThat(json.get("proxyType")).isEqualTo("direct");
     assertThat(json.entrySet()).hasSize(1);
   }
 
   @Test
-  public void constructingWithNullKeysWorksAsExpected() {
+  void constructingWithNullKeysWorksAsExpected() {
     Map<String, String> rawProxy = new HashMap<>();
     rawProxy.put("ftpProxy", null);
     rawProxy.put("httpProxy", "http://www.example.com");

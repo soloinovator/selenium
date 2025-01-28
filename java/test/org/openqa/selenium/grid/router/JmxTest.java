@@ -17,7 +17,27 @@
 
 package org.openqa.selenium.grid.router;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import com.google.common.collect.ImmutableMap;
+import java.lang.management.ManagementFactory;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.logging.Logger;
+import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanException;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
@@ -26,7 +46,6 @@ import org.openqa.selenium.events.local.GuavaEventBus;
 import org.openqa.selenium.grid.config.MapConfig;
 import org.openqa.selenium.grid.data.DefaultSlotMatcher;
 import org.openqa.selenium.grid.data.Session;
-import org.openqa.selenium.grid.distributor.Distributor;
 import org.openqa.selenium.grid.distributor.local.LocalDistributor;
 import org.openqa.selenium.grid.distributor.selector.DefaultSlotSelector;
 import org.openqa.selenium.grid.jmx.JMXHelper;
@@ -43,27 +62,7 @@ import org.openqa.selenium.net.PortProber;
 import org.openqa.selenium.remote.tracing.DefaultTestTracer;
 import org.openqa.selenium.remote.tracing.Tracer;
 
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
-import javax.management.MBeanAttributeInfo;
-import javax.management.MBeanException;
-import javax.management.MBeanInfo;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.ReflectionException;
-import java.lang.management.ManagementFactory;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.logging.Logger;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
-public class JmxTest {
+class JmxTest {
 
   private static final Logger LOG = Logger.getLogger(LocalNode.class.getName());
 
@@ -71,14 +70,15 @@ public class JmxTest {
   private final MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
 
   @Test
-  public void shouldBeAbleToRegisterBaseServerConfig() {
+  void shouldBeAbleToRegisterBaseServerConfig() {
     try {
       ObjectName name = new ObjectName("org.seleniumhq.grid:type=Config,name=BaseServerConfig");
       new JMXHelper().unregister(name);
 
-      BaseServerOptions baseServerOptions = new BaseServerOptions(
-        new MapConfig(
-          ImmutableMap.of("server", ImmutableMap.of("port", PortProber.findFreePort()))));
+      BaseServerOptions baseServerOptions =
+          new BaseServerOptions(
+              new MapConfig(
+                  ImmutableMap.of("server", ImmutableMap.of("port", PortProber.findFreePort()))));
 
       MBeanInfo info = beanServer.getMBeanInfo(name);
       assertThat(info).isNotNull();
@@ -86,11 +86,16 @@ public class JmxTest {
       MBeanAttributeInfo[] attributeInfoArray = info.getAttributes();
       assertThat(attributeInfoArray).hasSize(3);
 
+      AttributeList attributeList = getAttributeList(name, attributeInfoArray);
+      assertThat(attributeList).isNotNull().hasSize(3);
+
       String uriValue = (String) beanServer.getAttribute(name, "Uri");
       assertThat(uriValue).isEqualTo(baseServerOptions.getExternalUri().toString());
 
-    } catch (InstanceNotFoundException | IntrospectionException | ReflectionException
-      | MalformedObjectNameException e) {
+    } catch (InstanceNotFoundException
+        | IntrospectionException
+        | ReflectionException
+        | MalformedObjectNameException e) {
       fail("Could not find the registered MBean");
     } catch (MBeanException e) {
       fail("MBeanServer exception");
@@ -100,7 +105,7 @@ public class JmxTest {
   }
 
   @Test
-  public void shouldBeAbleToRegisterNode() throws URISyntaxException {
+  void shouldBeAbleToRegisterNode() throws URISyntaxException {
     try {
       URI nodeUri = new URI("https://example.com:1234");
       ObjectName name = new ObjectName("org.seleniumhq.grid:type=Node,name=LocalNode");
@@ -111,13 +116,15 @@ public class JmxTest {
 
       Secret secret = new Secret("cheese");
 
-      LocalNode localNode = LocalNode.builder(tracer, bus, nodeUri, nodeUri, secret)
-        .add(CAPS, new TestSessionFactory((id, caps) -> new Session(
-          id,
-          nodeUri,
-          new ImmutableCapabilities(),
-          caps,
-          Instant.now()))).build();
+      LocalNode localNode =
+          LocalNode.builder(tracer, bus, nodeUri, nodeUri, secret)
+              .add(
+                  CAPS,
+                  new TestSessionFactory(
+                      (id, caps) ->
+                          new Session(
+                              id, nodeUri, new ImmutableCapabilities(), caps, Instant.now())))
+              .build();
 
       assertThat(localNode).isNotNull();
 
@@ -127,23 +134,26 @@ public class JmxTest {
       MBeanAttributeInfo[] attributeInfo = info.getAttributes();
       assertThat(attributeInfo).hasSize(9);
 
-      String currentSessions = (String) beanServer.getAttribute(name, "CurrentSessions");
-      assertThat(Integer.parseInt(currentSessions)).isZero();
+      AttributeList attributeList = getAttributeList(name, attributeInfo);
+      assertThat(attributeList).isNotNull().hasSize(9);
 
-      String maxSessions = (String) beanServer.getAttribute(name, "MaxSessions");
-      assertThat(Integer.parseInt(maxSessions)).isEqualTo(1);
+      Object currentSessions = beanServer.getAttribute(name, "CurrentSessions");
+      assertNumberAttribute(currentSessions, 0);
+
+      Object maxSessions = beanServer.getAttribute(name, "MaxSessions");
+      assertNumberAttribute(maxSessions, 1);
 
       String status = (String) beanServer.getAttribute(name, "Status");
       assertThat(status).isEqualTo("UP");
 
-      String totalSlots = (String) beanServer.getAttribute(name, "TotalSlots");
-      assertThat(Integer.parseInt(totalSlots)).isEqualTo(1);
+      Object totalSlots = beanServer.getAttribute(name, "TotalSlots");
+      assertNumberAttribute(totalSlots, 1);
 
-      String usedSlots = (String) beanServer.getAttribute(name, "UsedSlots");
-      assertThat(Integer.parseInt(usedSlots)).isZero();
+      Object usedSlots = beanServer.getAttribute(name, "UsedSlots");
+      assertNumberAttribute(usedSlots, 0);
 
-      String load = (String) beanServer.getAttribute(name, "Load");
-      assertThat(Float.parseFloat(load)).isEqualTo(0.0f);
+      Object load = beanServer.getAttribute(name, "Load");
+      assertNumberAttribute(load, 0.0f);
 
       String remoteNodeUri = (String) beanServer.getAttribute(name, "RemoteNodeUri");
       assertThat(remoteNodeUri).isEqualTo(nodeUri.toString());
@@ -151,8 +161,10 @@ public class JmxTest {
       String gridUri = (String) beanServer.getAttribute(name, "GridUri");
       assertThat(gridUri).isEqualTo(nodeUri.toString());
 
-    } catch (InstanceNotFoundException | IntrospectionException | ReflectionException
-      | MalformedObjectNameException e) {
+    } catch (InstanceNotFoundException
+        | IntrospectionException
+        | ReflectionException
+        | MalformedObjectNameException e) {
       fail("Could not find the registered MBean");
     } catch (MBeanException e) {
       fail("MBeanServer exception");
@@ -162,30 +174,33 @@ public class JmxTest {
   }
 
   @Test
-  public void shouldBeAbleToRegisterSessionQueuerServerConfig() {
+  void shouldBeAbleToRegisterSessionQueueServerConfig() {
     try {
-      ObjectName name = new ObjectName(
-        "org.seleniumhq.grid:type=Config,name=NewSessionQueueConfig");
+      ObjectName name =
+          new ObjectName("org.seleniumhq.grid:type=Config,name=NewSessionQueueConfig");
 
       new JMXHelper().unregister(name);
 
       NewSessionQueueOptions newSessionQueueOptions =
-        new NewSessionQueueOptions(new MapConfig(ImmutableMap.of()));
+          new NewSessionQueueOptions(new MapConfig(ImmutableMap.of()));
       MBeanInfo info = beanServer.getMBeanInfo(name);
       assertThat(info).isNotNull();
 
       MBeanAttributeInfo[] attributeInfoArray = info.getAttributes();
       assertThat(attributeInfoArray).hasSize(2);
 
-      String requestTimeout = (String) beanServer.getAttribute(name, "RequestTimeoutSeconds");
-      assertThat(Long.parseLong(requestTimeout))
-        .isEqualTo(newSessionQueueOptions.getRequestTimeoutSeconds());
+      AttributeList attributeList = getAttributeList(name, attributeInfoArray);
+      assertThat(attributeList).isNotNull().hasSize(2);
 
-      String retryInterval = (String) beanServer.getAttribute(name, "RetryIntervalSeconds");
-      assertThat(Long.parseLong(retryInterval))
-        .isEqualTo(newSessionQueueOptions.getRetryIntervalSeconds());
-    } catch (InstanceNotFoundException | IntrospectionException | ReflectionException
-      | MalformedObjectNameException e) {
+      Object requestTimeout = beanServer.getAttribute(name, "RequestTimeoutSeconds");
+      assertNumberAttribute(requestTimeout, newSessionQueueOptions.getRequestTimeoutSeconds());
+
+      Object retryInterval = beanServer.getAttribute(name, "RetryIntervalMilliseconds");
+      assertNumberAttribute(retryInterval, newSessionQueueOptions.getRetryIntervalMilliseconds());
+    } catch (InstanceNotFoundException
+        | IntrospectionException
+        | ReflectionException
+        | MalformedObjectNameException e) {
       fail("Could not find the registered MBean");
     } catch (MBeanException e) {
       fail("MBeanServer exception");
@@ -195,20 +210,24 @@ public class JmxTest {
   }
 
   @Test
-  public void shouldBeAbleToRegisterSessionQueue() {
+  void shouldBeAbleToRegisterSessionQueue() {
     try {
-      ObjectName name = new ObjectName("org.seleniumhq.grid:type=SessionQueue,name=LocalSessionQueue");
+      ObjectName name =
+          new ObjectName("org.seleniumhq.grid:type=SessionQueue,name=LocalSessionQueue");
 
       new JMXHelper().unregister(name);
 
       Tracer tracer = DefaultTestTracer.createTracer();
 
-      NewSessionQueue sessionQueue = new LocalNewSessionQueue(
-        tracer,
-        new DefaultSlotMatcher(),
-        Duration.ofSeconds(2),
-        Duration.ofSeconds(2),
-        new Secret(""));
+      NewSessionQueue sessionQueue =
+          new LocalNewSessionQueue(
+              tracer,
+              new DefaultSlotMatcher(),
+              Duration.ofSeconds(2),
+              Duration.ofSeconds(2),
+              Duration.ofSeconds(1),
+              new Secret(""),
+              5);
 
       assertThat(sessionQueue).isNotNull();
       MBeanInfo info = beanServer.getMBeanInfo(name);
@@ -217,10 +236,15 @@ public class JmxTest {
       MBeanAttributeInfo[] attributeInfoArray = info.getAttributes();
       assertThat(attributeInfoArray).hasSize(1);
 
-      String size = (String) beanServer.getAttribute(name, "NewSessionQueueSize");
-      assertThat(Integer.parseInt(size)).isZero();
-    } catch (InstanceNotFoundException | IntrospectionException | ReflectionException
-      | MalformedObjectNameException e) {
+      AttributeList attributeList = getAttributeList(name, attributeInfoArray);
+      assertThat(attributeList).isNotNull().hasSize(1);
+
+      Object size = beanServer.getAttribute(name, "NewSessionQueueSize");
+      assertNumberAttribute(size, 0);
+    } catch (InstanceNotFoundException
+        | IntrospectionException
+        | ReflectionException
+        | MalformedObjectNameException e) {
       fail("Could not find the registered MBean");
     } catch (MBeanException e) {
       fail("MBeanServer exception");
@@ -230,7 +254,7 @@ public class JmxTest {
   }
 
   @Test
-  public void shouldBeAbleToMonitorHub() throws Exception {
+  void shouldBeAbleToMonitorHub() throws Exception {
     ObjectName name = new ObjectName("org.seleniumhq.grid:type=Distributor,name=LocalDistributor");
 
     new JMXHelper().unregister(name);
@@ -240,54 +264,96 @@ public class JmxTest {
     Secret secret = new Secret("cheese");
     URI nodeUri = new URI("https://example.com:1234");
 
-    LocalNode localNode = LocalNode.builder(tracer, bus, nodeUri, nodeUri, secret)
-      .add(CAPS, new TestSessionFactory((id, caps) -> new Session(
-        id,
-        nodeUri,
-        new ImmutableCapabilities(),
-        caps,
-        Instant.now()))).build();
+    LocalNode localNode =
+        LocalNode.builder(tracer, bus, nodeUri, nodeUri, secret)
+            .add(
+                CAPS,
+                new TestSessionFactory(
+                    (id, caps) ->
+                        new Session(id, nodeUri, new ImmutableCapabilities(), caps, Instant.now())))
+            .build();
 
-    NewSessionQueue sessionQueue = new LocalNewSessionQueue(
-      tracer,
-      new DefaultSlotMatcher(),
-      Duration.ofSeconds(2),
-      Duration.ofSeconds(2),
-      secret);
+    NewSessionQueue sessionQueue =
+        new LocalNewSessionQueue(
+            tracer,
+            new DefaultSlotMatcher(),
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(1),
+            secret,
+            5);
 
-    Distributor distributor = new LocalDistributor(
-      tracer,
-      bus,
-      new PassthroughHttpClient.Factory(localNode),
-      new LocalSessionMap(tracer, bus),
-      sessionQueue,
-      new DefaultSlotSelector(),
-      secret,
-      Duration.ofMinutes(5),
-      false,
-      Duration.ofSeconds(5));
+    try (LocalDistributor distributor =
+        new LocalDistributor(
+            tracer,
+            bus,
+            new PassthroughHttpClient.Factory(localNode),
+            new LocalSessionMap(tracer, bus),
+            sessionQueue,
+            new DefaultSlotSelector(),
+            secret,
+            Duration.ofMinutes(5),
+            false,
+            Duration.ofSeconds(5),
+            Runtime.getRuntime().availableProcessors(),
+            new DefaultSlotMatcher())) {
 
-    distributor.add(localNode);
+      distributor.add(localNode);
 
-    MBeanInfo info = beanServer.getMBeanInfo(name);
-    assertThat(info).isNotNull();
+      MBeanInfo info = beanServer.getMBeanInfo(name);
+      assertThat(info).isNotNull();
 
-    String nodeUpCount = (String) beanServer.getAttribute(name, "NodeUpCount");
-    LOG.info("Node up count=" + nodeUpCount);
-    assertThat(Integer.parseInt(nodeUpCount)).isEqualTo(1);
+      MBeanAttributeInfo[] attributeInfoArray = info.getAttributes();
+      assertThat(attributeInfoArray).hasSize(4);
 
-    String nodeDownCount = (String) beanServer.getAttribute(name, "NodeDownCount");
-    LOG.info("Node down count=" + nodeDownCount);
-    assertThat(Integer.parseInt(nodeDownCount)).isZero();
+      AttributeList attributeList = getAttributeList(name, attributeInfoArray);
+      assertThat(attributeList).isNotNull().hasSize(4);
 
-    String activeSlots = (String) beanServer.getAttribute(name, "ActiveSlots");
-    LOG.info("Active slots count=" + activeSlots);
-    assertThat(Integer.parseInt(activeSlots)).isZero();
+      Object nodeUpCount = beanServer.getAttribute(name, "NodeUpCount");
+      LOG.info("Node up count=" + nodeUpCount);
+      assertNumberAttribute(nodeUpCount, 1);
 
-    String idleSlots = (String) beanServer.getAttribute(name, "IdleSlots");
-    LOG.info("Idle slots count=" + idleSlots);
-    assertThat(Integer.parseInt(idleSlots)).isEqualTo(1);
+      Object nodeDownCount = beanServer.getAttribute(name, "NodeDownCount");
+      LOG.info("Node down count=" + nodeDownCount);
+      assertNumberAttribute(nodeDownCount, 0);
+
+      Object activeSlots = beanServer.getAttribute(name, "ActiveSlots");
+      LOG.info("Active slots count=" + activeSlots);
+      assertNumberAttribute(activeSlots, 0);
+
+      Object idleSlots = beanServer.getAttribute(name, "IdleSlots");
+      LOG.info("Idle slots count=" + idleSlots);
+      assertNumberAttribute(idleSlots, 1);
+    }
   }
 
-}
+  private AttributeList getAttributeList(ObjectName name, MBeanAttributeInfo[] attributeInfoArray)
+      throws InstanceNotFoundException, ReflectionException {
+    String[] attributeNames = new String[attributeInfoArray.length];
+    for (int i = 0; i < attributeInfoArray.length; i++) {
+      attributeNames[i] = attributeInfoArray[i].getName();
+    }
 
+    return beanServer.getAttributes(name, attributeNames);
+  }
+
+  private void assertCommonNumberAttributes(Object attribute) {
+    assertThat(attribute).isNotNull();
+    assertThat(attribute).isInstanceOf(Number.class);
+  }
+
+  private void assertNumberAttribute(Object attribute, int expectedValue) {
+    assertCommonNumberAttributes(attribute);
+    assertThat(Integer.parseInt(attribute.toString())).isEqualTo(expectedValue);
+  }
+
+  private void assertNumberAttribute(Object attribute, long expectedValue) {
+    assertCommonNumberAttributes(attribute);
+    assertThat(Long.parseLong(attribute.toString())).isEqualTo(expectedValue);
+  }
+
+  private void assertNumberAttribute(Object attribute, float expectedValue) {
+    assertCommonNumberAttributes(attribute);
+    assertThat(Float.parseFloat(attribute.toString())).isEqualTo(expectedValue);
+  }
+}

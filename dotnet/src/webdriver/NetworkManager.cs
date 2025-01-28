@@ -1,25 +1,26 @@
-// <copyright file="NetworkManager.cs" company="WebDriver Committers">
+// <copyright file="NetworkManager.cs" company="Selenium Committers">
 // Licensed to the Software Freedom Conservancy (SFC) under one
-// or more contributor license agreements. See the NOTICE file
+// or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
-// regarding copyright ownership. The SFC licenses this file
-// to you under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 // </copyright>
 
+using OpenQA.Selenium.DevTools;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using OpenQA.Selenium.DevTools;
 
 namespace OpenQA.Selenium
 {
@@ -45,7 +46,7 @@ namespace OpenQA.Selenium
             this.session = new Lazy<DevToolsSession>(() =>
             {
                 IDevTools devToolsDriver = driver as IDevTools;
-                if (session == null)
+                if (devToolsDriver == null)
                 {
                     throw new WebDriverException("Driver must implement IDevTools to use these features");
                 }
@@ -73,9 +74,9 @@ namespace OpenQA.Selenium
             this.session.Value.Domains.Network.RequestPaused += OnRequestPaused;
             this.session.Value.Domains.Network.AuthRequired += OnAuthRequired;
             this.session.Value.Domains.Network.ResponsePaused += OnResponsePaused;
-            await this.session.Value.Domains.Network.EnableFetchForAllPatterns();
-            await this.session.Value.Domains.Network.EnableNetwork();
-            await this.session.Value.Domains.Network.DisableNetworkCaching();
+            await this.session.Value.Domains.Network.EnableFetchForAllPatterns().ConfigureAwait(false);
+            await this.session.Value.Domains.Network.EnableNetwork().ConfigureAwait(false);
+            await this.session.Value.Domains.Network.DisableNetworkCaching().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -87,12 +88,12 @@ namespace OpenQA.Selenium
             this.session.Value.Domains.Network.ResponsePaused -= OnResponsePaused;
             this.session.Value.Domains.Network.AuthRequired -= OnAuthRequired;
             this.session.Value.Domains.Network.RequestPaused -= OnRequestPaused;
-            await this.session.Value.Domains.Network.EnableNetworkCaching();
+            await this.session.Value.Domains.Network.EnableNetworkCaching().ConfigureAwait(false);
         }
 
         /// <summary>
         /// Adds a <see cref="NetworkRequestHandler"/> to examine incoming network requests,
-        /// and optionally modify the request or provide a response. 
+        /// and optionally modify the request or provide a response.
         /// </summary>
         /// <param name="handler">The <see cref="NetworkRequestHandler"/> to add.</param>
         public void AddRequestHandler(NetworkRequestHandler handler)
@@ -164,7 +165,7 @@ namespace OpenQA.Selenium
 
         /// <summary>
         /// Adds a <see cref="NetworkResponseHandler"/> to examine received network responses,
-        /// and optionally modify the response. 
+        /// and optionally modify the response.
         /// </summary>
         /// <param name="handler">The <see cref="NetworkResponseHandler"/> to add.</param>
         public void AddResponseHandler(NetworkResponseHandler handler)
@@ -190,7 +191,7 @@ namespace OpenQA.Selenium
             this.responseHandlers.Clear();
         }
 
-        private async void OnAuthRequired(object sender, AuthRequiredEventArgs e)
+        private async Task OnAuthRequired(object sender, AuthRequiredEventArgs e)
         {
             string requestId = e.RequestId;
             Uri uri = new Uri(e.Uri);
@@ -200,7 +201,7 @@ namespace OpenQA.Selenium
                 if (authenticationHandler.UriMatcher.Invoke(uri))
                 {
                     PasswordCredentials credentials = authenticationHandler.Credentials as PasswordCredentials;
-                    await this.session.Value.Domains.Network.ContinueWithAuth(e.RequestId, credentials.UserName, credentials.Password);
+                    await this.session.Value.Domains.Network.ContinueWithAuth(e.RequestId, credentials.UserName, credentials.Password).ConfigureAwait(false);
                     successfullyAuthenticated = true;
                     break;
                 }
@@ -208,11 +209,11 @@ namespace OpenQA.Selenium
 
             if (!successfullyAuthenticated)
             {
-                await this.session.Value.Domains.Network.CancelAuth(e.RequestId);
+                await this.session.Value.Domains.Network.CancelAuth(e.RequestId).ConfigureAwait(false);
             }
         }
 
-        private async void OnRequestPaused(object sender, RequestPausedEventArgs e)
+        private async Task OnRequestPaused(object sender, RequestPausedEventArgs e)
         {
             if (this.NetworkRequestSent != null)
             {
@@ -225,27 +226,27 @@ namespace OpenQA.Selenium
                 {
                     if (handler.RequestTransformer != null)
                     {
-                        await this.session.Value.Domains.Network.ContinueRequest(handler.RequestTransformer(e.RequestData));
+                        await this.session.Value.Domains.Network.ContinueRequest(handler.RequestTransformer(e.RequestData)).ConfigureAwait(false);
                         return;
                     }
 
                     if (handler.ResponseSupplier != null)
                     {
-                        await this.session.Value.Domains.Network.ContinueRequestWithResponse(e.RequestData, handler.ResponseSupplier(e.RequestData));
+                        await this.session.Value.Domains.Network.ContinueRequestWithResponse(e.RequestData, handler.ResponseSupplier(e.RequestData)).ConfigureAwait(false);
                         return;
                     }
                 }
             }
 
-            await this.session.Value.Domains.Network.ContinueRequestWithoutModification(e.RequestData);
+            await this.session.Value.Domains.Network.ContinueRequestWithoutModification(e.RequestData).ConfigureAwait(false);
         }
 
-        private async void OnResponsePaused(object sender, ResponsePausedEventArgs e)
+        private async Task OnResponsePaused(object sender, ResponsePausedEventArgs e)
         {
             if (e.ResponseData.Headers.Count > 0)
             {
                 // If no headers are present, the body cannot be retrieved.
-                await this.session.Value.Domains.Network.AddResponseBody(e.ResponseData);
+                await this.session.Value.Domains.Network.AddResponseBody(e.ResponseData).ConfigureAwait(false);
             }
 
             if (this.NetworkResponseReceived != null)
@@ -262,12 +263,12 @@ namespace OpenQA.Selenium
                     // It might be better to refactor that method signature to simply pass the request ID, or
                     // alternatively, just pass the response data, which should also contain the request ID anyway.
                     HttpRequestData requestData = new HttpRequestData() { RequestId = e.ResponseData.RequestId };
-                    await this.session.Value.Domains.Network.ContinueRequestWithResponse(requestData, handler.ResponseTransformer(e.ResponseData));
+                    await this.session.Value.Domains.Network.ContinueRequestWithResponse(requestData, handler.ResponseTransformer(e.ResponseData)).ConfigureAwait(false);
                     return;
                 }
             }
 
-            await this.session.Value.Domains.Network.ContinueResponseWithoutModification(e.ResponseData);
+            await this.session.Value.Domains.Network.ContinueResponseWithoutModification(e.ResponseData).ConfigureAwait(false);
         }
     }
 }

@@ -23,5 +23,5 @@ package org.openqa.selenium.html5;
  * unique set of session storage, one for each origin. Sites can add data to the session storage and
  * it will be accessible to any page from the same site opened in that window.
  */
-public interface SessionStorage extends Storage {
-}
+@Deprecated
+public interface SessionStorage extends Storage {}

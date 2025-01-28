@@ -1,10 +1,31 @@
+// <copyright file="TestWebServer.cs" company="Selenium Committers">
+// Licensed to the Software Freedom Conservancy (SFC) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
+
+using Bazel;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
-using System.Diagnostics;
+using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
-using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace OpenQA.Selenium.Environment
 {
@@ -12,11 +33,12 @@ namespace OpenQA.Selenium.Environment
     {
         private Process webserverProcess;
 
-        private string standaloneTestJar = @"java/test/org/openqa/selenium/environment/appserver_deploy.jar";
+        private string standaloneTestJar = @"_main/java/test/org/openqa/selenium/environment/appserver";
         private string projectRootPath;
         private bool captureWebServerOutput;
         private bool hideCommandPrompt;
         private string javaHomeDirectory;
+        private string port;
 
         private StringBuilder outputData = new StringBuilder();
 
@@ -26,14 +48,32 @@ namespace OpenQA.Selenium.Environment
             this.captureWebServerOutput = config.CaptureConsoleOutput;
             this.hideCommandPrompt = config.HideCommandPromptWindow;
             this.javaHomeDirectory = config.JavaHomeDirectory;
+            this.port = config.Port;
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
             if (webserverProcess == null || webserverProcess.HasExited)
             {
-                standaloneTestJar = standaloneTestJar.Replace('/', Path.DirectorySeparatorChar);
-                if (!File.Exists(Path.Combine(projectRootPath, standaloneTestJar)))
+                try
+                {
+                    var runfiles = Runfiles.Create();
+                    standaloneTestJar = runfiles.Rlocation(standaloneTestJar);
+                }
+                catch (FileNotFoundException)
+                {
+                    var baseDirectory = AppContext.BaseDirectory;
+                    standaloneTestJar = Path.Combine(baseDirectory, "../../../../../../bazel-bin/java/test/org/openqa/selenium/environment/appserver");
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    standaloneTestJar += ".exe";
+                }
+
+                Console.Write("Standalone jar is " + standaloneTestJar);
+
+                if (!File.Exists(standaloneTestJar))
                 {
                     throw new FileNotFoundException(
                         string.Format(
@@ -43,47 +83,39 @@ namespace OpenQA.Selenium.Environment
                             projectRootPath));
                 }
 
-                string javaExecutableName = "java";
-                if (System.Environment.OSVersion.Platform == PlatformID.Win32NT || System.Environment.OSVersion.Platform == PlatformID.Win32Windows)
-                {
-                    javaExecutableName = javaExecutableName + ".exe";
-                }
-
-                string javaExecutablePath = string.Empty;
-                if (!string.IsNullOrEmpty(this.javaHomeDirectory))
-                {
-                    javaExecutablePath = Path.Combine(this.javaHomeDirectory, "bin");
-                }
-
-                List<string> javaSystemProperties = new List<string>();
+                //List<string> javaSystemProperties = new List<string>();
 
                 StringBuilder processArgsBuilder = new StringBuilder();
-                foreach (string systemProperty in javaSystemProperties)
-                {
-                    if (processArgsBuilder.Length > 0)
-                    {
-                        processArgsBuilder.Append(" ");
-                    }
+                // foreach (string systemProperty in javaSystemProperties)
+                // {
+                //     if (processArgsBuilder.Length > 0)
+                //     {
+                //         processArgsBuilder.Append(" ");
+                //     }
+                //
+                //     processArgsBuilder.AppendFormat("-D{0}", systemProperty);
+                // }
+                //
+                // if (processArgsBuilder.Length > 0)
+                // {
+                //     processArgsBuilder.Append(" ");
+                // }
+                //
+                // processArgsBuilder.AppendFormat("-jar {0}", standaloneTestJar);
+                processArgsBuilder.AppendFormat(" {0}", this.port);
 
-                    processArgsBuilder.AppendFormat("-D{0}", systemProperty);
-                }
-
-                if (processArgsBuilder.Length > 0)
-                {
-                    processArgsBuilder.Append(" ");
-                }
-
-                processArgsBuilder.AppendFormat("-jar {0}", standaloneTestJar);
+                Console.Write(processArgsBuilder.ToString());
 
                 webserverProcess = new Process();
-                if (!string.IsNullOrEmpty(javaExecutablePath))
-                {
-                    webserverProcess.StartInfo.FileName = Path.Combine(javaExecutablePath, javaExecutableName);
-                }
-                else
-                {
-                    webserverProcess.StartInfo.FileName = javaExecutableName;
-                }
+                webserverProcess.StartInfo.FileName = standaloneTestJar;
+                // if (!string.IsNullOrEmpty(javaExecutablePath))
+                // {
+                //     webserverProcess.StartInfo.FileName = Path.Combine(javaExecutablePath, javaExecutableName);
+                // }
+                // else
+                // {
+                //     webserverProcess.StartInfo.FileName = javaExecutableName;
+                // }
 
                 webserverProcess.StartInfo.Arguments = processArgsBuilder.ToString();
                 webserverProcess.StartInfo.WorkingDirectory = projectRootPath;
@@ -93,6 +125,8 @@ namespace OpenQA.Selenium.Environment
                 {
                     webserverProcess.StartInfo.EnvironmentVariables["JAVA_HOME"] = this.javaHomeDirectory;
                 }
+
+                captureWebServerOutput = true;
 
                 if (captureWebServerOutput)
                 {
@@ -105,19 +139,22 @@ namespace OpenQA.Selenium.Environment
                 TimeSpan timeout = TimeSpan.FromSeconds(30);
                 DateTime endTime = DateTime.Now.Add(TimeSpan.FromSeconds(30));
                 bool isRunning = false;
+
+                // Poll until the webserver is correctly serving pages.
+                using var httpClient = new HttpClient();
+
                 while (!isRunning && DateTime.Now < endTime)
                 {
-                    // Poll until the webserver is correctly serving pages.
-                    HttpWebRequest request = WebRequest.Create(EnvironmentManager.Instance.UrlBuilder.LocalWhereIs("simpleTest.html")) as HttpWebRequest;
                     try
                     {
-                        HttpWebResponse response = request.GetResponse() as HttpWebResponse;
+                        using var response = await httpClient.GetAsync(EnvironmentManager.Instance.UrlBuilder.LocalWhereIs("simpleTest.html"));
+
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
                             isRunning = true;
                         }
                     }
-                    catch (WebException)
+                    catch (Exception ex) when (ex is HttpRequestException || ex is TimeoutException)
                     {
                     }
                 }
@@ -138,29 +175,32 @@ namespace OpenQA.Selenium.Environment
             }
         }
 
-        public void Stop()
+        public async Task StopAsync()
         {
-            HttpWebRequest request = WebRequest.Create(EnvironmentManager.Instance.UrlBuilder.LocalWhereIs("quitquitquit")) as HttpWebRequest;
-            try
-            {
-                request.GetResponse();
-            }
-            catch (WebException)
-            {
-            }
-
             if (webserverProcess != null)
             {
+                using (var httpClient = new HttpClient())
+                {
+                    try
+                    {
+                        using (await httpClient.GetAsync(EnvironmentManager.Instance.UrlBuilder.LocalWhereIs("quitquitquit")))
+                        {
+
+                        }
+                    }
+                    catch (HttpRequestException)
+                    {
+
+                    }
+                }
+
                 try
                 {
                     webserverProcess.WaitForExit(10000);
                     if (!webserverProcess.HasExited)
                     {
-                        webserverProcess.Kill();
+                        webserverProcess.Kill(entireProcessTree: true);
                     }
-                }
-                catch (Exception)
-                {
                 }
                 finally
                 {

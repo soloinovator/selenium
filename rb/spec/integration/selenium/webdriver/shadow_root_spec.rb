@@ -5,14 +5,14 @@
 # distributed with this work for additional information
 # regarding copyright ownership.  The SFC licenses this file
 # to you under the Apache License, Version 2.0 (the
-# 'License'); you may not use this file except in compliance
+# "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
-# 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
@@ -21,31 +21,40 @@ require_relative 'spec_helper'
 
 module Selenium
   module WebDriver
-    describe ShadowRoot, only: {browser: %i[chrome firefox edge]} do
+    describe ShadowRoot, exclusive: [{bidi: false, reason: 'Not yet implemented with BiDi'},
+                                     {browser: %i[chrome firefox edge safari]}] do
       before { driver.navigate.to url_for('webComponents.html') }
 
       let(:custom_element) { driver.find_element(css: 'custom-checkbox-element') }
 
       it 'gets shadow root from driver' do
         shadow_root = custom_element.shadow_root
-        expect(shadow_root).to be_a ShadowRoot
+        expect(shadow_root).to be_a described_class
       end
 
-      it 'raises error if no shadow root' do
+      it 'raises error if no shadow root', exclude: {browser: :safari, reason: 'NoMethodError'} do
         driver.navigate.to url_for('simpleTest.html')
         div = driver.find_element(css: 'div')
         expect { div.shadow_root }.to raise_error(Error::NoSuchShadowRootError)
       end
 
-      it 'gets shadow root from script', except: {browser: :firefox,
-                                                  reason: 'https://github.com/mozilla/geckodriver/issues/2006'} do
+      it 'raises error if the shadow root is detached', exclude: {browser: :safari, reason: 'NoMethodError'} do
+        driver.navigate.to url_for('simpleTest.html')
+        div = driver.find_element(css: 'div')
+        driver.execute_script('arguments[0].attachShadow({ mode: "open" });', div)
+        root = div.shadow_root
+        driver.execute_script('arguments[0].remove();', div)
+        expect { root.find_element(css: '#x') }.to raise_error(Error::DetachedShadowRootError)
+      end
+
+      it 'gets shadow root from script',
+         exclude: {browser: :safari, reason: 'returns correct node, but references shadow root as a element'} do
         shadow_root = custom_element.shadow_root
         execute_shadow_root = driver.execute_script('return arguments[0].shadowRoot;', custom_element)
         expect(execute_shadow_root).to eq shadow_root
       end
 
-      describe '#find_element', except: {browser: :firefox,
-                                         reason: 'https://github.com/mozilla/geckodriver/issues/2005'} do
+      describe '#find_element' do
         it 'by css' do
           shadow_root = custom_element.shadow_root
           element = shadow_root.find_element(css: 'input')
@@ -53,7 +62,7 @@ module Selenium
           expect(element).to be_a Element
         end
 
-        it 'by xpath', except: {browser: %i[chrome edge],
+        it 'by xpath', except: {browser: %i[chrome edge firefox safari],
                                 reason: 'https://bugs.chromium.org/p/chromedriver/issues/detail?id=4097'} do
           shadow_root = custom_element.shadow_root
           element = shadow_root.find_element(xpath: "//input[type='checkbox']")
@@ -75,7 +84,7 @@ module Selenium
           expect(element).to be_a Element
         end
 
-        it 'by tag name', except: {browser: %i[chrome edge],
+        it 'by tag name', except: {browser: %i[chrome edge firefox safari],
                                    reason: 'https://bugs.chromium.org/p/chromedriver/issues/detail?id=4097'} do
           shadow_root = custom_element.shadow_root
           element = shadow_root.find_element(tag_name: 'input')
@@ -90,8 +99,7 @@ module Selenium
         end
       end
 
-      describe '#find_elements', except: {browser: :firefox,
-                                          reason: 'https://github.com/mozilla/geckodriver/issues/2005'} do
+      describe '#find_elements' do
         it 'by css' do
           shadow_root = custom_element.shadow_root
           elements = shadow_root.find_elements(css: 'input')
@@ -100,7 +108,7 @@ module Selenium
           expect(elements.first).to be_a Element
         end
 
-        it 'by xpath', except: {browser: %i[chrome edge],
+        it 'by xpath', except: {browser: %i[chrome edge firefox safari],
                                 reason: 'https://bugs.chromium.org/p/chromedriver/issues/detail?id=4097'} do
           shadow_root = custom_element.shadow_root
           elements = shadow_root.find_elements(xpath: "//input[type='checkbox']")
@@ -125,7 +133,7 @@ module Selenium
           expect(elements.first).to be_a Element
         end
 
-        it 'by tag name', except: {browser: %i[chrome edge],
+        it 'by tag name', except: {browser: %i[chrome edge firefox safari],
                                    reason: 'https://bugs.chromium.org/p/chromedriver/issues/detail?id=4097'} do
           shadow_root = custom_element.shadow_root
           elements = shadow_root.find_elements(tag_name: 'input')

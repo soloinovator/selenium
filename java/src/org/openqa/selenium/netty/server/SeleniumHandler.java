@@ -19,30 +19,41 @@ package org.openqa.selenium.netty.server;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.openqa.selenium.remote.ErrorFilter;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.openqa.selenium.internal.Require;
+import org.openqa.selenium.remote.ErrorFilter;
 import org.openqa.selenium.remote.http.HttpHandler;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 class SeleniumHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
   private final HttpHandler seleniumHandler;
+  private Future<?> lastOne;
 
   public SeleniumHandler(HttpHandler seleniumHandler) {
     super(HttpRequest.class);
     this.seleniumHandler = Require.nonNull("HTTP handler", seleniumHandler).with(new ErrorFilter());
+    this.lastOne = CompletableFuture.completedFuture(null);
   }
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, HttpRequest msg) {
-    EXECUTOR.submit(() -> {
-      HttpResponse res = seleniumHandler.execute(msg);
-      ctx.writeAndFlush(res);
-    });
+    lastOne =
+        EXECUTOR.submit(
+            () -> {
+              HttpResponse res = seleniumHandler.execute(msg);
+              ctx.writeAndFlush(res);
+            });
+  }
+
+  @Override
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    lastOne.cancel(true);
+    super.channelInactive(ctx);
   }
 }

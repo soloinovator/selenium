@@ -17,12 +17,7 @@
 
 package org.openqa.selenium.firefox;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.build.InProject;
-import org.openqa.selenium.io.FileHandler;
-import org.openqa.selenium.io.Zip;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,14 +32,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.build.InProject;
+import org.openqa.selenium.io.FileHandler;
+import org.openqa.selenium.io.Zip;
 
 @Tag("UnitTests")
-public class FirefoxProfileTest {
+class FirefoxProfileTest {
   private static final String EXT_PATH = "common/extensions/webextensions-selenium-example.xpi";
   private static final String EXT_RESOURCE_PATH =
-    "java/test/org/openqa/selenium/firefox/webextensions-selenium-example.xpi";
+      "java/test/org/openqa/selenium/firefox/webextensions-selenium-example.xpi";
 
   private FirefoxProfile profile;
 
@@ -54,14 +53,14 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void shouldQuoteStringsWhenSettingStringProperties() throws Exception {
+  void shouldQuoteStringsWhenSettingStringProperties() throws Exception {
     profile.setPreference("cheese", "brie");
 
     assertPreferenceValueEquals("cheese", "\"brie\"");
   }
 
   @Test
-  public void getStringPreferenceShouldReturnUserSuppliedValueWhenSet() {
+  void getStringPreferenceShouldReturnUserSuppliedValueWhenSet() {
     String key = "cheese";
     String value = "brie";
     profile.setPreference(key, value);
@@ -71,7 +70,7 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void getStringPreferenceShouldReturnDefaultValueWhenSet() {
+  void getStringPreferenceShouldReturnDefaultValueWhenSet() {
     String key = "cheese";
 
     String defaultValue = "brie";
@@ -79,14 +78,14 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void shouldSetIntegerPreferences() throws Exception {
+  void shouldSetIntegerPreferences() throws Exception {
     profile.setPreference("cheese", 1234);
 
     assertPreferenceValueEquals("cheese", 1234);
   }
 
   @Test
-  public void getIntegerPreferenceShouldReturnUserSuppliedValueWhenSet() {
+  void getIntegerPreferenceShouldReturnUserSuppliedValueWhenSet() {
     String key = "cheese";
     int value = 1234;
     profile.setPreference(key, value);
@@ -96,7 +95,7 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void getIntegerPreferenceShouldReturnDefaultValueWhenSet() {
+  void getIntegerPreferenceShouldReturnDefaultValueWhenSet() {
     String key = "cheese";
 
     int defaultValue = 42;
@@ -104,14 +103,14 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void shouldSetBooleanPreferences() throws Exception {
+  void shouldSetBooleanPreferences() throws Exception {
     profile.setPreference("cheese", false);
 
     assertPreferenceValueEquals("cheese", false);
   }
 
   @Test
-  public void getBooleanPreferenceShouldReturnUserSuppliedValueWhenSet() {
+  void getBooleanPreferenceShouldReturnUserSuppliedValueWhenSet() {
     String key = "cheese";
     boolean value = true;
     profile.setPreference(key, value);
@@ -121,7 +120,7 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void getBooleanPreferenceShouldReturnDefaultValueWhenSet() {
+  void getBooleanPreferenceShouldReturnDefaultValueWhenSet() {
     String key = "cheese";
 
     boolean defaultValue = true;
@@ -129,50 +128,54 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void shouldAllowSettingFrozenPreferences() throws Exception {
+  void shouldAllowSettingFrozenPreferences() throws Exception {
     profile.setPreference("network.http.phishy-userpass-length", 1024);
     assertPreferenceValueEquals("network.http.phishy-userpass-length", 1024);
   }
 
   @Test
-  public void shouldInstallWebExtensionFromZip() {
+  void shouldInstallWebExtensionFromZip() {
     profile.addExtension(InProject.locate(EXT_PATH).toFile());
     File profileDir = profile.layoutOnDisk();
-    File extensionFile = new File(profileDir, "extensions/webextensions-selenium-example@example.com.xpi");
+    File extensionFile = new File(profileDir, "extensions/webextensions-selenium-example@0.1.xpi");
     assertThat(extensionFile).exists().isFile();
   }
 
   @Test
-  public void shouldInstallWebExtensionFromDirectory() throws IOException {
+  void shouldInstallWebExtensionFromDirectory() throws IOException {
     File extension = InProject.locate(EXT_PATH).toFile();
     File unzippedExtension = Zip.unzipToTempDir(new FileInputStream(extension), "unzip", "stream");
     profile.addExtension(unzippedExtension);
     File profileDir = profile.layoutOnDisk();
-    File extensionDir = new File(profileDir, "extensions/webextensions-selenium-example@example.com");
+    File extensionDir = new File(profileDir, "extensions/webextensions-selenium-example@0.1");
     assertThat(extensionDir).exists();
   }
 
   @Test
-  public void shouldInstallExtensionUsingClasspath() {
+  void shouldInstallExtensionUsingClasspath() {
     profile.addExtension(FirefoxProfileTest.class, EXT_RESOURCE_PATH);
     File profileDir = profile.layoutOnDisk();
-    File extensionDir = new File(profileDir, "extensions/webextensions-selenium-example@example.com.xpi");
+    File extensionDir = new File(profileDir, "extensions/webextensions-selenium-example@0.1.xpi");
     assertThat(extensionDir).exists();
   }
 
   @Test
-  public void convertingToJsonShouldNotPolluteTempDir() throws IOException {
+  void convertingToJsonShouldNotPolluteTempDir() throws IOException {
     File sysTemp = new File(System.getProperty("java.io.tmpdir"));
-    Set<String> before = Arrays.stream(sysTemp.list())
-      .filter(f -> f.endsWith("webdriver-profile")).collect(Collectors.toSet());
+    Set<String> before =
+        Arrays.stream(sysTemp.list())
+            .filter(f -> f.endsWith("webdriver-profile"))
+            .collect(Collectors.toSet());
     assertThat(profile.toJson()).isNotNull();
-    Set<String> after = Arrays.stream(sysTemp.list())
-      .filter(f -> f.endsWith("webdriver-profile")).collect(Collectors.toSet());
+    Set<String> after =
+        Arrays.stream(sysTemp.list())
+            .filter(f -> f.endsWith("webdriver-profile"))
+            .collect(Collectors.toSet());
     assertThat(after).isEqualTo(before);
   }
 
   @Test
-  public void shouldConvertItselfIntoAMeaningfulRepresentation() throws IOException {
+  void shouldConvertItselfIntoAMeaningfulRepresentation() throws IOException {
     profile.setPreference("i.like.cheese", true);
 
     String json = profile.toJson();
@@ -182,7 +185,7 @@ public class FirefoxProfileTest {
     File dir = Zip.unzipToTempDir(json, "webdriver", "duplicated");
 
     File prefs = new File(dir, "user.js");
-    assertThat(prefs.exists()).isTrue();
+    assertThat(prefs).exists();
 
     try (Stream<String> lines = Files.lines(prefs.toPath())) {
       assertThat(lines.anyMatch(s -> s.contains("i.like.cheese"))).isTrue();
@@ -208,15 +211,15 @@ public class FirefoxProfileTest {
   }
 
   @Test
-  public void layoutOnDiskSetsUserPreferences() throws IOException {
+  void layoutOnDiskSetsUserPreferences() throws IOException {
     profile.setPreference("browser.startup.homepage", "http://www.example.com");
     Preferences parsedPrefs = parseUserPrefs(profile);
     assertThat(parsedPrefs.getPreference("browser.startup.homepage"))
-      .isEqualTo("http://www.example.com");
+        .isEqualTo("http://www.example.com");
   }
 
   @Test
-  public void userPrefsArePreservedWhenConvertingToAndFromJson() throws IOException {
+  void userPrefsArePreservedWhenConvertingToAndFromJson() throws IOException {
     profile.setPreference("browser.startup.homepage", "http://www.example.com");
 
     String json = profile.toJson();
@@ -224,12 +227,15 @@ public class FirefoxProfileTest {
     Preferences parsedPrefs = parseUserPrefs(rebuilt);
 
     assertThat(parsedPrefs.getPreference("browser.startup.homepage"))
-      .isEqualTo("http://www.example.com");
+        .isEqualTo("http://www.example.com");
   }
 
   @Test
-  public void backslashedCharsArePreservedWhenConvertingToAndFromJson() throws IOException {
-    String dir = "c:\\aaa\\bbb\\ccc\\ddd\\eee\\fff\\ggg\\hhh\\iii\\jjj\\kkk\\lll\\mmm\\nnn\\ooo\\ppp\\qqq\\rrr\\sss\\ttt\\uuu\\vvv\\www\\xxx\\yyy\\zzz";
+  void backslashedCharsArePreservedWhenConvertingToAndFromJson() throws IOException {
+    String dir =
+        "c:\\aaa\\bbb\\ccc\\ddd\\eee\\fff\\ggg\\hhh\\iii\\jjj\\kkk\\lll\\mmm\\n"
+            + "nn\\ooo\\ppp\\qqq\\r"
+            + "rr\\sss\\ttt\\uuu\\vvv\\www\\xxx\\yyy\\zzz";
     profile.setPreference("browser.download.dir", dir);
 
     String json = profile.toJson();
@@ -241,7 +247,10 @@ public class FirefoxProfileTest {
 
   private void assertPreferenceValueEquals(String key, Object value) throws Exception {
     List<String> props = readGeneratedProperties(profile);
-    assertThat(props.stream().anyMatch(line -> line.contains(key) && line.contains(", " + value + ")"))).isTrue();
+    assertThat(
+            props.stream()
+                .anyMatch(line -> line.contains(key) && line.contains(", " + value + ")")))
+        .isTrue();
   }
 
   private Preferences parseUserPrefs(FirefoxProfile profile) throws IOException {

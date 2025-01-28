@@ -17,17 +17,18 @@
 
 package org.openqa.selenium.chrome;
 
+import static org.openqa.selenium.remote.Browser.CHROME;
+
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.chromium.ChromiumOptions;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.remote.CapabilityType;
 
-import static org.openqa.selenium.remote.Browser.CHROME;
-
 /**
  * Class to manage options specific to {@link ChromeDriver}.
  *
  * <p>Example usage:
+ *
  * <pre><code>
  * ChromeOptions options = new ChromeOptions()
  * options.addExtensions(new File("/path/to/extension.crx"))
@@ -46,21 +47,14 @@ import static org.openqa.selenium.remote.Browser.CHROME;
  */
 public class ChromeOptions extends ChromiumOptions<ChromeOptions> {
 
-  /**
-   * Key used to store a set of ChromeOptions in a {@link Capabilities}
-   * object.
-   */
+  /** Key used to store a set of ChromeOptions in a {@link Capabilities} object. */
   public static final String CAPABILITY = "goog:chromeOptions";
+
+  @SuppressWarnings("unused")
   public static final String LOGGING_PREFS = "goog:loggingPrefs";
-  private ChromeDriverLogLevel logLevel;
 
   public ChromeOptions() {
     super(CapabilityType.BROWSER_NAME, CHROME.browserName(), CAPABILITY);
-  }
-
-  public ChromeOptions setLogLevel(ChromeDriverLogLevel logLevel){
-    this.logLevel = Require.nonNull("Log level", logLevel);
-    return this;
   }
 
   @Override
@@ -70,10 +64,8 @@ public class ChromeOptions extends ChromiumOptions<ChromeOptions> {
     ChromeOptions newInstance = new ChromeOptions();
     newInstance.mergeInPlace(this);
     newInstance.mergeInPlace(extraCapabilities);
-    return newInstance;
-  }
+    newInstance.mergeInOptionsFromCaps(CAPABILITY, extraCapabilities);
 
-  public ChromeDriverLogLevel getLogLevel(){
-    return logLevel;
+    return newInstance;
   }
 }

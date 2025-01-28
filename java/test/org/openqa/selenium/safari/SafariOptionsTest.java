@@ -17,27 +17,26 @@
 
 package org.openqa.selenium.safari;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.openqa.selenium.AcceptedW3CCapabilityKeys;
-import org.openqa.selenium.ImmutableCapabilities;
-import org.openqa.selenium.remote.CapabilityType;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
-
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.openqa.selenium.remote.Browser.SAFARI;
 import static org.openqa.selenium.remote.Browser.SAFARI_TECH_PREVIEW;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.AcceptedW3CCapabilityKeys;
+import org.openqa.selenium.ImmutableCapabilities;
+import org.openqa.selenium.remote.CapabilityType;
+
 @Tag("UnitTests")
-public class SafariOptionsTest {
+class SafariOptionsTest {
 
   @Test
-  public void roundTrippingToCapabilitiesAndBackWorks() {
+  void roundTrippingToCapabilitiesAndBackWorks() {
     SafariOptions expected = new SafariOptions().setUseTechnologyPreview(true);
 
     // Convert to a Map so we can create a standalone capabilities instance, which we then use to
@@ -48,33 +47,36 @@ public class SafariOptionsTest {
   }
 
   @Test
-  public void canConstructFromCapabilities() {
+  void canConstructFromCapabilities() {
     SafariOptions options = new SafariOptions();
     assertThat(options.getUseTechnologyPreview()).isFalse();
 
-    options = new SafariOptions(
-      new ImmutableCapabilities(CapabilityType.BROWSER_NAME, SAFARI_TECH_PREVIEW.browserName()));
+    options =
+        new SafariOptions(
+            new ImmutableCapabilities(
+                CapabilityType.BROWSER_NAME, SAFARI_TECH_PREVIEW.browserName()));
     assertThat(options.getUseTechnologyPreview()).isTrue();
 
-    options = new SafariOptions(
-      new ImmutableCapabilities(CapabilityType.BROWSER_NAME, SAFARI.browserName()));
+    options =
+        new SafariOptions(
+            new ImmutableCapabilities(CapabilityType.BROWSER_NAME, SAFARI.browserName()));
     assertThat(options.getUseTechnologyPreview()).isFalse();
   }
 
   @Test
-  public void canSetAutomaticInspection() {
+  void canSetAutomaticInspection() {
     SafariOptions options = new SafariOptions().setAutomaticInspection(true);
     assertThat(options.getAutomaticInspection()).isTrue();
   }
 
   @Test
-  public void canSetAutomaticProfiling() {
+  void canSetAutomaticProfiling() {
     SafariOptions options = new SafariOptions().setAutomaticProfiling(true);
     assertThat(options.getAutomaticProfiling()).isTrue();
   }
 
   @Test
-  public void settingTechnologyPreviewModeAlsoChangesBrowserName() {
+  void settingTechnologyPreviewModeAlsoChangesBrowserName() {
     SafariOptions options = new SafariOptions();
     assertThat(options.getBrowserName()).isEqualTo(SAFARI.browserName());
 
@@ -86,24 +88,23 @@ public class SafariOptionsTest {
   }
 
   @Test
-  public void optionsAsMapShouldBeImmutable() {
+  void optionsAsMapShouldBeImmutable() {
     Map<String, Object> options = new SafariOptions().asMap();
     assertThatExceptionOfType(UnsupportedOperationException.class)
         .isThrownBy(() -> options.put("browserType", "chrome"));
   }
 
   @Test
-  public void isW3CSafe() {
-    Map<String, Object> converted = new SafariOptions()
-      .setUseTechnologyPreview(true)
-      .setAutomaticInspection(true)
-      .setAutomaticProfiling(true)
-      .asMap();
+  void isW3CSafe() {
+    Map<String, Object> converted =
+        new SafariOptions()
+            .setUseTechnologyPreview(true)
+            .setAutomaticInspection(true)
+            .setAutomaticProfiling(true)
+            .asMap();
 
     Predicate<String> badKeys = new AcceptedW3CCapabilityKeys().negate();
-    Set<String> seen = converted.keySet().stream()
-      .filter(badKeys)
-      .collect(toSet());
+    Set<String> seen = converted.keySet().stream().filter(badKeys).collect(toSet());
 
     assertThat(seen).isEmpty();
   }

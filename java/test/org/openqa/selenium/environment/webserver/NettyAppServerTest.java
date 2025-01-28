@@ -17,10 +17,10 @@
 
 package org.openqa.selenium.environment.webserver;
 
-public class NettyAppServerTest extends AppServerTestBase {
+class NettyAppServerTest extends AppServerTestBase {
 
   @Override
   protected AppServer createAppServer() {
-    return new NettyAppServer();
+    return new NettyAppServer(false);
   }
 }

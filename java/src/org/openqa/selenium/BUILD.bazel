@@ -1,5 +1,5 @@
+load("//java:defs.bzl", "artifact", "java_dist_zip", "java_export", "java_import", "javadoc")
 load("//java:version.bzl", "SE_VERSION")
-load("//java:defs.bzl", "java_dist_zip", "java_export", "java_import", "javadoc")
 load("//java/src/org/openqa/selenium/devtools:versions.bzl", "CDP_DEPS")
 
 filegroup(
@@ -12,6 +12,7 @@ java_export(
     name = "core",
     srcs = glob([
         "*.java",
+        "federatedcredentialmanagement/*.java",
         "html5/*.java",
         "internal/*.java",
         "interactions/**/*.java",
@@ -23,17 +24,19 @@ java_export(
     ]),
     hides = [
         "org.openqa.selenium.interactions.internal",
-        "org.openqa.selenium.internal",
     ],
     maven_coordinates = "org.seleniumhq.selenium:selenium-api:%s" % SE_VERSION,
     opens_to = [
-        "org.openqa.selenium.json",
+        "org.seleniumhq.selenium.json",
     ],
     pom_template = ":template-pom",
+    tags = [
+        "release-artifact",
+    ],
     visibility = ["//visibility:public"],
     deps = [
-        # Nothing from third party
         ":manifest",
+        artifact("org.jspecify:jspecify"),
     ],
 )
 
@@ -41,6 +44,9 @@ java_export(
     name = "client-combined",
     maven_coordinates = "org.seleniumhq.selenium:selenium-java:" + SE_VERSION,
     pom_template = ":template-pom",
+    tags = [
+        "release-artifact",
+    ],
     visibility = [
         "//visibility:public",
     ],
@@ -50,7 +56,6 @@ java_export(
         "//java/src/org/openqa/selenium/edge",
         "//java/src/org/openqa/selenium/firefox",
         "//java/src/org/openqa/selenium/ie",
-        "//java/src/org/openqa/selenium/opera",
         "//java/src/org/openqa/selenium/remote",
         "//java/src/org/openqa/selenium/safari",
         "//java/src/org/openqa/selenium/support",
@@ -75,7 +80,7 @@ java_dist_zip(
 javadoc(
     name = "client-javadoc",
     third_party_prefixes = [
-        "@maven//",
+        "@",
         "//third_party",
     ] + CDP_DEPS,
     transitive = True,

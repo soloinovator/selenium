@@ -40,7 +40,8 @@ module Selenium
         @executable_path = config.executable_path
         @host = Platform.localhost
         @port = config.port
-        @extra_args = config.extra_args
+        @io = config.log
+        @extra_args = config.args
         @shutdown_supported = config.shutdown_supported
 
         raise Error::WebDriverError, "invalid port: #{@port}" if @port < 1
@@ -64,7 +65,7 @@ module Selenium
 
         stop_server
         @process.poll_for_exit STOP_TIMEOUT
-      rescue ChildProcess::TimeoutError
+      rescue ChildProcess::TimeoutError, Errno::ECONNREFUSED
         nil # noop
       ensure
         stop_process
@@ -77,14 +78,10 @@ module Selenium
       private
 
       def build_process(*command)
-        WebDriver.logger.debug("Executing Process #{command}")
+        WebDriver.logger.debug("Executing Process #{command}", id: :driver_service)
         @process = ChildProcess.build(*command)
-        if WebDriver.logger.debug?
-          @process.io.stdout = @process.io.stderr = WebDriver.logger.io
-        elsif Platform.jruby?
-          # Apparently we need to read the output of drivers on JRuby.
-          @process.io.stdout = @process.io.stderr = File.new(Platform.null_device, 'w')
-        end
+        @io ||= WebDriver.logger.io if WebDriver.logger.debug?
+        @process.io = @io if @io
 
         @process
       end
@@ -104,8 +101,6 @@ module Selenium
 
       def start_process
         @process = build_process(@executable_path, "--port=#{@port}", *@extra_args)
-        # NOTE: this is a bug only in Windows 7
-        @process.leader = true unless Platform.windows?
         @process.start
       end
 
@@ -113,12 +108,12 @@ module Selenium
         return if process_exited?
 
         @process.stop STOP_TIMEOUT
-        @process.io.stdout.close if Platform.jruby? && !WebDriver.logger.debug?
       end
 
       def stop_server
         connect_to_server do |http|
           headers = WebDriver::Remote::Http::Common::DEFAULT_HEADERS.dup
+          WebDriver.logger.debug('Sending shutdown request to server', id: :driver_service)
           http.get('/shutdown', headers)
         end
       end

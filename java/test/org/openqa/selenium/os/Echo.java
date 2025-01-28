@@ -20,7 +20,7 @@ package org.openqa.selenium.os;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-public class Echo {
+class Echo {
 
   public static void main(String[] args) {
     if (args.length == 0) {
@@ -30,5 +30,4 @@ public class Echo {
     String message = Arrays.stream(args).collect(Collectors.joining(" "));
     System.out.println(message);
   }
-
 }

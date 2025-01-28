@@ -17,21 +17,23 @@
 
 package org.openqa.selenium.ie;
 
-import com.google.auto.service.AutoService;
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.ImmutableCapabilities;
-import org.openqa.selenium.SessionNotCreatedException;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.WebDriverInfo;
-
-import java.util.Optional;
-
 import static org.openqa.selenium.remote.Browser.IE;
 import static org.openqa.selenium.remote.CapabilityType.BROWSER_NAME;
 
+import com.google.auto.service.AutoService;
+import java.util.Optional;
+import java.util.logging.Logger;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.ImmutableCapabilities;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.SessionNotCreatedException;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverInfo;
+import org.openqa.selenium.remote.service.DriverFinder;
+
 @AutoService(WebDriverInfo.class)
 public class InternetExplorerDriverInfo implements WebDriverInfo {
+  private static final Logger LOG = Logger.getLogger(InternetExplorerDriverInfo.class.getName());
 
   @Override
   public String getDisplayName() {
@@ -45,8 +47,7 @@ public class InternetExplorerDriverInfo implements WebDriverInfo {
 
   @Override
   public boolean isSupporting(Capabilities capabilities) {
-    return IE.is(capabilities) ||
-           capabilities.getCapability("se:ieOptions") != null;
+    return IE.is(capabilities) || capabilities.getCapability("se:ieOptions") != null;
   }
 
   @Override
@@ -55,13 +56,24 @@ public class InternetExplorerDriverInfo implements WebDriverInfo {
   }
 
   @Override
+  public boolean isSupportingBiDi() {
+    return false;
+  }
+
+  @Override
   public boolean isAvailable() {
-    try {
-      InternetExplorerDriverService.createDefaultService();
-      return true;
-    } catch (IllegalStateException | WebDriverException e) {
-      return false;
-    }
+    return Platform.getCurrent().is(Platform.WINDOWS)
+        && new DriverFinder(
+                InternetExplorerDriverService.createDefaultService(), getCanonicalCapabilities())
+            .isAvailable();
+  }
+
+  @Override
+  public boolean isPresent() {
+    return Platform.getCurrent().is(Platform.WINDOWS)
+        && new DriverFinder(
+                InternetExplorerDriverService.createDefaultService(), getCanonicalCapabilities())
+            .isPresent();
   }
 
   @Override
@@ -76,6 +88,7 @@ public class InternetExplorerDriverInfo implements WebDriverInfo {
       return Optional.empty();
     }
 
-    return Optional.of(new InternetExplorerDriver(new InternetExplorerOptions().merge(capabilities)));
+    return Optional.of(
+        new InternetExplorerDriver(new InternetExplorerOptions().merge(capabilities)));
   }
 }

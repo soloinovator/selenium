@@ -18,13 +18,12 @@
 package org.openqa.selenium.environment;
 
 import com.google.common.net.InetAddresses;
-
 import org.openqa.selenium.environment.webserver.AppServer;
 import org.openqa.selenium.internal.Require;
 
 public class DomainHelper {
 
-  private AppServer appServer;
+  private final AppServer appServer;
 
   public DomainHelper(AppServer appServer) {
     this.appServer = appServer;
@@ -48,16 +47,17 @@ public class DomainHelper {
 
   public String getUrlForSecondValidHostname(String path) {
     Require.precondition(
-      isValidHostname(appServer.getAlternateHostName()),
-      "Expected valid hostname but was %s",
-      appServer.getAlternateHostName());
+        isValidHostname(appServer.getAlternateHostName()),
+        "Expected valid hostname but was %s",
+        appServer.getAlternateHostName());
     return appServer.whereElseIs(path);
   }
 
   public boolean checkIsOnValidHostname() {
     boolean correct = getHostName() != null && isValidHostname(getHostName());
     if (!correct) {
-      System.out.println("Skipping test: unable to find domain name to use, hostname: " + getHostName());
+      System.out.println(
+          "Skipping test: unable to find domain name to use, hostname: " + getHostName());
     }
     return correct;
   }
@@ -66,7 +66,8 @@ public class DomainHelper {
     boolean correct = getHostName() != null && isValidSubDomain(getHostName());
 
     if (!correct) {
-      System.out.println("Skipping test: unable to find sub domain name to use, hostname: " + getHostName());
+      System.out.println(
+          "Skipping test: unable to find sub domain name to use, hostname: " + getHostName());
     }
     return correct;
   }
@@ -83,11 +84,11 @@ public class DomainHelper {
 
   private boolean isValidSubDomain(String hostname) {
     /*
-    * /etc/hosts needs to have e.g.
-    *
-    * 127.0.0.1       sub.selenium.tests
-    *
-    */
+     * /etc/hosts needs to have e.g.
+     *
+     * 127.0.0.1       sub.selenium.tests
+     *
+     */
     return hostname.split("\\.").length >= 3;
   }
 

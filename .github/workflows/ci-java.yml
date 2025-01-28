@@ -1,316 +1,74 @@
-# Configuration for Java CI
-# To force the execution of this workflow, add [run java] to your commit message
-name: 'CI - Java'
+name: CI - Java
 
 on:
+  workflow_call:
   workflow_dispatch:
 
-  schedule:
-    - cron: '15 9,21 * * *'
-
-  push:
-
-  pull_request:
-
-env:
-  NODE_VERSION: '16.x'
-
 jobs:
-  check_workflow:
-    permissions:
-      contents: none
-    uses: ./.github/workflows/should-workflow-run.yml
+  browser-tests-windows:
+    name: Browser Tests
+    uses: ./.github/workflows/bazel.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
     with:
-      bazel-target-prefix: '//java'
+      name: Browser Tests (chrome, ${{ matrix.os }})
+      os: ${{ matrix.os }}
+      browser: chrome
+      cache-key: java-${{ matrix.os }}-tests
+      # rules_jvm_external is not fully hermetic
+      # https://github.com/bazelbuild/rules_jvm_external/issues/1046
+      java-version: 17
+      run: |
+        fsutil 8dot3name set 0
+        bazel test --flaky_test_attempts 3 //java/test/org/openqa/selenium/chrome:ChromeDriverFunctionalTest `
+            //java/test/org/openqa/selenium/federatedcredentialmanagement:FederatedCredentialManagementTest `
+            //java/test/org/openqa/selenium/firefox:FirefoxDriverBuilderTest `
+            //java/test/org/openqa/selenium/grid/router:RemoteWebDriverDownloadTest `
+            //java/test/org/openqa/selenium/remote:RemoteWebDriverBuilderTest `
+            //java/test/org/openqa/selenium/grid/router:RemoteWebDriverDownloadTest
 
-  build:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: check_workflow
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-build-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Build grid
-        uses: ./.github/actions/bazel
-        with:
-          command: build grid
-
-  small_tests:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, build ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-small-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-small-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Run small tests
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(size, small, tests(//java/...)) except attr(tags, lint, tests(//java/...))
-      - name: Sonar Scanner
-        uses: ./.github/actions/sonar-cloud
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  medium_tests:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, small_tests ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-medium-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-medium-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Run medium tests
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(size, medium, tests(//java/...)) except attr(tags, lint, tests(//java/...))
-          attempts: 3
-
-  lint:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, build ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-lint-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-lint-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Run linter
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(tags, lint, tests(//java/...)) except attr(tags, no-lint, tests(//java/...))
-
-  browser_tests:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, small_tests ]
-    runs-on: ubuntu-latest
+  browser-tests-macos:
+    name: Browser Tests
+    uses: ./.github/workflows/bazel.yml
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { "browser": "firefox", "version": "latest" }
-          - { "browser": "firefox", "version": "latest-beta" }
-          - { "browser": "firefox", "version": "latest-devedition" }
-          - { "browser": "chrome", "version": "stable" }
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-${{ matrix.browser }}-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-${{ matrix.browser }}-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Setup Firefox and GeckoDriver
-        uses: ./.github/actions/setup-firefox
-        with:
-          version: ${{ matrix.version }}
-        if: |
-          matrix.browser == 'firefox'
-      - name: Setup Chrome and ChromeDriver
-        uses: ./.github/actions/setup-chrome
-        with:
-          version: ${{ matrix.version }}
-        if: |
-          matrix.browser == 'chrome'
-      - name: Start XVFB
-        run: Xvfb :99 &
-      - name: Run browser tests in ${{ matrix.browser }}
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(tags, ${{ matrix.browser }}, tests(//java/...)) except attr(tags, 'rc|remote', tests(//java/...))
-          attempts: 3
-        env:
-          DISPLAY: :99
+          - os: macos
+    with:
+      name: Browser Tests (chrome, ${{ matrix.os }})
+      os: ${{ matrix.os }}
+      browser: chrome
+      cache-key: java-${{ matrix.os }}-tests
+      # rules_jvm_external is not fully hermetic
+      # https://github.com/bazelbuild/rules_jvm_external/issues/1046
+      java-version: 17
+      run: |
+        bazel test --flaky_test_attempts 3 //java/test/org/openqa/selenium/chrome:ChromeDriverFunctionalTest-remote \
+            //java/test/org/openqa/selenium/federatedcredentialmanagement:FederatedCredentialManagementTest \
+          //java/test/org/openqa/selenium/firefox:FirefoxDriverBuilderTest \
+            //java/test/org/openqa/selenium/grid/router:RemoteWebDriverDownloadTest \
+            //java/test/org/openqa/selenium/remote:RemoteWebDriverBuilderTest \
+            //java/test/org/openqa/selenium/grid/router:RemoteWebDriverDownloadTest
 
-  server_tests:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, small_tests ]
-    runs-on: ubuntu-latest
+  remote-tests:
+    name: Remote Tests
+    uses: ./.github/workflows/bazel.yml
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { "browser": "firefox", "version": "latest" }
-          - { "browser": "firefox", "version": "latest-beta" }
-          - { "browser": "firefox", "version": "latest-devedition" }
-          - { "browser": "chrome", "version": "stable" }
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-${{ matrix.browser }}-server-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-${{ matrix.browser }}-server-tests-
-            ${{ runner.os }}-bazel-${{ matrix.browser }}-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Setup Firefox and GeckoDriver
-        uses: ./.github/actions/setup-firefox
-        with:
-          version: ${{ matrix.version }}
-        if: |
-          matrix.browser == 'firefox'
-      - name: Setup Chrome and ChromeDriver
-        uses: ./.github/actions/setup-chrome
-        with:
-          version: ${{ matrix.version }}
-        if: |
-          matrix.browser == 'chrome'
-      - name: Start XVFB
-        run: Xvfb :99 &
-      - name: Run server tests
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(tags, ${{ matrix.browser }}, tests(//java/...)) intersect attr(tags, 'remote', tests(//java/...))
-          attempts: 3
-        env:
-          DISPLAY: :99
-
-  rc_tests:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, small_tests ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-firefox-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-firefox-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Setup Firefox and GeckoDriver
-        uses: ./.github/actions/setup-firefox
-        with:
-          version: latest
-      - name: Start XVFB
-        run: Xvfb :99 &
-      - name: Run browser tests in Firefox
-        uses: ./.github/actions/bazel-test
-        with:
-          query: attr(tags, rc, tests(//java/...))
-          attempts: 3
-        env:
-          DISPLAY: :99
-
-  javadoc:
-    if: ${{ needs.check_workflow.outputs.result == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '[run java]') == true }}
-    needs: [ check_workflow, build ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source tree
-        uses: actions/checkout@v3
-      - name: Cache Bazel artifacts
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/bazel-disk
-            ~/.cache/bazel-repo
-          key: ${{ runner.os }}-bazel-firefox-tests-${{ hashFiles('**/BUILD.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-firefox-tests-
-            ${{ runner.os }}-bazel-build-
-      - name: Setup bazelisk
-        uses: ./.github/actions/setup-bazelisk
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-      - name: Generate javadoc
-        run: |
-          ./go --verbose javadocs
+          - os: macos
+    with:
+      name: Remote Tests (chrome, ${{ matrix.os }})
+      os: ${{ matrix.os }}
+      browser: chrome
+      cache-key: java-${{ matrix.os }}-remote-tests
+      # rules_jvm_external is not fully hermetic
+      # https://github.com/bazelbuild/rules_jvm_external/issues/1046
+      java-version: 17
+      run: |
+        bazel test --flaky_test_attempts 3 //java/test/org/openqa/selenium/chrome:ChromeDriverFunctionalTest-remote

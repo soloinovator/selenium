@@ -19,17 +19,16 @@ package org.openqa.selenium.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class CircularOutputStreamTest {
+class CircularOutputStreamTest {
   @Test
-  public void testShouldReturnTheEntireWrittenContentIfSmallerThanTheBufferSize() throws Exception {
+  void testShouldReturnTheEntireWrittenContentIfSmallerThanTheBufferSize() throws Exception {
     String expected = "foo";
     int maxSize = expected.getBytes().length;
 
@@ -43,7 +42,7 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testShouldReturnJustTheWrittenOutputIfBufferIsTooLarge() throws Exception {
+  void testShouldReturnJustTheWrittenOutputIfBufferIsTooLarge() throws Exception {
     String expected = "foo";
     // Note, this makes the buffer larger than what we write to it
     int maxSize = expected.getBytes().length + 1;
@@ -58,7 +57,7 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testShouldTruncateOutputToMatchTheSizeOfTheBuffer() throws Exception {
+  void testShouldTruncateOutputToMatchTheSizeOfTheBuffer() throws Exception {
     String expected = "oo";
     int maxSize = expected.getBytes().length;
 
@@ -72,7 +71,7 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testShouldReturnContentInTheCorrectOrder() throws Exception {
+  void testShouldReturnContentInTheCorrectOrder() throws Exception {
     String expected = "234";
     int maxSize = expected.getBytes().length;
 
@@ -86,7 +85,7 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testLongerMultiLineOutputPreservesJustTheEnd() {
+  void testLongerMultiLineOutputPreservesJustTheEnd() {
     int maxSize = 64;
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -107,7 +106,7 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testCircularness() {
+  void testCircularness() {
     CircularOutputStream os = new CircularOutputStream(5);
     try (PrintWriter pw = new PrintWriter(os, true)) {
 
@@ -126,7 +125,19 @@ public class CircularOutputStreamTest {
   }
 
   @Test
-  public void testConcurrentWrites() throws InterruptedException {
+  void testWriteExceedsBuffer() {
+    CircularOutputStream os = new CircularOutputStream(5);
+    try (PrintWriter pw = new PrintWriter(os, true)) {
+
+      pw.write("00");
+      pw.write("000000000000012345");
+      pw.flush();
+      assertThat(os.toString()).isEqualTo("12345");
+    }
+  }
+
+  @Test
+  void testConcurrentWrites() throws InterruptedException {
     final int bytesToWrite = 10000;
     CircularOutputStream os = new CircularOutputStream(2 * bytesToWrite);
 

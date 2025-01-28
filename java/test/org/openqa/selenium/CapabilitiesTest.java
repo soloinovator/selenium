@@ -21,56 +21,55 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.google.common.collect.ImmutableMap;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTests")
-public class CapabilitiesTest {
+class CapabilitiesTest {
 
   @Test
-  public void canCreateEmptyCapabilities() {
+  void canCreateEmptyCapabilities() {
     Capabilities caps = new ImmutableCapabilities();
     assertThat(caps.asMap()).isEmpty();
   }
 
   @Test
-  public void canCreateSinglePairCapabilities() {
+  void canCreateSinglePairCapabilities() {
     Capabilities caps = new ImmutableCapabilities("c1", "v1");
     assertThat(caps.asMap()).isEqualTo(ImmutableMap.of("c1", "v1"));
   }
 
   @Test
-  public void canCreateTwoPairCapabilities() {
+  void canCreateTwoPairCapabilities() {
     Capabilities caps = new ImmutableCapabilities("c1", "v1", "c2", 2);
     assertThat(caps.asMap()).isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2));
   }
 
   @Test
-  public void canCreateThreePairCapabilities() {
+  void canCreateThreePairCapabilities() {
     Capabilities caps = new ImmutableCapabilities("c1", "v1", "c2", 2, "c3", true);
     assertThat(caps.asMap()).isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2, "c3", true));
   }
 
   @Test
-  public void canCreateFourPairCapabilities() {
+  void canCreateFourPairCapabilities() {
     Capabilities caps = new ImmutableCapabilities("c1", "v1", "c2", 2, "c3", true, "c4", "v4");
     assertThat(caps.asMap())
-      .isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2, "c3", true, "c4", "v4"));
+        .isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2, "c3", true, "c4", "v4"));
   }
 
   @Test
-  public void canCreateFivePairCapabilities() {
-    Capabilities caps = new ImmutableCapabilities("c1", "v1", "c2", 2, "c3", true, "c4", "v4", "c5", "v5");
+  void canCreateFivePairCapabilities() {
+    Capabilities caps =
+        new ImmutableCapabilities("c1", "v1", "c2", 2, "c3", true, "c4", "v4", "c5", "v5");
     assertThat(caps.asMap())
-      .isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2, "c3", true, "c4", "v4", "c5", "v5"));
+        .isEqualTo(ImmutableMap.of("c1", "v1", "c2", 2, "c3", true, "c4", "v4", "c5", "v5"));
   }
 
   @Test
-  public void canCompareCapabilities() {
+  void canCompareCapabilities() {
     MutableCapabilities caps1 = new MutableCapabilities();
     MutableCapabilities caps2 = new MutableCapabilities();
     assertThat(new ImmutableCapabilities(caps2)).isEqualTo(new ImmutableCapabilities(caps1));
@@ -83,52 +82,60 @@ public class CapabilitiesTest {
   }
 
   @Test
-  public void shouldCheckKeyType() {
+  void shouldCheckKeyType() {
     Map<Object, Object> map = new HashMap<>();
     map.put(new Object(), new Object());
     assertThatExceptionOfType(IllegalArgumentException.class)
-      .isThrownBy(() -> new ImmutableCapabilities(map));
+        .isThrownBy(() -> new ImmutableCapabilities(map));
   }
 
   @Test
-  public void canMergeImmutableCapabilities() {
+  void canMergeImmutableCapabilities() {
     Map<String, Object> map1 = ImmutableMap.of("c1", "v1", "c2", "v2");
     Map<String, Object> map2 = ImmutableMap.of("c1", "new value", "c3", "v3");
     Capabilities caps1 = new ImmutableCapabilities(map1);
     Capabilities caps2 = new ImmutableCapabilities(map2);
     Capabilities merged = caps1.merge(caps2);
     assertThat(merged).isNotSameAs(caps1).isNotSameAs(caps2);
-    assertThat(merged.asMap()).containsExactlyEntriesOf(
-      ImmutableMap.of(
-        "c1", "new value", "c2", "v2", "c3", "v3"));
+    assertThat(merged.asMap())
+        .containsExactlyEntriesOf(ImmutableMap.of("c1", "new value", "c2", "v2", "c3", "v3"));
     assertThat(caps1.asMap()).containsExactlyEntriesOf(map1);
     assertThat(caps2.asMap()).containsExactlyEntriesOf(map2);
   }
 
   @Test
-  public void canMergeMutableCapabilities() {
+  void canMergeMutableCapabilities() {
     Map<String, Object> map1 = ImmutableMap.of("c1", "v1", "c2", "v2");
     Map<String, Object> map2 = ImmutableMap.of("c1", "new value", "c3", "v3");
     Capabilities caps1 = new MutableCapabilities(map1);
     Capabilities caps2 = new MutableCapabilities(map2);
     Capabilities merged = caps1.merge(caps2);
     assertThat(merged).isNotSameAs(caps1).isNotSameAs(caps2);
-    assertThat(merged.asMap()).containsExactlyEntriesOf(
-      ImmutableMap.of(
-        "c1", "new value", "c2", "v2", "c3", "v3"));
+    assertThat(merged.asMap())
+        .containsExactlyEntriesOf(ImmutableMap.of("c1", "new value", "c2", "v2", "c3", "v3"));
     assertThat(caps1.asMap()).containsExactlyEntriesOf(map1);
     assertThat(caps2.asMap()).containsExactlyEntriesOf(map2);
   }
 
   @Test
-  public void ensureHashCodesAreEqual() {
+  void ensureHashCodesAreEqual() {
     Capabilities one = new ImmutableCapabilities("key1", "value1", "key2", "value2");
     Capabilities two = new MutableCapabilities(ImmutableMap.of("key1", "value1", "key2", "value2"));
-    Capabilities three = new PersistentCapabilities(new ImmutableCapabilities("key2", "value2"))
-      .setCapability("key1", "value1");
+    Capabilities three =
+        new PersistentCapabilities(new ImmutableCapabilities("key2", "value2"))
+            .setCapability("key1", "value1");
 
     assertThat(one.hashCode()).isEqualTo(two.hashCode());
     assertThat(one.hashCode()).isEqualTo(three.hashCode());
     assertThat(two.hashCode()).isEqualTo(three.hashCode());
+  }
+
+  @Test
+  void ensureEqualHashCodesMightBeNotEqual() {
+    Capabilities one = new ImmutableCapabilities("key", "DB");
+    Capabilities two = new ImmutableCapabilities("key", "Ca");
+
+    assertThat(one.hashCode()).isEqualTo(two.hashCode());
+    assertThat(one).isNotEqualTo(two);
   }
 }

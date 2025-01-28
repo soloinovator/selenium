@@ -1,3 +1,364 @@
+4.28.0 (2025-01-16)
+=========================
+* Add CDP for Chrome 132 and remove 129
+* [ci] Bumping versions for nightly
+* [rb] Add tests for the cookie named, and updates type (#14843)
+* [rb] Update note for return value of Hash (#14845)
+* [rb] BiDi Network: add_request_handler, remove_request_handler, clear_request_handlers (#14751)
+* Update supported versions for Chrome DevTools
+
+4.27.0 (2024-11-21)
+=========================
+* Add CDP for Chrome 131 and remove 128
+* Add Firefox CDP deprecation warnings (#14763)
+* Add Bidi network commands for authentication and interception (#14523)
+* Handle graceful webdriver shutdown (#14430)
+* Reduce RBS errors to 0 (#14661)
+* Resolve `uri` gem deprecation warning (#14770)
+* Update minimum Ruby to 3.1 (#14685)
+* Implement navigation commands with BiDi (#14094)
+
+4.26.0 (2024-10-28)
+=========================
+* Add CDP for Chrome 130 and remove 127
+* Add missing RBS methods (#14621)
+* Update Ruby BiDi script structs to match spec
+* Add RBS type support for BiDi related classes (#14611)
+
+4.25.0 (2024-09-19)
+=========================
+* Add CDP for Chrome 129 and remove 126
+* Fix add_cause method not being able to process an array of hashes (#14433)
+* replace `fedcm` links with new ones (#14478)
+* Allow driver path to be set using ENV variables (#14287)
+
+4.24.0 (2024-08-23)
+=========================
+* Deprecate WebStorage JS methods (#14276)
+* BUGFIX: Add stamp to nightly build (#14320)
+* Add timeout and tests for curb, also added the gem curb that was not part of selenium (#14285)
+* Add CDP for Chrome 128 and remove 125
+
+4.23.0 (2024-07-18)
+=========================
+* Add FedCM support to the ruby selenium client (#13796)
+* Add URLs constant to update error messages (#14174)
+* Update selenium manager types (#14189)
+* Add backtrace locations and cause to errors (#14170)
+* Add CDP for Chrome 127 and remove 124
+
+4.22.0 (2024-06-20)
+=========================
+
+* Force UTF-8 encoding on logger (see #6937)
+* Don't crash when ChildProcess is already killed (see #14032)
+* Manage bidi instance on the bridge not the driver (#14071)
+* Implement High Level Logging API with BiDi (#14073)
+* Fix bug with message deletion in Guard class
+* Change output for Guard class
+* Implement toggle for BiDi and Classic implementations (#14092)
+* Add preference to enable CDP in Firefox by default (#14091)
+* Add support for the w3c silent option for the ruby library (#14152)
+* Add CDP for Chrome 126 and remove 123
+
+4.21.1 (2024-05-16)
+=========================
+
+* Fixed missing Chrome binary error in Rails system tests.
+
+4.21.0 (2024-05-16)
+=========================
+
+* Add CDP for Chrome 125 and remove 122
+* Initial extensibility points for Appium
+  * Support registering extra headers in HTTP client
+  * Support overriding User-Agent in HTTP client
+  * Support registering extra bridge commands
+  * Support overriding default locator conversion
+  * Support registering custom finders for SearchContext
+  * Support using custom element classes
+
+4.20.1 (2024-04-25)
+=========================
+
+* Returned accidentally removed DriverFinder.path and deprecated it.
+
+4.20.0 (2024-04-24)
+=========================
+
+* Add CDP for Chrome 124 and remove 121
+* Making Selenium Manager a thin wrapper (#13386)
+  * This change has been made to make it easier to maintain and improve, the interface has
+  changed and if users were invoking it, they might experience issues. Selenium Manager is
+  still in beta and these type of changes are expected.
+
+4.19.0 (2024-03-27)
+=========================
+
+* Add CDP for Chrome 123 and remove 120
+* Avoid over-escaping browser path (#13632)
+* Add full RBS support (#13234)
+
+4.18.1 (2024-02-19)
+=========================
+
+* Add CDP for Chrome 122 and remove 119
+
+4.18.0 (2024-02-19)
+=========================
+
+* Update documentation link in readme (#13570)
+* make suggested updates from rubocop
+
+4.17.0 (2024-01-22)
+=========================
+
+* Logger defaults output to stderr instead of stdout
+* Fully support Chrome 120+ old headless mode (#13271)
+* Add ruby to Selenium Manager input for tracking (see #13288)
+* Define default command_list (fixes #13307)
+* Fix issues with incorrectly named edge browser
+* Check for whether driver supports full page screenshots to error (#12799)
+* Add CDP for Chrome 121 and remove 118
+
+4.16.0 (2023-12-06)
+=========================
+
+Ruby:
+* Add RBS files to Ruby (#12844)
+* Convert binary locations for cygwin (#12618)
+* Allow Selenium Manager to work with Unix (#13161)
+* Extend RBS support for logger and log entry (#13192)
+* Update rules_ruby to the latest version (#13235)
+
+BiDi:
+  * Released selenium-devtools 0.120.0 (supports CDP v85, v118, v119, v120)
+
+Chrome:
+* Fix http proxy configuration for chrome (#13093)
+
+Firefox:
+* Delete 'lock' file in FF profile (#13090)
+
+4.15.0 (2023-11-01)
+=========================
+
+* Do not set browser binary in selenium manager if it is an empty string (#12738)
+* Add flaky condition to guards to mark unreliable tests
+* Rake update needs to build latest grid for running remote tests
+* Add CDP v119 and remove v116
+* Implement file downloads (#12979)
+
+4.14.0 (2023-10-09)
+=========================
+Ruby:
+  * allow users to access the full script of the atom directly
+
+BiDi:
+  * Released selenium-devtools 0.118.0 (supports CDP v85, v116, v117, v118)
+
+4.13.1 (2023-09-25)
+=========================
+Ruby:
+  * Fix bug preventing logging chromedriver to file
+
+4.13.0 (2023-09-25)
+=========================
+Ruby:
+  * Fix bug preventing using performance logging with chromium
+  * Allow users to set Selenium Manager path by environment variable (#12752)
+  * Allow service to be started before the driver
+  * remove deprecated driver extensions for location and network connection
+
+BiDi:
+  * Released selenium-devtools 0.117.0 (supports CDP v85, v115, v116, v117)
+
+4.12.0 (2023-08-31)
+=========================
+Ruby:
+  * Fix bug preventing good error messages in Selenium Manager when stdout empty
+  * Fix bug with Firefox not loading net/http library by default (#12506)
+  * Remove support for using capabilities in local drivers
+
+BiDi:
+  * Released selenium-devtools 0.116.0 (supports CDP v85, v114, v115, v116)
+
+4.11.0 (2023-07-31)
+=========================
+Ruby:
+  * Made network interception threads fail silently (#12226)
+  * Have Selenium Manager binary locate drivers on PATH (#12345)
+  * Add browser output from selenium manager to options (#12398)
+  * Remove deprecated code (#12417)
+BiDi:
+  * Released selenium-devtools 0.115.0 (supports CDP v85, v113, v114, v115)
+Edge:
+  * Adding ignore process match for IE Mode across bindings (#12279)
+
+4.10.0 (2023-06-07)
+=========================
+Ruby:
+  * Implement proxy support for Selenium Manager
+  * Prevent setting driver log level in Safari
+  * Change all Selenium Manager logging to :debug (#12145)
+  * Error messages include links to documentation
+  * Add custom error class for driver location and improve error logic
+
+BiDi:
+  * Released selenium-devtools 0.114.0 (supports CDP v85, v112, v113, v114)
+
+Edge:
+  * Add support for webview2
+
+4.9.1 (2023-05-08)
+=========================
+Ruby:
+  * Allow users to specify driver process output in Service class (#11964)
+  * Updated minimum required Ruby version to 3.0
+  * Selenium Logger defaults to :info and all debugging is now logged as :debug (#11967)
+  * Every logging entry can be ignored based on ID, not just warnings
+  * Logging entries can be filtered to allow or ignore specific IDs
+
+BiDi:
+  * Fix bug with loading devtools (#11931) (thanks Boris Petrov!)
+  * Released selenium-devtools 0.113.0 (supports CDP v85, v111, v112, v113)
+
+4.9.0 (2023-04-21)
+=========================
+Ruby:
+  * Fix devtools version fallback (#11869)
+  * Fix bug in selenium manager escaping back slashes in Windows (#11884)
+
+BiDi:
+  * Released selenium-devtools 0.112.0 (supports CDP v85, v110, v111, v112)
+
+4.8.6 (2023-03-29)
+=========================
+Ruby:
+  * Properly escape arguments passed to Selenium Manager
+
+4.8.5 (2023-03-28)
+=========================
+Ruby:
+  * Wrapping browser name in quotes when calling Selenium Manager
+
+4.8.4 (2023-03-28)
+=========================
+Ruby:
+  * Update the selenium-manager versions to fix an IE naming issue (#11828)
+
+4.8.3 (2023-03-26)
+=========================
+Ruby:
+  * Still need to use driver finder when using capabilities parameter
+  * Accommodate Driver Finder being sent something other than an Options instance
+
+4.8.2 (2023-03-24)
+=========================
+Ruby:
+  * Ruby driver finder (#11523)
+  * Using json output with Selenium Manager
+
+BiDi:
+  * Released selenium-devtools 0.111.0 (supports CDP v85, v109, v110, v111)
+
+4.8.1 (2023-02-17)
+=========================
+Ruby:
+  * Fix autoload of WebDriver::Remote::Bridge::COMMANDS
+  * Subclass is setting value before the superclass is setting it to nil
+  * Updating Selenium Manager binaries for 4.8.1 release
+
+BiDi:
+  * Released selenium-devtools 0.110.0 (supports CDP v85, v108, v109, v110)
+  * Close BiDi session on closing the last top-level browsing context
+  * Add filtering capability to LogInspector
+
+4.8.0 (2023-01-23)
+=========================
+Ruby:
+  * Allow updating instance variables on service classes
+  * Deprecate extract_service_args processing in service classes
+  * Fix bug preventing sending nil to #send_keys with Remote Driver
+  * Fix bug with IE specific methods not available to IE Driver
+  * Created Chromium superclass for Chrome and Edge
+  * Deprecated platform and version setters/getters in Capabilities class
+  * Revamped driver constructor logic
+  * Fix bug preventing using Safari Technology Preview when using SafariOptions
+  * Fix bug preventing more than one driver type to access Selenium Manager
+  * Defaults to using Options instead of Capabilities
+  * Make Options classes more strict for allowed arguments and types
+  * Removed previously deprecated actions class parameters
+  * Removed Location struct
+  * Add comment with name of large JS executions (#11038)
+  * update logger with link on how to use it (#11478)
+  * Deprecate #add_option for Option classes in favor of constructor and attr_accessor
+  * Deprecate all unrecognized capabilities for Options classes
+  * Deprecate support for :capabilities for local drivers
+  * Deprecate browser class methods for Capabilities
+  * Deprecate #headless! for Chrome and Firefox
+
+BiDi:
+  * Released selenium-devtools 0.109.0 (supports CDP v85, v107, v108, v109)
+  * Add LogInspector (#11368)
+  * Add Browsing context commands (#11446)
+
+4.7.1 (2022-12-02)
+=========================
+Ruby:
+  * Fix bug preventing selenium manager from using Internet Explorer
+
+4.7.0 (2022-12-01)
+=========================
+BiDi:
+  * Released selenium-devtools 0.108.0 (supports CDP v85, v106, v107, v108)
+  * Fix bug with socket stability
+
+Ruby:
+  * Remove dependency on ChildProcess gem in favor of native Process.spawn (#11251)
+  * Add support for Selenium Manager to work with IE Driver
+  * Improve error handling for Selenium Manager
+
+Safari:
+  * Fix bug preventing Safari Options from being used with Safari Technology Preview
+
+4.6.1 (2022-11-04)
+=========================
+Ruby:
+  * fix bug preventing selenium-manager from being executable by default
+
+4.6.0 (2022-11-04)
+=========================
+BiDi:
+  * Released selenium-devtools 0.107.0 (supports CDP v85, v105, v106, v107)
+
+Ruby:
+  * firefox scroll by amount is only failing on mac
+  * add initial support for selenium manager
+  * Revert "[rb] do not allow Select class to work with disabled selects"
+  * Make sure selenium-manager is packed into gem
+  * Fix platform list in #scroll_by guard
+
+4.5.0 (2022-09-28)
+=========================
+
+BiDi:
+  * Released selenium-devtools 0.105.0 (supports CDP v85, v103, v104, v105)
+  * Released selenium-devtools 0.106.0 (supports CDP v85, v104, v105, v106)
+  * Add HasBiDi support to Chrome
+
+Ruby:
+  * Fix bug in Platform code
+  * Update Select class to error when elements are disabled (#10812)
+
+Firefox:
+  * Add support for installing unsigned add-ons (#10265, thanks TamsilAmani!)
+  * Change accept_insecure_certificates to true by default (to match other bindings)
+  * Set debugger_address option to true by default
+
+Server:
+  * Add support for initializing server class with arguments and log level
+
 4.4.0 (2022-08-09)
 =========================
 

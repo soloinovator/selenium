@@ -1,6 +1,24 @@
+// <copyright file="BasicKeyboardInterfaceTest.cs" company="Selenium Committers">
+// Licensed to the Software Freedom Conservancy (SFC) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The SFC licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+// </copyright>
+
 using NUnit.Framework;
 using OpenQA.Selenium.Environment;
-using OpenQA.Selenium.Internal;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -33,6 +51,17 @@ namespace OpenQA.Selenium.Interactions
         }
 
         [Test]
+        public void ShouldSetActiveKeyboard()
+        {
+            Actions actionProvider = new Actions(driver);
+            actionProvider.SetActiveKeyboard("test keyboard");
+
+            KeyInputDevice device = actionProvider.GetActiveKeyboard();
+
+            Assert.That(device.DeviceName, Is.EqualTo("test keyboard"));
+        }
+
+        [Test]
         [IgnoreBrowser(Browser.Remote, "API not implemented in driver")]
         public void ShouldAllowBasicKeyboardInput()
         {
@@ -48,7 +77,7 @@ namespace OpenQA.Selenium.Interactions
 
             sendLowercase.Perform();
 
-            Assert.AreEqual("abc def", keyReporter.GetAttribute("value"));
+            Assert.That(keyReporter.GetAttribute("value"), Is.EqualTo("abc def"));
 
         }
 
@@ -104,6 +133,7 @@ namespace OpenQA.Selenium.Interactions
         }
 
         [Test]
+        [IgnoreBrowser(Browser.IE, "Keypress and Keyup are getting switched")]
         [IgnoreBrowser(Browser.Remote, "API not implemented in driver")]
         public void ShouldAllowSendingKeysWithShiftPressed()
         {
@@ -122,9 +152,9 @@ namespace OpenQA.Selenium.Interactions
             IAction releaseShift = new Actions(driver).KeyUp(Keys.Shift).Build();
             releaseShift.Perform();
 
-            AssertThatFormEventsFiredAreExactly("focus keydown keydown keypress keyup keydown keypress keyup keyup"); 
+            AssertThatFormEventsFiredAreExactly("focus keydown keydown keypress keyup keydown keypress keyup keyup");
 
-            Assert.AreEqual("AB", keysEventInput.GetAttribute("value"));
+            Assert.That(keysEventInput.GetAttribute("value"), Is.EqualTo("AB"));
         }
 
         [Test]
@@ -139,25 +169,7 @@ namespace OpenQA.Selenium.Interactions
 
             AssertThatBodyEventsFiredAreExactly("keypress keypress");
             IWebElement formLoggingElement = driver.FindElement(By.Id("result"));
-            AssertThatFormEventsFiredAreExactly(string.Empty); 
-        }
-
-        [Test]
-        [IgnoreBrowser(Browser.Remote, "API not implemented in driver")]
-        public void ShouldAllowBasicKeyboardInputOnActiveElement()
-        {
-            driver.Url = javascriptPage;
-
-            IWebElement keyReporter = driver.FindElement(By.Id("keyReporter"));
-
-            keyReporter.Click();
-
-            Actions actionProvider = new Actions(driver);
-            IAction sendLowercase = actionProvider.SendKeys("abc def").Build();
-
-            sendLowercase.Perform();
-
-            Assert.AreEqual("abc def", keyReporter.GetAttribute("value"));
+            AssertThatFormEventsFiredAreExactly(string.Empty);
         }
 
         [Test]
@@ -169,7 +181,7 @@ namespace OpenQA.Selenium.Interactions
 
         [Test]
         public void CanGenerateKeyboardShortcuts()
-        { 
+        {
             driver.Url = EnvironmentManager.Instance.UrlBuilder.WhereIs("keyboard_shortcut.html");
 
             IWebElement body = driver.FindElement(By.XPath("//body"));
@@ -319,14 +331,14 @@ namespace OpenQA.Selenium.Interactions
             IAction releaseShift = new Actions(driver).KeyUp(Keys.LeftShift).Build();
             releaseShift.Perform();
 
-            AssertThatFormEventsFiredAreExactly("focus keydown keydown keypress keyup keydown keypress keyup keyup"); 
+            AssertThatFormEventsFiredAreExactly("focus keydown keydown keypress keyup keydown keypress keyup keyup");
 
-            Assert.AreEqual("AB", keysEventInput.GetAttribute("value"));
+            Assert.That(keysEventInput.GetAttribute("value"), Is.EqualTo("AB"));
         }
 
         private void AssertThatFormEventsFiredAreExactly(string message, string expected)
         {
-            Assert.AreEqual(expected, driver.FindElement(By.Id("result")).Text.Trim(), message);
+            Assert.That(driver.FindElement(By.Id("result")).Text.Trim(), Is.EqualTo(expected), message);
         }
 
         private void AssertThatFormEventsFiredAreExactly(string expected)
@@ -336,7 +348,7 @@ namespace OpenQA.Selenium.Interactions
 
         private void AssertThatBodyEventsFiredAreExactly(string expected)
         {
-            Assert.AreEqual(expected, driver.FindElement(By.Id("body_result")).Text.Trim());
+            Assert.That(driver.FindElement(By.Id("body_result")).Text.Trim(), Is.EqualTo(expected));
         }
 
         private Func<bool> BackgroundColorToChangeFrom(IWebElement element, Color currentColor)

@@ -21,16 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.openqa.selenium.testing.drivers.Browser.SAFARI;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.testing.JupiterTestBase;
 import org.openqa.selenium.testing.NotYetImplemented;
 
-import java.util.List;
-
-public class ChildrenFindingTest extends JupiterTestBase {
+class ChildrenFindingTest extends JupiterTestBase {
 
   @Test
-  public void testFindElementByXPath() {
+  void testFindElementByXPath() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     WebElement child = element.findElement(By.xpath("select"));
@@ -38,7 +37,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindingElementsOnElementByXPathShouldFindTopLevelElements() {
+  void testFindingElementsOnElementByXPathShouldFindTopLevelElements() {
     driver.get(pages.simpleTestPage);
     WebElement parent = driver.findElement(By.id("multiline"));
     List<WebElement> allPs = driver.findElements(By.xpath("//p"));
@@ -47,7 +46,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindingDotSlashElementsOnElementByXPathShouldFindNotTopLevelElements() {
+  void testFindingDotSlashElementsOnElementByXPathShouldFindNotTopLevelElements() {
     driver.get(pages.simpleTestPage);
     WebElement parent = driver.findElement(By.id("multiline"));
     List<WebElement> children = parent.findElements(By.xpath("./p"));
@@ -56,7 +55,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementByXPathWhenNoMatch() {
+  void testFindElementByXPathWhenNoMatch() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     assertThatExceptionOfType(NoSuchElementException.class)
@@ -64,7 +63,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementsByXPath() {
+  void testFindElementsByXPath() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     List<WebElement> children = element.findElements(By.xpath("select/option"));
@@ -74,15 +73,15 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementsByXPathWhenNoMatch() {
+  void testFindElementsByXPathWhenNoMatch() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     List<WebElement> children = element.findElements(By.xpath(".//select/x"));
-    assertThat(children).hasSize(0);
+    assertThat(children).isEmpty();
   }
 
   @Test
-  public void testFindElementByName() {
+  void testFindElementByName() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     WebElement child = element.findElement(By.name("selectomatic"));
@@ -90,7 +89,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementsByName() {
+  void testFindElementsByName() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     List<WebElement> children = element.findElements(By.name("selectomatic"));
@@ -98,7 +97,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementById() {
+  void testFindElementById() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     WebElement child = element.findElement(By.id("2"));
@@ -106,7 +105,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementByIdWhenMultipleMatchesExist() {
+  void testFindElementByIdWhenMultipleMatchesExist() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.id("test_id_div"));
     WebElement child = element.findElement(By.id("test_id"));
@@ -114,7 +113,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementByIdWhenIdContainsNonAlphanumericCharacters() {
+  void testFindElementByIdWhenIdContainsNonAlphanumericCharacters() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.id("test_special_chars"));
     WebElement childWithSpaces = element.findElement(By.id("white space"));
@@ -124,7 +123,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementByIdWhenNoMatchInContext() {
+  void testFindElementByIdWhenNoMatchInContext() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.id("test_id_div"));
     assertThatExceptionOfType(NoSuchElementException.class)
@@ -132,7 +131,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementsById() {
+  void testFindElementsById() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("form2"));
     List<WebElement> children = element.findElements(By.id("2"));
@@ -140,7 +139,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementsByIdWithNonAlphanumericCharacters() {
+  void testFindElementsByIdWithNonAlphanumericCharacters() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.id("test_special_chars"));
     List<WebElement> children = element.findElements(By.id("white space"));
@@ -150,17 +149,17 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindElementByLinkText() {
+  void testFindElementByLinkText() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("div1"));
     WebElement child = element.findElement(By.linkText("hello world"));
     List<WebElement> invalidChildren = element.findElements(By.linkText("HellO WorLD"));
-    assertThat(invalidChildren).hasSize(0);
+    assertThat(invalidChildren).isEmpty();
     assertThat(child.getAttribute("name")).isEqualTo("link1");
   }
 
   @Test
-  public void testFindElementsByLinkTest() {
+  void testFindElementsByLinkTest() {
     driver.get(pages.nestedPage);
     WebElement element = driver.findElement(By.name("div1"));
     List<WebElement> elements = element.findElements(By.linkText("hello world"));
@@ -171,7 +170,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFindChildElementsById() {
+  void testShouldFindChildElementsById() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.id("test_id_div"));
     WebElement element = parent.findElement(By.id("test_id"));
@@ -179,17 +178,17 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldNotReturnRootElementWhenFindingChildrenById() {
+  void testShouldNotReturnRootElementWhenFindingChildrenById() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.id("test_id"));
 
-    assertThat(parent.findElements(By.id("test_id"))).hasSize(0);
+    assertThat(parent.findElements(By.id("test_id"))).isEmpty();
     assertThatExceptionOfType(NoSuchElementException.class)
         .isThrownBy(() -> parent.findElement(By.id("test_id")));
   }
 
   @Test
-  public void testShouldFindChildElementsByClassName() {
+  void testShouldFindChildElementsByClassName() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("classes"));
 
@@ -199,7 +198,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFindChildrenByClassName() {
+  void testShouldFindChildrenByClassName() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("classes"));
 
@@ -209,7 +208,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFindChildElementsByTagName() {
+  void testShouldFindChildElementsByTagName() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("div1"));
 
@@ -219,7 +218,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldFindChildrenByTagName() {
+  void testShouldFindChildrenByTagName() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("div1"));
 
@@ -229,7 +228,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToFindAnElementByCssSelector() {
+  void testShouldBeAbleToFindAnElementByCssSelector() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("form2"));
 
@@ -239,7 +238,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToFindAnElementByCss3Selector() {
+  void testShouldBeAbleToFindAnElementByCss3Selector() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("form2"));
 
@@ -249,7 +248,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToFindElementsByCssSelector() {
+  void testShouldBeAbleToFindElementsByCssSelector() {
     driver.get(pages.nestedPage);
     WebElement parent = driver.findElement(By.name("form2"));
 
@@ -259,7 +258,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testShouldBeAbleToFindChildrenOfANode() {
+  void testShouldBeAbleToFindChildrenOfANode() {
     driver.get(pages.selectableItemsPage);
     List<WebElement> elements = driver.findElements(By.xpath("/html/head"));
     WebElement head = elements.get(0);
@@ -268,23 +267,23 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testReturnAnEmptyListWhenThereAreNoChildrenOfANode() {
+  void testReturnAnEmptyListWhenThereAreNoChildrenOfANode() {
     driver.get(pages.xhtmlTestPage);
     WebElement table = driver.findElement(By.id("table"));
     List<WebElement> rows = table.findElements(By.tagName("tr"));
 
-    assertThat(rows).hasSize(0);
+    assertThat(rows).isEmpty();
   }
 
   @Test
-  public void testShouldFindGrandChildren() {
+  void testShouldFindGrandChildren() {
     driver.get(pages.formPage);
     WebElement form = driver.findElement(By.id("nested_form"));
     form.findElement(By.name("x"));
   }
 
   @Test
-  public void testShouldNotFindElementOutSideTree() {
+  void testShouldNotFindElementOutSideTree() {
     driver.get(pages.formPage);
     WebElement element = driver.findElement(By.name("login"));
     assertThatExceptionOfType(NoSuchElementException.class)
@@ -292,7 +291,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindingByTagNameShouldNotIncludeParentElementIfSameTagType() {
+  void testFindingByTagNameShouldNotIncludeParentElementIfSameTagType() {
     driver.get(pages.xhtmlTestPage);
     WebElement parent = driver.findElement(By.id("my_span"));
 
@@ -301,7 +300,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindingByCssShouldNotIncludeParentElementIfSameTagType() {
+  void testFindingByCssShouldNotIncludeParentElementIfSameTagType() {
     driver.get(pages.xhtmlTestPage);
     WebElement parent = driver.findElement(By.cssSelector("div#parent"));
     WebElement child = parent.findElement(By.cssSelector("div"));
@@ -310,7 +309,7 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testFindMultipleElements() {
+  void testFindMultipleElements() {
     driver.get(pages.simpleTestPage);
     WebElement elem = driver.findElement(By.id("links"));
 
@@ -339,12 +338,11 @@ public class ChildrenFindingTest extends JupiterTestBase {
   }
 
   @Test
-  public void testElementCanGetLinkByLinkTestIgnoringTrailingWhitespace() {
+  void testElementCanGetLinkByLinkTestIgnoringTrailingWhitespace() {
     driver.get(pages.simpleTestPage);
     WebElement elem = driver.findElement(By.id("links"));
 
     WebElement link = elem.findElement(By.linkText("link with trailing space"));
     assertThat(link.getAttribute("id")).isEqualTo("linkWithTrailingSpace");
   }
-
 }

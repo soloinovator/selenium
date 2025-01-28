@@ -17,10 +17,19 @@
 
 package org.openqa.selenium.remote;
 
-import com.google.common.io.CountingOutputStream;
-import com.google.common.io.FileBackedOutputStream;
+import static java.util.Collections.singleton;
+import static org.openqa.selenium.json.Json.JSON_UTF_8;
+import static org.openqa.selenium.remote.CapabilityType.PROXY;
+import static org.openqa.selenium.remote.http.Contents.string;
 
-import org.openqa.selenium.AcceptedW3CCapabilityKeys;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.Proxy;
@@ -29,59 +38,31 @@ import org.openqa.selenium.internal.Either;
 import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.json.JsonException;
+import org.openqa.selenium.remote.http.Contents;
 import org.openqa.selenium.remote.http.HttpHandler;
+import org.openqa.selenium.remote.http.HttpHeader;
 import org.openqa.selenium.remote.http.HttpMethod;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
-
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.net.HttpHeaders.CONTENT_LENGTH;
-import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.openqa.selenium.json.Json.JSON_UTF_8;
-import static org.openqa.selenium.remote.CapabilityType.PROXY;
-import static org.openqa.selenium.remote.http.Contents.string;
 
 public class ProtocolHandshake {
 
   private static final Logger LOG = Logger.getLogger(ProtocolHandshake.class.getName());
 
   public Result createSession(HttpHandler client, Command command) throws IOException {
-    Capabilities desired = (Capabilities) command.getParameters().get("desiredCapabilities");
-    desired = desired == null ? new ImmutableCapabilities() : desired;
+    @SuppressWarnings("unchecked")
+    Collection<Capabilities> desired =
+        (Collection<Capabilities>) command.getParameters().get("capabilities");
+
+    desired =
+        desired == null || desired.isEmpty() ? singleton(new ImmutableCapabilities()) : desired;
 
     try (NewSessionPayload payload = NewSessionPayload.create(desired)) {
       Either<SessionNotCreatedException, Result> result = createSession(client, payload);
 
       if (result.isRight()) {
         Result toReturn = result.right();
-        LOG.info(String.format("Detected upstream dialect: %s", toReturn.dialect));
-
-        List<String> invalid = desired.asMap().keySet()
-          .stream()
-          .filter(key -> !(new AcceptedW3CCapabilityKeys().test(key)))
-          .collect(Collectors.toList());
-
-        if (!invalid.isEmpty()) {
-          LOG.log(Level.WARNING,
-                  () -> String.format("Support for Legacy Capabilities is deprecated; " +
-                                      "You are sending the following invalid capabilities: %s; " +
-                                      "Please update to W3C Syntax: https://www.selenium.dev/blog/2022/legacy-protocol-support/",
-                                      invalid));
-        }
+        LOG.log(Level.FINE, "Detected upstream dialect: {0}", toReturn.dialect);
         return toReturn;
       } else {
         throw result.left();
@@ -89,33 +70,21 @@ public class ProtocolHandshake {
     }
   }
 
-  public Either<SessionNotCreatedException, Result> createSession(HttpHandler client, NewSessionPayload payload) throws IOException {
-    int threshold = (int) Math.min(Runtime.getRuntime().freeMemory() / 10, Integer.MAX_VALUE);
-    FileBackedOutputStream os = new FileBackedOutputStream(threshold);
-
-    try (CountingOutputStream counter = new CountingOutputStream(os);
-         Writer writer = new OutputStreamWriter(counter, UTF_8)) {
-      payload.writeTo(writer);
-
-      try (InputStream rawIn = os.asByteSource().openBufferedStream();
-           BufferedInputStream contentStream = new BufferedInputStream(rawIn)) {
-        return createSession(client, contentStream, counter.getCount());
-      }
-    } finally {
-      os.reset();
-    }
+  public Either<SessionNotCreatedException, Result> createSession(
+      HttpHandler client, NewSessionPayload payload) throws IOException {
+    return createSession(client, payload.getSupplier());
   }
 
-  private Either<SessionNotCreatedException, Result> createSession(HttpHandler client, InputStream newSessionBlob, long size) {
+  private Either<SessionNotCreatedException, Result> createSession(
+      HttpHandler client, Contents.Supplier contentSupplier) {
     // Create the http request and send it
     HttpRequest request = new HttpRequest(HttpMethod.POST, "/session");
 
     HttpResponse response;
     long start = System.currentTimeMillis();
 
-    request.setHeader(CONTENT_LENGTH, String.valueOf(size));
-    request.setHeader(CONTENT_TYPE, JSON_UTF_8);
-    request.setContent(() -> newSessionBlob);
+    request.setHeader(HttpHeader.ContentType.getName(), JSON_UTF_8);
+    request.setContent(contentSupplier);
 
     response = client.execute(request);
     long time = System.currentTimeMillis() - start;
@@ -126,58 +95,65 @@ public class ProtocolHandshake {
     try {
       blob = new Json().toType(string(response), Map.class);
     } catch (JsonException e) {
-      return Either.left(new SessionNotCreatedException(
-        "Unable to parse remote response: " + string(response), e));
+      return Either.left(
+          new SessionNotCreatedException(
+              "Unable to parse remote response: " + string(response), e));
     }
 
-    InitialHandshakeResponse initialResponse = new InitialHandshakeResponse(
-      time,
-      response.getStatus(),
-      blob);
+    InitialHandshakeResponse initialResponse =
+        new InitialHandshakeResponse(time, response.getStatus(), blob);
 
     if (initialResponse.getStatusCode() != 200) {
       Object rawResponseValue = initialResponse.getData().get("value");
-      String responseMessage = rawResponseValue instanceof Map
-                               ? ((Map<?, ?>) rawResponseValue).get("message").toString()
-                               : new Json().toJson(rawResponseValue);
-      return Either.left(new SessionNotCreatedException(
-        String.format("Response code %s. Message: %s",
-                      initialResponse.getStatusCode(), responseMessage)));
+      String responseMessage =
+          rawResponseValue instanceof Map
+              ? ((Map<?, ?>) rawResponseValue).get("message").toString()
+              : new Json().toJson(rawResponseValue);
+      return Either.left(
+          new SessionNotCreatedException(
+              String.format(
+                  "Response code %s. Message: %s",
+                  initialResponse.getStatusCode(), responseMessage)));
     }
 
-    return Stream.of(
-      new W3CHandshakeResponse().getResponseFunction(),
-      new JsonWireProtocolResponse().getResponseFunction())
-      .map(func -> func.apply(initialResponse))
-      .filter(Objects::nonNull)
-      .findFirst()
-      .<Either<SessionNotCreatedException, Result>>map(Either::right)
-      .orElseGet(() -> Either.left(
-        new SessionNotCreatedException("Handshake response does not match any supported protocol")));
+    return Stream.of(new W3CHandshakeResponse().getResponseFunction())
+        .map(func -> func.apply(initialResponse))
+        .filter(Objects::nonNull)
+        .findFirst()
+        .<Either<SessionNotCreatedException, Result>>map(Either::right)
+        .orElseGet(
+            () ->
+                Either.left(
+                    new SessionNotCreatedException(
+                        String.format(
+                            "Handshake response does not match any supported protocol. "
+                                + "Response payload: %s",
+                            string(response)))));
   }
 
   public static class Result {
 
-    private static final Function<Object, Proxy> massageProxy = obj -> {
-      if (obj instanceof Proxy) {
-        return (Proxy) obj;
-      }
+    private static final Function<Object, Proxy> massageProxy =
+        obj -> {
+          if (obj instanceof Proxy) {
+            return (Proxy) obj;
+          }
 
-      if (!(obj instanceof Map)) {
-        return null;
-      }
+          if (!(obj instanceof Map)) {
+            return null;
+          }
 
-      Map<?, ?> rawMap = (Map<?, ?>) obj;
-      for (Object key : rawMap.keySet()) {
-        if (!(key instanceof String)) {
-          return null;
-        }
-      }
+          Map<?, ?> rawMap = (Map<?, ?>) obj;
+          for (Object key : rawMap.keySet()) {
+            if (!(key instanceof String)) {
+              return null;
+            }
+          }
 
-      // This cast is now safe.
-      //noinspection unchecked
-      return new Proxy((Map<String, ?>) obj);
-    };
+          // This cast is now safe.
+          //noinspection unchecked
+          return new Proxy((Map<String, ?>) obj);
+        };
 
     private final Dialect dialect;
     private final Map<String, ?> capabilities;
@@ -191,7 +167,7 @@ public class ProtocolHandshake {
       if (capabilities.containsKey(PROXY)) {
         //noinspection unchecked
         ((Map<String, Object>) capabilities)
-          .put(PROXY, massageProxy.apply(capabilities.get(PROXY)));
+            .put(PROXY, massageProxy.apply(capabilities.get(PROXY)));
       }
     }
 

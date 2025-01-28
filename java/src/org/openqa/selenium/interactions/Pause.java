@@ -22,17 +22,17 @@ import static org.openqa.selenium.internal.Require.nonNegative;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import org.jspecify.annotations.NullMarked;
 
-/**
- * Indicates that a given {@link InputSource} should pause for a given duration.
- */
+/** Indicates that a given {@link InputSource} should pause for a given duration. */
+@NullMarked
 public class Pause extends Interaction implements Encodable {
 
   private final Duration duration;
 
   /**
    * @param duration If 0, this means "wait until all other actions in the tick have been
-   *   evaluated". Must be greater than 0.
+   *     evaluated". Must be greater than 0.
    */
   // TODO(simons): Reduce visibility?
   public Pause(InputSource device, Duration duration) {

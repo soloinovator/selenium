@@ -17,13 +17,17 @@
 
 package org.openqa.selenium.html5;
 
+/**
+ * @deprecated This functionality is no longer supported
+ */
+@Deprecated
 public interface LocationContext {
 
   /**
    * Gets the physical location of the browser.
    *
    * @return A {@link Location} containing the location information. Returns null if the location is
-   *         not available
+   *     not available
    */
   Location location();
 

@@ -17,20 +17,19 @@
 
 package org.openqa.selenium.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import java.io.File;
+import java.io.IOException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.IOException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 @Tag("UnitTests")
-public class TemporaryFilesystemTest {
+class TemporaryFilesystemTest {
   private File baseForTest;
   private TemporaryFilesystem tmpFs;
 
@@ -51,7 +50,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testCanCreateTempFiles() {
+  void testCanCreateTempFiles() {
     File tmp = tmpFs.createTempDir("TemporaryFilesystem", "canCreate");
     try {
       assertThat(tmp).exists();
@@ -62,7 +61,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testFilesystemCleanupDeletesDirs() {
+  void testFilesystemCleanupDeletesDirs() {
     assumeTrue(tmpFs.shouldReap(), "Reaping of files disabled");
 
     File tmp = tmpFs.createTempDir("TemporaryFilesystem", "fcdd");
@@ -73,7 +72,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testFilesystemCleanupDeletesRecursive() throws IOException {
+  void testFilesystemCleanupDeletesRecursive() throws IOException {
     assumeTrue(tmpFs.shouldReap(), "Reaping of files disabled");
 
     File tmp = tmpFs.createTempDir("TemporaryFilesystem", "fcdr");
@@ -84,7 +83,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testSpecificDeleteRequestHonored() throws IOException {
+  void testSpecificDeleteRequestHonored() throws IOException {
     assumeTrue(tmpFs.shouldReap(), "Reaping of files disabled");
 
     File tmp = tmpFs.createTempDir("TemporaryFilesystem", "sdrh");
@@ -96,7 +95,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testDoesNotDeleteArbitraryFiles() throws IOException {
+  void testDoesNotDeleteArbitraryFiles() throws IOException {
     File tempFile = File.createTempFile("TemporaryFilesystem", "dndaf");
     assertThat(tempFile).exists();
     try {
@@ -108,7 +107,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testShouldDeleteTempDir() {
+  void testShouldDeleteTempDir() {
     final File tempDir = tmpFs.createTempDir("foo", "bar");
     assertThat(tempDir).exists();
     tmpFs.deleteTemporaryFiles();
@@ -117,7 +116,7 @@ public class TemporaryFilesystemTest {
   }
 
   @Test
-  public void testShouldBeAbleToModifyDefaultInstance() throws IOException {
+  void testShouldBeAbleToModifyDefaultInstance() throws IOException {
     // Create a temp file *outside* of the directory owned by the current
     // TemporaryFilesystem instance.
     File otherTempDir = File.createTempFile("TemporaryFilesystem", "NewDir");
@@ -125,8 +124,7 @@ public class TemporaryFilesystemTest {
     String otherTempDirPath = otherTempDir.getAbsolutePath();
 
     if (!otherTempDir.mkdirs()) {
-      throw new RuntimeException("Error creating other temporary directory: " +
-        otherTempDirPath);
+      throw new RuntimeException("Error creating other temporary directory: " + otherTempDirPath);
     }
 
     TemporaryFilesystem.setTemporaryDirectory(otherTempDir);

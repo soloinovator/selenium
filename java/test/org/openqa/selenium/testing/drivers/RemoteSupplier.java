@@ -17,21 +17,20 @@
 
 package org.openqa.selenium.testing.drivers;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.function.Supplier;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.remote.Augmenter;
 import org.openqa.selenium.remote.LocalFileDetector;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.function.Supplier;
+class RemoteSupplier implements Supplier<WebDriver> {
 
-public class RemoteSupplier implements Supplier<WebDriver> {
-
-  private static OutOfProcessSeleniumServer server = new OutOfProcessSeleniumServer();
+  private static final OutOfProcessSeleniumServer server = new OutOfProcessSeleniumServer();
   private static volatile boolean started;
-  private Capabilities desiredCapabilities;
+  private final Capabilities desiredCapabilities;
 
   public RemoteSupplier(Capabilities desiredCapabilities) {
     this.desiredCapabilities = desiredCapabilities;
@@ -58,9 +57,17 @@ public class RemoteSupplier implements Supplier<WebDriver> {
       serverUrl = server.getWebDriverUrl();
     }
 
-    RemoteWebDriver driver = new RemoteWebDriver(serverUrl, desiredCapabilities);
-    driver.setFileDetector(new LocalFileDetector());
-    return new Augmenter().augment(driver);
+    try {
+      RemoteWebDriver driver = new RemoteWebDriver(serverUrl, desiredCapabilities);
+      driver.setFileDetector(new LocalFileDetector());
+      return new Augmenter().augment(driver);
+    } catch (Exception ex) {
+      if (started) {
+        started = false;
+        server.stop();
+      }
+      throw ex;
+    }
   }
 
   private synchronized void startServer() {

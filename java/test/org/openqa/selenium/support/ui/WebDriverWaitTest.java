@@ -17,9 +17,18 @@
 
 package org.openqa.selenium.support.ui;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
+
+import java.io.IOException;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openqa.selenium.By;
@@ -38,18 +47,8 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.Response;
 import org.openqa.selenium.remote.SessionId;
 
-import java.io.IOException;
-import java.time.Duration;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
-
 @Tag("UnitTests")
-public class WebDriverWaitTest {
+class WebDriverWaitTest {
 
   @Mock private WebDriver mockDriver;
   @Mock private WebElement mockElement;
@@ -60,9 +59,10 @@ public class WebDriverWaitTest {
   }
 
   @Test
-  public void shouldIncludeRemoteInfoForWrappedDriverTimeout() throws IOException {
+  void shouldIncludeRemoteInfoForWrappedDriverTimeout() throws IOException {
     Capabilities caps = new MutableCapabilities();
     Response response = new Response(new SessionId("foo"));
+    response.setState("success");
     response.setValue(caps.asMap());
     CommandExecutor executor = mock(CommandExecutor.class);
     when(executor.execute(any(Command.class))).thenReturn(response);
@@ -76,32 +76,35 @@ public class WebDriverWaitTest {
         new WebDriverWait(testDriver, Duration.ofSeconds(1), Duration.ofMillis(200), clock, clock);
 
     assertThatExceptionOfType(TimeoutException.class)
-      .isThrownBy(() -> wait.until(d -> false))
-      .withMessageContaining("Capabilities {platformName: ANY}")
+        .isThrownBy(() -> wait.until(d -> false))
+        .withMessageContaining("Capabilities {platformName: any}")
         .withMessageContaining("Session ID: foo");
   }
 
   @Test
-  public void shouldThrowAnExceptionIfTheTimerRunsOut() {
+  void shouldThrowAnExceptionIfTheTimerRunsOut() {
     TickingClock clock = new TickingClock();
     WebDriverWait wait =
         new WebDriverWait(mockDriver, Duration.ofSeconds(1), Duration.ofMillis(200), clock, clock);
 
-    assertThatExceptionOfType(TimeoutException.class)
-        .isThrownBy(() -> wait.until(d -> false));
+    assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> wait.until(d -> false));
   }
 
   @Test
-  public void shouldThrowAnExceptionFromCorrectThreadIfTheTimerRunsOut() {
+  void shouldThrowAnExceptionFromCorrectThreadIfTheTimerRunsOut() {
     WebDriverWait wait = new WebDriverWait(mockDriver, Duration.ofSeconds(1));
     assertThatExceptionOfType(TimeoutException.class)
-      .isThrownBy(() -> wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(".doesntexist"))))
-      .withStackTraceContaining(this.getClass().getName());
+        .isThrownBy(
+            () ->
+                wait.until(
+                    ExpectedConditions.presenceOfAllElementsLocatedBy(
+                        By.cssSelector(".doesntexist"))))
+        .withStackTraceContaining(this.getClass().getName());
   }
 
   @SuppressWarnings("unchecked")
   @Test
-  public void shouldSilentlyCaptureNoSuchElementExceptions() {
+  void shouldSilentlyCaptureNoSuchElementExceptions() {
     final ExpectedCondition<WebElement> condition = mock(ExpectedCondition.class);
     when(condition.apply(mockDriver))
         .thenThrow(new NoSuchElementException("foo"))
@@ -115,7 +118,7 @@ public class WebDriverWaitTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void shouldSilentlyCaptureNoSuchFrameExceptions() {
+  void shouldSilentlyCaptureNoSuchFrameExceptions() {
     final ExpectedCondition<WebElement> condition = mock(ExpectedCondition.class);
     when(condition.apply(mockDriver))
         .thenThrow(new NoSuchFrameException("foo"))
@@ -129,7 +132,7 @@ public class WebDriverWaitTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void shouldSilentlyCaptureNoSuchWindowExceptions() {
+  void shouldSilentlyCaptureNoSuchWindowExceptions() {
 
     final ExpectedCondition<WebElement> condition = mock(ExpectedCondition.class);
     when(condition.apply(mockDriver))

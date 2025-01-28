@@ -22,8 +22,8 @@
  * @enum {string}
  */
 const Protocol = {
-  'CTAP2': 'ctap2',
-  'U2F': 'ctap1/u2f',
+  CTAP2: 'ctap2',
+  U2F: 'ctap1/u2f',
 }
 
 /**
@@ -31,10 +31,10 @@ const Protocol = {
  * @enum {string}
  */
 const Transport = {
-  'BLE': 'ble',
-  'USB': 'usb',
-  'NFC': 'nfc',
-  'INTERNAL': 'internal',
+  BLE: 'ble',
+  USB: 'usb',
+  NFC: 'nfc',
+  INTERNAL: 'internal',
 }
 
 /**
@@ -42,7 +42,6 @@ const Transport = {
  * @see http://w3c.github.io/webauthn/#sctn-automation
  */
 class VirtualAuthenticatorOptions {
-
   /**
    * Constructor to initialise VirtualAuthenticatorOptions object.
    */
@@ -105,12 +104,12 @@ class VirtualAuthenticatorOptions {
 
   toDict() {
     return {
-      "protocol": this.getProtocol(),
-      "transport": this.getTransport(),
-      "hasResidentKey": this.getHasResidentKey(),
-      "hasUserVerification": this.getHasUserVerification(),
-      "isUserConsenting": this.getIsUserConsenting(),
-      'isUserVerified': this.getIsUserVerified()
+      protocol: this.getProtocol(),
+      transport: this.getTransport(),
+      hasResidentKey: this.getHasResidentKey(),
+      hasUserVerification: this.getHasUserVerification(),
+      isUserConsenting: this.getIsUserConsenting(),
+      isUserVerified: this.getIsUserVerified(),
     }
   }
 }
@@ -120,19 +119,21 @@ class VirtualAuthenticatorOptions {
  * @see https://w3c.github.io/webauthn/#credential-parameters
  */
 class Credential {
-  constructor (
-    credentialId,
-    isResidentCredential,
-    rpId,
-    userHandle,
-    privateKey,
-    signCount) {
+  constructor(credentialId, isResidentCredential, rpId, userHandle, privateKey, signCount) {
     this._id = credentialId
     this._isResidentCredential = isResidentCredential
     this._rpId = rpId
     this._userHandle = userHandle
     this._privateKey = privateKey
     this._signCount = signCount
+  }
+
+  static createResidentCredential(id, rpId, userHandle, privateKey, signCount) {
+    return new Credential(id, true, rpId, userHandle, privateKey, signCount)
+  }
+
+  static createNonResidentCredential(id, rpId, privateKey, signCount) {
+    return new Credential(id, false, rpId, null, privateKey, signCount)
   }
 
   id() {
@@ -169,6 +170,7 @@ class Credential {
    * @param userHandle userHandle associated to the credential. Must be Base64 encoded string.
    * @param privateKey Base64 encoded PKCS
    * @param signCount initial value for a signature counter.
+   * @deprecated This method has been made static. Call it with class name. Example, Credential.createResidentCredential()
    * @returns A resident credential
    */
   createResidentCredential(id, rpId, userHandle, privateKey, signCount) {
@@ -181,6 +183,7 @@ class Credential {
    * @param rpId Relying party identifier.
    * @param privateKey Base64 encoded PKCS
    * @param signCount initial value for a signature counter.
+   * @deprecated This method has been made static. Call it with class name. Example, Credential.createNonResidentCredential()
    * @returns A non-resident credential
    */
   createNonResidentCredential(id, rpId, privateKey, signCount) {
@@ -189,11 +192,11 @@ class Credential {
 
   toDict() {
     let credentialData = {
-      'credentialId': Buffer.from(this._id).toString('base64url'),
-      'isResidentCredential': this._isResidentCredential,
-      'rpId': this._rpId,
-      'privateKey': Buffer.from(this._privateKey, 'binary').toString('base64url'),
-      'signCount': this._signCount,
+      credentialId: Buffer.from(this._id).toString('base64url'),
+      isResidentCredential: this._isResidentCredential,
+      rpId: this._rpId,
+      privateKey: Buffer.from(this._privateKey, 'binary').toString('base64url'),
+      signCount: this._signCount,
     }
 
     if (this.userHandle() != null) {
@@ -219,19 +222,15 @@ class Credential {
     } else {
       userHandle = null
     }
-    return new Credential(
-      id,
-      isResidentCredential,
-      rpId,
-      userHandle,
-      privateKey,
-      signCount
-    )
+    return new Credential(id, isResidentCredential, rpId, userHandle, privateKey, signCount)
   }
 }
 
-module.exports.Credential = Credential
-module.exports.VirtualAuthenticatorOptions = VirtualAuthenticatorOptions
-module.exports.Transport = Transport
-module.exports.Protocol = Protocol
+// PUBLIC API
 
+module.exports = {
+  Credential,
+  VirtualAuthenticatorOptions,
+  Transport,
+  Protocol,
+}

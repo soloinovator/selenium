@@ -16,8 +16,9 @@
 // under the License.
 package org.openqa.selenium.edge;
 
-import com.google.common.collect.ImmutableMap;
-
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.openqa.selenium.Beta;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chromium.ChromiumDriver;
@@ -26,15 +27,16 @@ import org.openqa.selenium.internal.Require;
 import org.openqa.selenium.remote.CommandInfo;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.RemoteWebDriverBuilder;
+import org.openqa.selenium.remote.http.ClientConfig;
+import org.openqa.selenium.remote.service.DriverFinder;
 import org.openqa.selenium.remote.service.DriverService;
 
-import java.util.Map;
-
 /**
- * A {@link WebDriver} implementation that controls an Edge browser running on the local machine.
- * It requires an <code>edgedriver</code> executable to be available in PATH.
+ * A {@link WebDriver} implementation that controls an Edge browser running on the local machine. It
+ * requires an <code>edgedriver</code> executable to be available in PATH.
  *
- * @see <a href="https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/">Microsoft WebDriver</a>
+ * @see <a href="https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/">Microsoft
+ *     WebDriver</a>
  */
 public class EdgeDriver extends ChromiumDriver {
 
@@ -51,9 +53,27 @@ public class EdgeDriver extends ChromiumDriver {
   }
 
   public EdgeDriver(EdgeDriverService service, EdgeOptions options) {
-    super(new EdgeDriverCommandExecutor(service), Require.nonNull("Driver options", options), EdgeOptions.CAPABILITY);
+    this(service, options, ClientConfig.defaultConfig());
+  }
+
+  public EdgeDriver(EdgeDriverService service, EdgeOptions options, ClientConfig clientConfig) {
+    super(generateExecutor(service, options, clientConfig), options, EdgeOptions.CAPABILITY);
     casting = new AddHasCasting().getImplementation(getCapabilities(), getExecuteMethod());
     cdp = new AddHasCdp().getImplementation(getCapabilities(), getExecuteMethod());
+  }
+
+  private static EdgeDriverCommandExecutor generateExecutor(
+      EdgeDriverService service, EdgeOptions options, ClientConfig clientConfig) {
+    Require.nonNull("Driver service", service);
+    Require.nonNull("Driver options", options);
+    Require.nonNull("Driver clientConfig", clientConfig);
+    DriverFinder finder = new DriverFinder(service, options);
+    service.setExecutable(finder.getDriverPath());
+    if (finder.hasBrowserPath()) {
+      options.setBinary(finder.getBrowserPath());
+      options.setCapability("browserVersion", (Object) null);
+    }
+    return new EdgeDriverCommandExecutor(service, clientConfig);
   }
 
   @Beta
@@ -62,15 +82,15 @@ public class EdgeDriver extends ChromiumDriver {
   }
 
   private static class EdgeDriverCommandExecutor extends ChromiumDriverCommandExecutor {
-    public EdgeDriverCommandExecutor(DriverService service) {
-      super(service, getExtraCommands());
+    public EdgeDriverCommandExecutor(DriverService service, ClientConfig clientConfig) {
+      super(service, getExtraCommands(), clientConfig);
     }
 
     private static Map<String, CommandInfo> getExtraCommands() {
-      return ImmutableMap.<String, CommandInfo>builder()
-        .putAll(new AddHasCasting().getAdditionalCommands())
-        .putAll(new AddHasCdp().getAdditionalCommands())
-        .build();
+      return Stream.of(
+              new AddHasCasting().getAdditionalCommands(), new AddHasCdp().getAdditionalCommands())
+          .flatMap((m) -> m.entrySet().stream())
+          .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
   }
 }

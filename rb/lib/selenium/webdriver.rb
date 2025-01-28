@@ -17,13 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-require 'childprocess'
 require 'tmpdir'
 require 'fileutils'
 require 'date'
 require 'json'
 require 'set'
 require 'uri'
+require 'net/http'
 
 require 'selenium/webdriver/atoms'
 require 'selenium/webdriver/common'
@@ -34,9 +34,9 @@ module Selenium
     Point     = Struct.new(:x, :y)
     Dimension = Struct.new(:width, :height)
     Rectangle = Struct.new(:x, :y, :width, :height)
-    Location  = Struct.new(:latitude, :longitude, :altitude)
 
     autoload :BiDi,       'selenium/webdriver/bidi'
+    autoload :Chromium,   'selenium/webdriver/chromium'
     autoload :Chrome,     'selenium/webdriver/chrome'
     autoload :DevTools,   'selenium/webdriver/devtools'
     autoload :Edge,       'selenium/webdriver/edge'
@@ -49,7 +49,7 @@ module Selenium
     # @api private
 
     def self.root
-      @root ||= File.expand_path('..', __dir__)
+      @root ||= File.expand_path('..', __dir__.to_s)
     end
 
     #
@@ -95,8 +95,9 @@ module Selenium
     # @return [Logger]
     #
 
-    def self.logger
-      @logger ||= WebDriver::Logger.new
+    def self.logger(**opts)
+      level = $DEBUG || ENV.key?('DEBUG') ? :debug : :info
+      @logger ||= WebDriver::Logger.new('Selenium', default_level: level, **opts)
     end
   end # WebDriver
 end # Selenium

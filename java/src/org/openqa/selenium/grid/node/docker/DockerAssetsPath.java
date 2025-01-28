@@ -17,9 +17,8 @@
 
 package org.openqa.selenium.grid.node.docker;
 
-import org.openqa.selenium.remote.SessionId;
-
 import java.io.File;
+import org.openqa.selenium.remote.SessionId;
 
 public class DockerAssetsPath {
 
@@ -29,6 +28,10 @@ public class DockerAssetsPath {
   public DockerAssetsPath(String hostPath, String containerPath) {
     this.hostPath = hostPath;
     this.containerPath = containerPath;
+  }
+
+  public String getHostPath() {
+    return this.hostPath;
   }
 
   public String getHostPath(SessionId id) {

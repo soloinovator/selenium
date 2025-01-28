@@ -17,25 +17,21 @@
 
 package org.openqa.selenium.bidi;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
-
 import org.openqa.selenium.internal.Require;
 
 public class BiDi implements Closeable {
 
   private final Duration timeout = Duration.ofSeconds(30);
   private final Connection connection;
-  private final BiDiSessionStatus status;
 
   public BiDi(Connection connection) {
     this.connection = Require.nonNull("WebSocket connection", connection);
-    this.status =
-      send(new Command<>("session.status", Collections.emptyMap(), BiDiSessionStatus.class));
   }
 
   @Override
@@ -55,23 +51,68 @@ public class BiDi implements Closeable {
     return connection.sendAndWait(command, timeout);
   }
 
-  public <X> void addListener(Event<X> event, Consumer<X> handler) {
+  public <X> long addListener(Event<X> event, Consumer<X> handler) {
     Require.nonNull("Event to listen for", event);
     Require.nonNull("Handler to call", handler);
 
-    send(new Command<>("session.subscribe",
-                       ImmutableMap.of("events", Collections.singletonList(event.getMethod()))));
+    send(
+        new Command<>(
+            "session.subscribe", Map.of("events", Collections.singletonList(event.getMethod()))));
 
-    connection.addListener(event, handler);
+    return connection.addListener(event, handler);
+  }
+
+  public <X> long addListener(String browsingContextId, Event<X> event, Consumer<X> handler) {
+    Require.nonNull("Event to listen for", event);
+    Require.nonNull("Browsing context id", browsingContextId);
+    Require.nonNull("Handler to call", handler);
+
+    send(
+        new Command<>(
+            "session.subscribe",
+            Map.of(
+                "contexts",
+                Collections.singletonList(browsingContextId),
+                "events",
+                Collections.singletonList(event.getMethod()))));
+
+    return connection.addListener(event, handler);
+  }
+
+  public <X> long addListener(Set<String> browsingContextIds, Event<X> event, Consumer<X> handler) {
+    Require.nonNull("List of browsing context ids", browsingContextIds);
+    Require.nonNull("Event to listen for", event);
+    Require.nonNull("Handler to call", handler);
+
+    send(
+        new Command<>(
+            "session.subscribe",
+            Map.of(
+                "contexts",
+                browsingContextIds,
+                "events",
+                Collections.singletonList(event.getMethod()))));
+
+    return connection.addListener(event, handler);
   }
 
   public <X> void clearListener(Event<X> event) {
     Require.nonNull("Event to listen for", event);
 
-    send(new Command<>("session.unsubscribe",
-                       ImmutableMap.of("events", Collections.singletonList(event.getMethod()))));
+    // The browser throws an error if we try to unsubscribe an event that was not subscribed in the
+    // first place
+    if (connection.isEventSubscribed(event)) {
+      send(
+          new Command<>(
+              "session.unsubscribe",
+              Map.of("events", Collections.singletonList(event.getMethod()))));
 
-    connection.clearListener(event);
+      connection.clearListener(event);
+    }
+  }
+
+  public void removeListener(long id) {
+    connection.removeListener(id);
   }
 
   public void clearListeners() {
@@ -79,6 +120,6 @@ public class BiDi implements Closeable {
   }
 
   public BiDiSessionStatus getBidiSessionStatus() {
-    return status;
+    return send(new Command<>("session.status", Collections.emptyMap(), BiDiSessionStatus.class));
   }
 }

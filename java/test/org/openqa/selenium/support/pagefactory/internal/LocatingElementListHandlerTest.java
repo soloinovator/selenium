@@ -21,10 +21,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -35,15 +38,11 @@ import org.openqa.selenium.support.How;
 import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.support.pagefactory.ElementLocator;
 
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.List;
-
-public class LocatingElementListHandlerTest {
+class LocatingElementListHandlerTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void shouldAlwaysLocateTheElementPerCall() {
+  void shouldAlwaysLocateTheElementPerCall() {
     final ElementLocator locator = mock(ElementLocator.class);
     final WebElement element1 = mock(WebElement.class, "webElement1");
     final WebElement element2 = mock(WebElement.class, "webElement2");
@@ -53,8 +52,8 @@ public class LocatingElementListHandlerTest {
 
     LocatingElementListHandler handler = new LocatingElementListHandler(locator);
     List<WebElement> proxy =
-        (List<WebElement>) Proxy.newProxyInstance(getClass().getClassLoader(),
-            new Class[] {List.class}, handler);
+        (List<WebElement>)
+            Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {List.class}, handler);
 
     proxy.get(1).sendKeys("Fishy");
     assertThat(proxy).hasSize(2);
@@ -66,7 +65,7 @@ public class LocatingElementListHandlerTest {
   }
 
   @Test
-  public void shouldUseAnnotationsToLookUpByAlternativeMechanisms() {
+  void shouldUseAnnotationsToLookUpByAlternativeMechanisms() {
     final WebDriver driver = mock(WebDriver.class);
     final WebElement element1 = mock(WebElement.class, "webElement1");
     final WebElement element2 = mock(WebElement.class, "webElement2");
@@ -83,7 +82,7 @@ public class LocatingElementListHandlerTest {
   }
 
   @Test
-  public void findByAnnotationShouldBeInherited() {
+  void findByAnnotationShouldBeInherited() {
     final WebDriver driver = mock(WebDriver.class);
     final WebElement element1 = mock(WebElement.class, "webElement1");
     final WebElement element2 = mock(WebElement.class, "webElement2");

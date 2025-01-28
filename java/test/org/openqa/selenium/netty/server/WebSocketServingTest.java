@@ -17,7 +17,23 @@
 
 package org.openqa.selenium.netty.server;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.openqa.selenium.remote.http.Contents.utf8String;
+import static org.openqa.selenium.remote.http.HttpMethod.GET;
+
 import com.google.common.collect.ImmutableMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.grid.config.MapConfig;
@@ -35,24 +51,7 @@ import org.openqa.selenium.remote.http.WebSocket;
 import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.testing.Safely;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.openqa.selenium.remote.http.Contents.utf8String;
-import static org.openqa.selenium.remote.http.HttpMethod.GET;
-
-public class WebSocketServingTest {
+class WebSocketServingTest {
 
   private Server<?> server;
 
@@ -62,51 +61,54 @@ public class WebSocketServingTest {
   }
 
   @Test
-  public void clientShouldThrowAnExceptionIfUnableToConnectToAWebSocketEndPoint() {
-    assertThrows(ConnectionFailedException.class, () -> {
-      server = new NettyServer(defaultOptions(), req -> new HttpResponse()).start();
+  void clientShouldThrowAnExceptionIfUnableToConnectToAWebSocketEndPoint() {
+    assertThrows(
+        ConnectionFailedException.class,
+        () -> {
+          server = new NettyServer(defaultOptions(), req -> new HttpResponse()).start();
 
-      HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
+          HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
 
-      client.openSocket(new HttpRequest(GET, "/does-not-exist"), new WebSocket.Listener() {
-      });
-    });
+          client.openSocket(new HttpRequest(GET, "/does-not-exist"), new WebSocket.Listener() {});
+        });
   }
 
   @Test
-  public void shouldUseUriToChooseWhichWebSocketHandlerToUse() throws InterruptedException {
+  void shouldUseUriToChooseWhichWebSocketHandlerToUse() throws InterruptedException {
     AtomicBoolean foo = new AtomicBoolean(false);
     AtomicBoolean bar = new AtomicBoolean(false);
 
-    BiFunction<String, Consumer<Message>, Optional<Consumer<Message>>> factory = (str, sink) -> {
-      if ("/foo".equals(str)) {
-        return Optional.of(msg -> {
-          foo.set(true);
-          sink.accept(new TextMessage("Foo called"));
-        });
-      } else {
-        return Optional.of(msg -> {
-          bar.set(true);
-          sink.accept(new TextMessage("Bar called"));
-        });
-      }
-    };
+    BiFunction<String, Consumer<Message>, Optional<Consumer<Message>>> factory =
+        (str, sink) -> {
+          if ("/foo".equals(str)) {
+            return Optional.of(
+                msg -> {
+                  foo.set(true);
+                  sink.accept(new TextMessage("Foo called"));
+                });
+          } else {
+            return Optional.of(
+                msg -> {
+                  bar.set(true);
+                  sink.accept(new TextMessage("Bar called"));
+                });
+          }
+        };
 
-    server = new NettyServer(
-      defaultOptions(),
-      req -> new HttpResponse(),
-      factory
-    ).start();
+    server = new NettyServer(defaultOptions(), req -> new HttpResponse(), factory).start();
 
     CountDownLatch latch = new CountDownLatch(1);
     HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
-    WebSocket fooSocket = client.openSocket(new HttpRequest(GET, "/foo"), new WebSocket.Listener() {
-      @Override
-      public void onText(CharSequence data) {
-        System.out.println("Called!");
-        latch.countDown();
-      }
-    });
+    WebSocket fooSocket =
+        client.openSocket(
+            new HttpRequest(GET, "/foo"),
+            new WebSocket.Listener() {
+              @Override
+              public void onText(CharSequence data) {
+                System.out.println("Called!");
+                latch.countDown();
+              }
+            });
     fooSocket.sendText("Hello, World!");
 
     latch.await(2, SECONDS);
@@ -115,16 +117,18 @@ public class WebSocketServingTest {
   }
 
   @Test
-  public void shouldStillBeAbleToServeHttpTraffic() {
-    server = new NettyServer(
-      defaultOptions(),
-      req -> new HttpResponse().setContent(utf8String("Brie!")),
-      (uri, sink) -> {
-        if ("/foo".equals(uri)) {
-          return Optional.of(msg -> sink.accept(new TextMessage("Peas!")));
-        }
-        return Optional.empty();
-      }).start();
+  void shouldStillBeAbleToServeHttpTraffic() {
+    server =
+        new NettyServer(
+                defaultOptions(),
+                req -> new HttpResponse().setContent(utf8String("Brie!")),
+                (uri, sink) -> {
+                  if ("/foo".equals(uri)) {
+                    return Optional.of(msg -> sink.accept(new TextMessage("Peas!")));
+                  }
+                  return Optional.empty();
+                })
+            .start();
 
     HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
     HttpResponse res = client.execute(new HttpRequest(GET, "/cheese"));
@@ -133,16 +137,19 @@ public class WebSocketServingTest {
   }
 
   @Test
-  public void shouldPropagateCloseMessage() throws InterruptedException {
+  void shouldPropagateCloseMessage() throws InterruptedException {
     CountDownLatch latch = new CountDownLatch(1);
 
-    server = new NettyServer(
-      defaultOptions(),
-      req -> new HttpResponse(),
-      (uri, sink) -> Optional.of(socket -> latch.countDown())).start();
+    server =
+        new NettyServer(
+                defaultOptions(),
+                req -> new HttpResponse(),
+                (uri, sink) -> Optional.of(socket -> latch.countDown()))
+            .start();
 
     HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
-    WebSocket socket = client.openSocket(new HttpRequest(GET, "/cheese"), new WebSocket.Listener() {});
+    WebSocket socket =
+        client.openSocket(new HttpRequest(GET, "/cheese"), new WebSocket.Listener() {});
 
     socket.close();
 
@@ -150,44 +157,50 @@ public class WebSocketServingTest {
   }
 
   @Test
-  public void webSocketHandlersShouldBeAbleToFireMoreThanOneMessage() {
-    server = new NettyServer(
-      defaultOptions(),
-      req -> new HttpResponse(),
-      (uri, sink) -> Optional.of(msg -> {
-        sink.accept(new TextMessage("beyaz peynir"));
-        sink.accept(new TextMessage("cheddar"));
-      })).start();
+  void webSocketHandlersShouldBeAbleToFireMoreThanOneMessage() {
+    server =
+        new NettyServer(
+                defaultOptions(),
+                req -> new HttpResponse(),
+                (uri, sink) ->
+                    Optional.of(
+                        msg -> {
+                          sink.accept(new TextMessage("beyaz peynir"));
+                          sink.accept(new TextMessage("cheddar"));
+                        }))
+            .start();
 
     HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
     List<String> messages = new LinkedList<>();
-    WebSocket socket = client.openSocket(new HttpRequest(GET, "/cheese"), new WebSocket.Listener() {
-      @Override
-      public void onText(CharSequence data) {
-        messages.add(data.toString());
-      }
-    });
+    WebSocket socket =
+        client.openSocket(
+            new HttpRequest(GET, "/cheese"),
+            new WebSocket.Listener() {
+              @Override
+              public void onText(CharSequence data) {
+                messages.add(data.toString());
+              }
+            });
 
     socket.send(new TextMessage("Hello"));
 
     new FluentWait<>(messages).until(msgs -> msgs.size() == 2);
   }
 
-  public void serverShouldBeAbleToPushAMessageWithoutNeedingTheClientToSendAMessage() throws InterruptedException {
+  public void serverShouldBeAbleToPushAMessageWithoutNeedingTheClientToSendAMessage()
+      throws InterruptedException {
     class MyHandler implements Consumer<Message> {
 
       private final Consumer<Message> sink;
-      private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+      private final ScheduledExecutorService executor =
+          Executors.newSingleThreadScheduledExecutor();
 
       public MyHandler(Consumer<Message> sink) {
         this.sink = sink;
 
         // Send a message every 250ms
         executor.scheduleAtFixedRate(
-          () -> sink.accept(new TextMessage("Calling home.")),
-          100,
-          250,
-          MILLISECONDS);
+            () -> sink.accept(new TextMessage("Calling home.")), 100, 250, MILLISECONDS);
       }
 
       @Override
@@ -196,27 +209,30 @@ public class WebSocketServingTest {
       }
     }
 
-    server = new NettyServer(
-      defaultOptions(),
-      req -> new HttpResponse(),
-      (uri, sink) -> Optional.of(new MyHandler(sink))).start();
+    server =
+        new NettyServer(
+                defaultOptions(),
+                req -> new HttpResponse(),
+                (uri, sink) -> Optional.of(new MyHandler(sink)))
+            .start();
 
     CountDownLatch latch = new CountDownLatch(2);
     HttpClient client = HttpClient.Factory.createDefault().createClient(server.getUrl());
-    client.openSocket(new HttpRequest(GET, "/pushit"), new WebSocket.Listener() {
-      @Override
-      public void onText(CharSequence data) {
-        latch.countDown();
-      }
-    });
+    client.openSocket(
+        new HttpRequest(GET, "/pushit"),
+        new WebSocket.Listener() {
+          @Override
+          public void onText(CharSequence data) {
+            latch.countDown();
+          }
+        });
 
     latch.await(2, SECONDS);
   }
 
   private BaseServerOptions defaultOptions() {
-    return new BaseServerOptions(new MapConfig(
-      ImmutableMap.of("server", ImmutableMap.of(
-        "port", PortProber.findFreePort()
-      ))));
+    return new BaseServerOptions(
+        new MapConfig(
+            ImmutableMap.of("server", ImmutableMap.of("port", PortProber.findFreePort()))));
   }
 }

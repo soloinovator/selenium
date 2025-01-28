@@ -19,16 +19,16 @@ package org.openqa.selenium.interactions;
 
 import static org.mockito.Mockito.mock;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 @Tag("UnitTests")
-public class CompositeActionTest {
+class CompositeActionTest {
 
   @Test
-  public void invokingActions() {
+  void invokingActions() {
     CompositeAction sequence = new CompositeAction();
     final Action dummyAction1 = mock(Action.class);
     final Action dummyAction2 = mock(Action.class, "dummy2");
